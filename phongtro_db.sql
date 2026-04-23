@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 23, 2026 at 09:58 AM
+-- Generation Time: Apr 23, 2026 at 10:18 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -18,7 +18,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `dangtinphongtro_db`
+-- Database: `phongtro`
 --
 
 -- --------------------------------------------------------
@@ -28,12 +28,12 @@ SET time_zone = "+00:00";
 --
 
 CREATE TABLE `bookings` (
-  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `user_id` int(11) NOT NULL,
-  `motel_id` int(11) NOT NULL,
-  `deposit_amount` int(11) NOT NULL,
-  `checkin_date` date NOT NULL,
-  `status` enum('pending','paid','accepted','completed','rejected','cancelled') NOT NULL DEFAULT 'pending',
+  `id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `motel_id` int(11) DEFAULT NULL,
+  `deposit_amount` int(11) DEFAULT NULL,
+  `checkin_date` date DEFAULT NULL,
+  `status` enum('pending','paid','accepted','completed','rejected','cancelled') DEFAULT 'pending',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -44,8 +44,8 @@ CREATE TABLE `bookings` (
 --
 
 CREATE TABLE `categories` (
-  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `name` varchar(255) NOT NULL
+  `id` int(11) NOT NULL,
+  `name` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -55,8 +55,8 @@ CREATE TABLE `categories` (
 --
 
 CREATE TABLE `districts` (
-  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `name` varchar(255) NOT NULL
+  `id` int(11) NOT NULL,
+  `name` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -66,9 +66,9 @@ CREATE TABLE `districts` (
 --
 
 CREATE TABLE `favorites` (
-  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `user_id` int(11) NOT NULL,
-  `motel_id` int(11) NOT NULL
+  `id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `motel_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -78,20 +78,20 @@ CREATE TABLE `favorites` (
 --
 
 CREATE TABLE `motels` (
-  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `id` int(11) NOT NULL,
   `title` varchar(255) NOT NULL,
   `description` text DEFAULT NULL,
   `price` int(11) NOT NULL,
   `area` int(11) DEFAULT NULL,
-  `address` varchar(255) NOT NULL,
-  `lat` decimal(10,8) NOT NULL,
-  `lng` decimal(10,8) NOT NULL,
-  `phone` varchar(20) NOT NULL,
+  `address` varchar(255) DEFAULT NULL,
+  `lat` decimal(10,8) DEFAULT NULL,
+  `lng` decimal(11,8) DEFAULT NULL,
+  `phone` varchar(20) DEFAULT NULL,
   `user_id` int(11) NOT NULL,
   `category_id` int(11) DEFAULT NULL,
   `district_id` int(11) DEFAULT NULL,
-  `status` enum('pending','approved','hidden') NOT NULL DEFAULT 'pending',
-  `count_view` int(11) NOT NULL DEFAULT 0,
+  `status` enum('pending','approved','hidden') DEFAULT 'pending',
+  `count_view` int(11) DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -103,9 +103,9 @@ CREATE TABLE `motels` (
 --
 
 CREATE TABLE `motel_images` (
-  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `id` int(11) NOT NULL,
   `motel_id` int(11) DEFAULT NULL,
-  `image_url` varchar(255) NOT NULL
+  `image_url` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -126,14 +126,14 @@ CREATE TABLE `motel_utilities` (
 --
 
 CREATE TABLE `payments` (
-  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `booking_id` int(11) NOT NULL,
-  `amount` int(11) NOT NULL,
-  `method` varchar(50) NOT NULL,
-  `transaction_code` varchar(255) NOT NULL,
-  `status` enum('pending','held','released','refunded') NOT NULL DEFAULT 'pending',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `fee` int(11) NOT NULL DEFAULT 0
+  `id` int(11) NOT NULL,
+  `booking_id` int(11) DEFAULT NULL,
+  `amount` int(11) DEFAULT NULL,
+  `fee` int(11) DEFAULT 0,
+  `method` varchar(50) DEFAULT NULL,
+  `transaction_code` varchar(255) DEFAULT NULL,
+  `status` enum('pending','held','released','refunded') DEFAULT 'pending',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -143,11 +143,11 @@ CREATE TABLE `payments` (
 --
 
 CREATE TABLE `reviews` (
-  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `user_id` int(11) NOT NULL,
-  `motel_id` int(11) NOT NULL,
-  `rating` int(11) NOT NULL CHECK (rating BETWEEN 1 AND 5),
-  `comment` text NOT NULL,
+  `id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `motel_id` int(11) DEFAULT NULL,
+  `rating` int(11) DEFAULT NULL,
+  `comment` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -158,13 +158,13 @@ CREATE TABLE `reviews` (
 --
 
 CREATE TABLE `transactions` (
-  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `from_user` int(11) NOT NULL,
-  `to_user` int(11) NOT NULL,
-  `amount` int(11) NOT NULL,
-  `fee` int(11) NOT NULL DEFAULT 0,
-  `type` enum('deposit','release','refund','withdraw') NOT NULL,
-  `booking_id` int(11),
+  `id` int(11) NOT NULL,
+  `from_user` int(11) DEFAULT NULL,
+  `to_user` int(11) DEFAULT NULL,
+  `amount` int(11) DEFAULT NULL,
+  `fee` int(11) DEFAULT 0,
+  `type` enum('deposit','release','refund','withdraw','fee') DEFAULT NULL,
+  `booking_id` int(11) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -175,14 +175,13 @@ CREATE TABLE `transactions` (
 --
 
 CREATE TABLE `users` (
-  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `name` varchar(255) NOT NULL,
-  `email` varchar(255) NOT NULL UNIQUE,
-  `password` varchar(255) NOT NULL,
-  `phone` varchar(15) NOT NULL,
-  `avatar` varchar(255) NOT NULL,
-  `role` enum('user','admin','owner') NOT NULL,
-  `email_verified_at` timestamp NULL DEFAULT NULL,
+  `id` int(11) NOT NULL,
+  `name` varchar(100) DEFAULT NULL,
+  `email` varchar(150) DEFAULT NULL,
+  `password` varchar(255) DEFAULT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `avatar` varchar(255) DEFAULT NULL,
+  `role` enum('user','owner','admin') DEFAULT 'user',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -193,8 +192,8 @@ CREATE TABLE `users` (
 --
 
 CREATE TABLE `utilities` (
-  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `name` varchar(255) NOT NULL
+  `id` int(11) NOT NULL,
+  `name` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -204,22 +203,22 @@ CREATE TABLE `utilities` (
 --
 
 CREATE TABLE `wallets` (
-  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `user_id` int(11) NOT NULL UNIQUE,
-  `balance` bigint(20) NOT NULL DEFAULT 0
+  `id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `balance` bigint(20) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `withdraw_request`
+-- Table structure for table `withdraw_requests`
 --
 
 CREATE TABLE `withdraw_requests` (
-  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  `user_id` int(11) NOT NULL,
-  `amount` int(11) NOT NULL,
-  `status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  `id` int(11) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `amount` int(11) DEFAULT NULL,
+  `status` enum('pending','approved','rejected') DEFAULT 'pending',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -230,33 +229,36 @@ CREATE TABLE `withdraw_requests` (
 --
 -- Indexes for table `bookings`
 --
--- (PRIMARY KEY already defined in CREATE TABLE)
 ALTER TABLE `bookings`
+  ADD PRIMARY KEY (`id`),
   ADD KEY `user_id` (`user_id`),
   ADD KEY `motel_id` (`motel_id`);
 
 --
 -- Indexes for table `categories`
 --
--- (PRIMARY KEY already defined in CREATE TABLE)
+ALTER TABLE `categories`
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `districts`
 --
--- (PRIMARY KEY already defined in CREATE TABLE)
+ALTER TABLE `districts`
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `favorites`
 --
 ALTER TABLE `favorites`
+  ADD PRIMARY KEY (`id`),
   ADD KEY `user_id` (`user_id`),
   ADD KEY `motel_id` (`motel_id`);
 
 --
 -- Indexes for table `motels`
 --
--- (PRIMARY KEY already defined in CREATE TABLE)
 ALTER TABLE `motels`
+  ADD PRIMARY KEY (`id`),
   ADD KEY `user_id` (`user_id`),
   ADD KEY `category_id` (`category_id`),
   ADD KEY `district_id` (`district_id`);
@@ -264,35 +266,37 @@ ALTER TABLE `motels`
 --
 -- Indexes for table `motel_images`
 --
--- (PRIMARY KEY already defined in CREATE TABLE)
 ALTER TABLE `motel_images`
+  ADD PRIMARY KEY (`id`),
   ADD KEY `motel_id` (`motel_id`);
 
 --
 -- Indexes for table `motel_utilities`
 --
 ALTER TABLE `motel_utilities`
-  ADD PRIMARY KEY (`motel_id`, `utility_id`),
+  ADD PRIMARY KEY (`motel_id`,`utility_id`),
   ADD KEY `utility_id` (`utility_id`);
 
 --
 -- Indexes for table `payments`
 --
--- (PRIMARY KEY already defined in CREATE TABLE)
 ALTER TABLE `payments`
-  ADD KEY `booking_id` (`booking_id`);
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `booking_id` (`booking_id`);
 
 --
 -- Indexes for table `reviews`
 --
 ALTER TABLE `reviews`
-  ADD KEY `user_id` (`user_id`),
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `user_id` (`user_id`,`motel_id`),
   ADD KEY `motel_id` (`motel_id`);
 
 --
 -- Indexes for table `transactions`
 --
 ALTER TABLE `transactions`
+  ADD PRIMARY KEY (`id`),
   ADD KEY `from_user` (`from_user`),
   ADD KEY `to_user` (`to_user`),
   ADD KEY `booking_id` (`booking_id`);
@@ -301,30 +305,110 @@ ALTER TABLE `transactions`
 -- Indexes for table `users`
 --
 ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `email` (`email`);
 
 --
 -- Indexes for table `utilities`
--- 
--- (PRIMARY KEY already defined in CREATE TABLE)
+--
+ALTER TABLE `utilities`
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `wallets`
 --
--- (PRIMARY KEY already defined in CREATE TABLE)
 ALTER TABLE `wallets`
+  ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `user_id` (`user_id`);
 
 --
 -- Indexes for table `withdraw_requests`
 --
--- (PRIMARY KEY already defined in CREATE TABLE)
+ALTER TABLE `withdraw_requests`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`);
 
 --
 -- AUTO_INCREMENT for dumped tables
 --
 
+--
+-- AUTO_INCREMENT for table `bookings`
+--
+ALTER TABLE `bookings`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
+--
+-- AUTO_INCREMENT for table `categories`
+--
+ALTER TABLE `categories`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `districts`
+--
+ALTER TABLE `districts`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `favorites`
+--
+ALTER TABLE `favorites`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `motels`
+--
+ALTER TABLE `motels`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `motel_images`
+--
+ALTER TABLE `motel_images`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `payments`
+--
+ALTER TABLE `payments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `reviews`
+--
+ALTER TABLE `reviews`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `transactions`
+--
+ALTER TABLE `transactions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `users`
+--
+ALTER TABLE `users`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `utilities`
+--
+ALTER TABLE `utilities`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `wallets`
+--
+ALTER TABLE `wallets`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `withdraw_requests`
+--
+ALTER TABLE `withdraw_requests`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- Constraints for dumped tables
@@ -334,8 +418,8 @@ ALTER TABLE `wallets`
 -- Constraints for table `bookings`
 --
 ALTER TABLE `bookings`
-  ADD CONSTRAINT `bookings_ibfk_1` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `bookings_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `bookings_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `bookings_ibfk_2` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `favorites`
@@ -349,8 +433,8 @@ ALTER TABLE `favorites`
 --
 ALTER TABLE `motels`
   ADD CONSTRAINT `motels_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `motels_ibfk_3` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL,
-  ADD CONSTRAINT `motels_ibfk_4` FOREIGN KEY (`district_id`) REFERENCES `districts` (`id`) ON DELETE SET NULL;
+  ADD CONSTRAINT `motels_ibfk_2` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `motels_ibfk_3` FOREIGN KEY (`district_id`) REFERENCES `districts` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `motel_images`
