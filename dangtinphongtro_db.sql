@@ -28,7 +28,7 @@ SET time_zone = "+00:00";
 --
 
 CREATE TABLE `bookings` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
   `user_id` int(11) NOT NULL,
   `motel_id` int(11) NOT NULL,
   `deposit_amount` int(11) NOT NULL,
@@ -44,7 +44,7 @@ CREATE TABLE `bookings` (
 --
 
 CREATE TABLE `categories` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
   `name` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -55,7 +55,7 @@ CREATE TABLE `categories` (
 --
 
 CREATE TABLE `districts` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
   `name` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -66,7 +66,7 @@ CREATE TABLE `districts` (
 --
 
 CREATE TABLE `favorites` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
   `user_id` int(11) NOT NULL,
   `motel_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -78,7 +78,7 @@ CREATE TABLE `favorites` (
 --
 
 CREATE TABLE `motels` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
   `title` varchar(255) NOT NULL,
   `description` text DEFAULT NULL,
   `price` int(11) NOT NULL,
@@ -103,7 +103,7 @@ CREATE TABLE `motels` (
 --
 
 CREATE TABLE `motel_images` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
   `motel_id` int(11) DEFAULT NULL,
   `image_url` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -126,7 +126,7 @@ CREATE TABLE `motel_utilities` (
 --
 
 CREATE TABLE `payments` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
   `booking_id` int(11) NOT NULL,
   `amount` int(11) NOT NULL,
   `method` varchar(50) NOT NULL,
@@ -143,10 +143,10 @@ CREATE TABLE `payments` (
 --
 
 CREATE TABLE `reviews` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
   `user_id` int(11) NOT NULL,
   `motel_id` int(11) NOT NULL,
-  `rating` int(11) NOT NULL,
+  `rating` int(11) NOT NULL CHECK (rating BETWEEN 1 AND 5),
   `comment` text NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -158,13 +158,13 @@ CREATE TABLE `reviews` (
 --
 
 CREATE TABLE `transactions` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
   `from_user` int(11) NOT NULL,
   `to_user` int(11) NOT NULL,
   `amount` int(11) NOT NULL,
   `fee` int(11) NOT NULL DEFAULT 0,
   `type` enum('deposit','release','refund','withdraw') NOT NULL,
-  `booking_id` int(11) NOT NULL,
+  `booking_id` int(11),
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -175,9 +175,9 @@ CREATE TABLE `transactions` (
 --
 
 CREATE TABLE `users` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
   `name` varchar(255) NOT NULL,
-  `email` varchar(255) NOT NULL,
+  `email` varchar(255) NOT NULL UNIQUE,
   `password` varchar(255) NOT NULL,
   `phone` varchar(15) NOT NULL,
   `avatar` varchar(255) NOT NULL,
@@ -193,7 +193,7 @@ CREATE TABLE `users` (
 --
 
 CREATE TABLE `utilities` (
-  `id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
   `name` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -204,8 +204,8 @@ CREATE TABLE `utilities` (
 --
 
 CREATE TABLE `wallets` (
-  `id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
+  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `user_id` int(11) NOT NULL UNIQUE,
   `balance` bigint(20) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -215,11 +215,11 @@ CREATE TABLE `wallets` (
 -- Table structure for table `withdraw_request`
 --
 
-CREATE TABLE `withdraw_request` (
-  `id` int(11) NOT NULL,
+CREATE TABLE `withdraw_requests` (
+  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
   `user_id` int(11) NOT NULL,
   `amount` int(11) NOT NULL,
-  `status` enum('pending','approved','rejected') NOT NULL,
+  `status` enum('pending','approved','rejected') NOT NULL DEFAULT 'pending',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -231,17 +231,8 @@ CREATE TABLE `withdraw_request` (
 -- Indexes for table `bookings`
 --
 ALTER TABLE `bookings`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `user_id` (`user_id`),
-  ADD UNIQUE KEY `motel_id` (`motel_id`),
-  ADD KEY `user_id_2` (`user_id`),
-  ADD KEY `motel_id_2` (`motel_id`),
-  ADD KEY `user_id_3` (`user_id`),
-  ADD KEY `motel_id_3` (`motel_id`),
-  ADD KEY `user_id_4` (`user_id`),
-  ADD KEY `motel_id_4` (`motel_id`),
-  ADD KEY `user_id_5` (`user_id`),
-  ADD KEY `user_id_6` (`user_id`,`motel_id`);
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `motel_id` (`motel_id`);
 
 --
 -- Indexes for table `categories`
@@ -267,22 +258,15 @@ ALTER TABLE `favorites`
 -- Indexes for table `motels`
 --
 ALTER TABLE `motels`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `user_id` (`user_id`),
-  ADD UNIQUE KEY `category_id` (`category_id`),
-  ADD UNIQUE KEY `district_id` (`district_id`),
-  ADD KEY `user_id_2` (`user_id`),
-  ADD KEY `category_id_2` (`category_id`),
-  ADD KEY `district_id_2` (`district_id`);
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `category_id` (`category_id`),
+  ADD KEY `district_id` (`district_id`);
 
 --
 -- Indexes for table `motel_images`
 --
 ALTER TABLE `motel_images`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `motel_id` (`motel_id`),
-  ADD KEY `motel_id_2` (`motel_id`),
-  ADD KEY `motel_id_3` (`motel_id`);
+  ADD KEY `motel_id` (`motel_id`);
 
 --
 -- Indexes for table `motel_utilities`
@@ -295,9 +279,7 @@ ALTER TABLE `motel_utilities`
 -- Indexes for table `payments`
 --
 ALTER TABLE `payments`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `booking_id` (`booking_id`),
-  ADD KEY `booking_id_2` (`booking_id`);
+  ADD KEY `booking_id` (`booking_id`);
 
 --
 -- Indexes for table `reviews`
@@ -320,13 +302,12 @@ ALTER TABLE `transactions`
 -- Indexes for table `users`
 --
 ALTER TABLE `users`
-  ADD PRIMARY KEY (`id`);
+  ADD UNIQUE KEY `email` (`email`);
 
 --
 -- Indexes for table `utilities`
---
-ALTER TABLE `utilities`
-  ADD PRIMARY KEY (`id`);
+-- 
+-- (no additional indexes needed)
 
 --
 -- Indexes for table `wallets`
@@ -336,93 +317,16 @@ ALTER TABLE `wallets`
   ADD UNIQUE KEY `user_id` (`user_id`);
 
 --
--- Indexes for table `withdraw_request`
+-- Indexes for table `withdraw_requests`
 --
-ALTER TABLE `withdraw_request`
-  ADD PRIMARY KEY (`id`),
+ALTER TABLE `withdraw_requests`
   ADD KEY `user_id` (`user_id`);
 
 --
 -- AUTO_INCREMENT for dumped tables
 --
 
---
--- AUTO_INCREMENT for table `bookings`
---
-ALTER TABLE `bookings`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
---
--- AUTO_INCREMENT for table `categories`
---
-ALTER TABLE `categories`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `districts`
---
-ALTER TABLE `districts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `favorites`
---
-ALTER TABLE `favorites`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `motels`
---
-ALTER TABLE `motels`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `motel_images`
---
-ALTER TABLE `motel_images`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `payments`
---
-ALTER TABLE `payments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `reviews`
---
-ALTER TABLE `reviews`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `transactions`
---
-ALTER TABLE `transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `users`
---
-ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `utilities`
---
-ALTER TABLE `utilities`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `wallets`
---
-ALTER TABLE `wallets`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `withdraw_request`
---
-ALTER TABLE `withdraw_request`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- Constraints for dumped tables
@@ -432,74 +336,69 @@ ALTER TABLE `withdraw_request`
 -- Constraints for table `bookings`
 --
 ALTER TABLE `bookings`
-  ADD CONSTRAINT `bookings_ibfk_1` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`),
-  ADD CONSTRAINT `bookings_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
+  ADD CONSTRAINT `bookings_ibfk_1` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `bookings_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `favorites`
 --
 ALTER TABLE `favorites`
-  ADD CONSTRAINT `favorites_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
-  ADD CONSTRAINT `favorites_ibfk_2` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`);
+  ADD CONSTRAINT `favorites_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `favorites_ibfk_2` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `motels`
 --
 ALTER TABLE `motels`
-  ADD CONSTRAINT `motels_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
-  ADD CONSTRAINT `motels_ibfk_2` FOREIGN KEY (`id`) REFERENCES `reviews` (`motel_id`),
-  ADD CONSTRAINT `motels_ibfk_3` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`),
-  ADD CONSTRAINT `motels_ibfk_4` FOREIGN KEY (`district_id`) REFERENCES `districts` (`id`);
+  ADD CONSTRAINT `motels_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `motels_ibfk_3` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `motels_ibfk_4` FOREIGN KEY (`district_id`) REFERENCES `districts` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `motel_images`
 --
 ALTER TABLE `motel_images`
-  ADD CONSTRAINT `motel_images_ibfk_1` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`);
+  ADD CONSTRAINT `motel_images_ibfk_1` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `motel_utilities`
 --
 ALTER TABLE `motel_utilities`
-  ADD CONSTRAINT `motel_utilities_ibfk_1` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`);
+  ADD CONSTRAINT `motel_utilities_ibfk_1` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `motel_utilities_ibfk_2` FOREIGN KEY (`utility_id`) REFERENCES `utilities` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `payments`
 --
 ALTER TABLE `payments`
-  ADD CONSTRAINT `payments_ibfk_1` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`);
+  ADD CONSTRAINT `payments_ibfk_1` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `reviews`
+--
+ALTER TABLE `reviews`
+  ADD CONSTRAINT `reviews_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `reviews_ibfk_2` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `transactions`
 --
 ALTER TABLE `transactions`
-  ADD CONSTRAINT `transactions_ibfk_1` FOREIGN KEY (`from_user`) REFERENCES `users` (`id`),
-  ADD CONSTRAINT `transactions_ibfk_2` FOREIGN KEY (`to_user`) REFERENCES `users` (`id`),
-  ADD CONSTRAINT `transactions_ibfk_3` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`);
-
---
--- Constraints for table `users`
---
-ALTER TABLE `users`
-  ADD CONSTRAINT `users_ibfk_1` FOREIGN KEY (`id`) REFERENCES `reviews` (`user_id`);
-
---
--- Constraints for table `utilities`
---
-ALTER TABLE `utilities`
-  ADD CONSTRAINT `utilities_ibfk_1` FOREIGN KEY (`id`) REFERENCES `motel_utilities` (`utility_id`);
+  ADD CONSTRAINT `transactions_ibfk_1` FOREIGN KEY (`from_user`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `transactions_ibfk_2` FOREIGN KEY (`to_user`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `transactions_ibfk_3` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `wallets`
 --
 ALTER TABLE `wallets`
-  ADD CONSTRAINT `wallets_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
+  ADD CONSTRAINT `wallets_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `withdraw_request`
+-- Constraints for table `withdraw_requests`
 --
-ALTER TABLE `withdraw_request`
-  ADD CONSTRAINT `withdraw_request_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
+ALTER TABLE `withdraw_requests`
+  ADD CONSTRAINT `withdraw_requests_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
