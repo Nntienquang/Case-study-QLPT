@@ -101,9 +101,3 @@ $currentPage = 'users';
 <?php else: ?>
 <div class="alert alert-info">Không có người dùng nào. <a href="?controller=users&action=create">Tạo mới</a></div>
 <?php endif; ?>
-
-        </li>
-        <?php endfor; ?>
-    </ul>
-</nav>
-<?php endif; ?>

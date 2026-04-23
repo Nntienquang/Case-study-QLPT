@@ -26,9 +26,9 @@
     </nav>
 
     <div class="container-fluid">
-        <div class="row">
+        <div class="row g-0">
             <!-- Sidebar -->
-            <nav class="col-md-2 d-md-block bg-light sidebar">
+            <nav class="col-lg-2 sidebar">
                 <div class="position-sticky pt-3">
                     <ul class="nav flex-column">
                         <li class="nav-item">
