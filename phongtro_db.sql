@@ -486,3 +486,92 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+
+-- ================= USERS =================
+INSERT INTO users (id, name, email, password, role) VALUES
+(1, 'User 1', 'user1@gmail.com', '123', 'user'),
+(2, 'User 2', 'user2@gmail.com', '123', 'user'),
+(3, 'Owner 1', 'owner1@gmail.com', '123', 'owner'),
+(4, 'Admin', 'admin@gmail.com', '123', 'admin');
+
+-- ================= WALLETS =================
+INSERT INTO wallets (user_id, balance) VALUES
+(1, 5000000),
+(2, 3000000),
+(3, 0),
+(4, 0);
+
+-- ================= DISTRICTS =================
+INSERT INTO districts (id, name) VALUES
+(1, 'Quận 1'),
+(2, 'Quận 3'),
+(3, 'Quận 7');
+
+-- ================= CATEGORIES =================
+INSERT INTO categories (id, name) VALUES
+(1, 'Phòng trọ'),
+(2, 'Chung cư mini'),
+(3, 'Căn hộ');
+
+-- ================= MOTELS =================
+INSERT INTO motels (id, title, price, area, address, lat, lng, user_id, category_id, district_id, status) VALUES
+(1, 'Phòng Q1 giá rẻ', 2000000, 20, 'Q1 HCM', 10.7769, 106.7009, 3, 1, 1, 'approved'),
+(2, 'Phòng full nội thất', 3500000, 30, 'Q3 HCM', 10.7820, 106.6910, 3, 2, 2, 'approved'),
+(3, 'Căn hộ mini Q7', 5000000, 40, 'Q7 HCM', 10.7379, 106.7310, 3, 3, 3, 'approved');
+
+-- ================= MOTEL IMAGES =================
+INSERT INTO motel_images (motel_id, image_url) VALUES
+(1, 'img1.jpg'),
+(1, 'img2.jpg'),
+(2, 'img3.jpg'),
+(3, 'img4.jpg');
+
+-- ================= UTILITIES =================
+INSERT INTO utilities (id, name) VALUES
+(1, 'Wifi'),
+(2, 'Điều hòa'),
+(3, 'Máy giặt');
+
+-- ================= MOTEL UTILITIES =================
+INSERT INTO motel_utilities (motel_id, utility_id) VALUES
+(1, 1),
+(1, 2),
+(2, 1),
+(3, 1),
+(3, 2),
+(3, 3);
+
+-- ================= BOOKINGS =================
+INSERT INTO bookings (id, user_id, motel_id, deposit_amount, checkin_date, status) VALUES
+(1, 1, 1, 1000000, '2026-05-01', 'completed'),
+(2, 2, 2, 1500000, '2026-05-02', 'accepted'),
+(3, 1, 3, 2000000, '2026-05-03', 'pending');
+
+-- ================= PAYMENTS =================
+INSERT INTO payments (booking_id, amount, fee, method, transaction_code, status) VALUES
+(1, 1000000, 10000, 'vnpay', 'TXN001', 'released'),
+(2, 1500000, 15000, 'momo', 'TXN002', 'held'),
+(3, 2000000, 20000, 'vnpay', 'TXN003', 'pending');
+
+-- ================= TRANSACTIONS =================
+INSERT INTO transactions (from_user, to_user, amount, fee, type, booking_id) VALUES
+(1, NULL, 1000000, 0, 'deposit', 1),
+(NULL, 3, 990000, 10000, 'release', 1),
+(NULL, 4, 10000, 0, 'fee', 1);
+
+-- ================= WITHDRAW REQUEST =================
+INSERT INTO withdraw_requests (user_id, amount, status) VALUES
+(3, 500000, 'pending'),
+(3, 1000000, 'approved');
+
+-- ================= FAVORITES =================
+INSERT INTO favorites (user_id, motel_id) VALUES
+(1, 1),
+(1, 2),
+(2, 3);
+
+-- ================= REVIEWS =================
+INSERT INTO reviews (user_id, motel_id, rating, comment) VALUES
+(1, 1, 5, 'Phòng rất tốt'),
+(2, 2, 4, 'Ổn áp'),
+(1, 3, 3, 'Tạm được');
