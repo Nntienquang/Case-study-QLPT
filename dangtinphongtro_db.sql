@@ -230,6 +230,7 @@ CREATE TABLE `withdraw_requests` (
 --
 -- Indexes for table `bookings`
 --
+-- (PRIMARY KEY already defined in CREATE TABLE)
 ALTER TABLE `bookings`
   ADD KEY `user_id` (`user_id`),
   ADD KEY `motel_id` (`motel_id`);
@@ -237,26 +238,24 @@ ALTER TABLE `bookings`
 --
 -- Indexes for table `categories`
 --
-ALTER TABLE `categories`
-  ADD PRIMARY KEY (`id`);
+-- (PRIMARY KEY already defined in CREATE TABLE)
 
 --
 -- Indexes for table `districts`
 --
-ALTER TABLE `districts`
-  ADD PRIMARY KEY (`id`);
+-- (PRIMARY KEY already defined in CREATE TABLE)
 
 --
 -- Indexes for table `favorites`
 --
 ALTER TABLE `favorites`
-  ADD PRIMARY KEY (`id`),
   ADD KEY `user_id` (`user_id`),
   ADD KEY `motel_id` (`motel_id`);
 
 --
 -- Indexes for table `motels`
 --
+-- (PRIMARY KEY already defined in CREATE TABLE)
 ALTER TABLE `motels`
   ADD KEY `user_id` (`user_id`),
   ADD KEY `category_id` (`category_id`),
@@ -265,6 +264,7 @@ ALTER TABLE `motels`
 --
 -- Indexes for table `motel_images`
 --
+-- (PRIMARY KEY already defined in CREATE TABLE)
 ALTER TABLE `motel_images`
   ADD KEY `motel_id` (`motel_id`);
 
@@ -272,12 +272,13 @@ ALTER TABLE `motel_images`
 -- Indexes for table `motel_utilities`
 --
 ALTER TABLE `motel_utilities`
-  ADD PRIMARY KEY (`utility_id`,`motel_id`),
-  ADD KEY `motel_id` (`motel_id`);
+  ADD PRIMARY KEY (`motel_id`, `utility_id`),
+  ADD KEY `utility_id` (`utility_id`);
 
 --
 -- Indexes for table `payments`
 --
+-- (PRIMARY KEY already defined in CREATE TABLE)
 ALTER TABLE `payments`
   ADD KEY `booking_id` (`booking_id`);
 
@@ -285,7 +286,6 @@ ALTER TABLE `payments`
 -- Indexes for table `reviews`
 --
 ALTER TABLE `reviews`
-  ADD PRIMARY KEY (`id`),
   ADD KEY `user_id` (`user_id`),
   ADD KEY `motel_id` (`motel_id`);
 
@@ -293,7 +293,6 @@ ALTER TABLE `reviews`
 -- Indexes for table `transactions`
 --
 ALTER TABLE `transactions`
-  ADD PRIMARY KEY (`id`),
   ADD KEY `from_user` (`from_user`),
   ADD KEY `to_user` (`to_user`),
   ADD KEY `booking_id` (`booking_id`);
@@ -307,20 +306,19 @@ ALTER TABLE `users`
 --
 -- Indexes for table `utilities`
 -- 
--- (no additional indexes needed)
+-- (PRIMARY KEY already defined in CREATE TABLE)
 
 --
 -- Indexes for table `wallets`
 --
+-- (PRIMARY KEY already defined in CREATE TABLE)
 ALTER TABLE `wallets`
-  ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `user_id` (`user_id`);
 
 --
 -- Indexes for table `withdraw_requests`
 --
-ALTER TABLE `withdraw_requests`
-  ADD KEY `user_id` (`user_id`);
+-- (PRIMARY KEY already defined in CREATE TABLE)
 
 --
 -- AUTO_INCREMENT for dumped tables
