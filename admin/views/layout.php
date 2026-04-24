@@ -96,7 +96,7 @@
             </nav>
 
             <!-- Main Content -->
-            <main class="col-md-10 ms-sm-auto px-md-4">
+            <main class="col-lg-10 ms-auto px-md-4">
                 <?php if ($flash = getFlash()): ?>
                     <div class="alert alert-<?= $flash['type'] === 'error' ? 'danger' : $flash['type'] ?> alert-dismissible fade show mt-3" role="alert">
                         <?= $flash['message'] ?>
