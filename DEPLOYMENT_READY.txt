@@ -1,0 +1,400 @@
+🎉 **HỆ THỐNG ADMIN HOÀN CHỈNH + TÍNH NĂNG DOANH THU ADMIN**
+
+═══════════════════════════════════════════════════════════════════
+
+📌 **PHẦN 1: HỆ THỐNG ADMIN (ĐƯỢC XÂY DỰNG LẦN ĐẦU)**
+
+├─ ✅ Dashboard với thống kê
+├─ ✅ Quản lý phòng trọ (duyệt, ẩn, xóa + hình ảnh)
+├─ ✅ Quản lý người dùng (lọc theo vai trò)
+├─ ✅ Quản lý đơn đặt phòng (6 trạng thái)
+├─ ✅ Quản lý thanh toán (4 trạng thái)
+├─ ✅ Quản lý đánh giá
+├─ ✅ Quản lý danh mục, quận, tiện nghi
+└─ ✅ Responsive Bootstrap 5 + Login page + Setup script
+
+═══════════════════════════════════════════════════════════════════
+
+🆕 **PHẦN 2: TÍNH NĂNG DOANH THU ADMIN (VỪA THÊM)**
+
+💰 **ADMIN NHẬN 1% DOANH THU TỪ MỖI BOOKING**
+
+📊 Thành Phần Chính:
+1. core/AdminRevenue.php
+   └─ Model tracking doanh thu
+   └─ Tính 1% commission tự động
+   └─ Lấy stats & danh sách
+
+2. app/controller/AdminRevenueController.php
+   └─ Xử lý logic doanh thu
+   └─ Phân trang & stats
+
+3. public/admin/admin_revenue.php
+   └─ 📊 Page xem doanh thu
+   └─ 4 stat cards (tổng, tháng, số lần, trung bình)
+   └─ Bảng chi tiết commission
+   └─ Thông tin cơ chế + ví dụ
+
+═══════════════════════════════════════════════════════════════════
+
+🔄 **LUỒNG HOẠT ĐỘNG DOANH THU**
+
+1️⃣ Khách hàng đặt phòng 5.000.000 ₫
+   ↓
+2️⃣ Payment được tạo (status: pending)
+   ↓
+3️⃣ Admin vào Payments → Click "Release"
+   ↓
+4️⃣ System tự động:
+   ✓ Tính commission: 5.000.000 × 1% = 50.000 ₫
+   ✓ Tạo transaction record (type='commission')
+   ✓ Tạo transaction record cho chủ trọ (4.950.000 ₫)
+   ↓
+5️⃣ Admin vào "Doanh Thu Admin"
+   ↓
+6️⃣ Xem 50.000 ₫ được thêm vào doanh thu
+
+═══════════════════════════════════════════════════════════════════
+
+📋 **CÔNG THỨC TÍNH TOÁN**
+
+┌─────────────────────────────────────────────────────┐
+│ Giá Phòng: 5.000.000 ₫                             │
+│                                                     │
+│ Commission Admin (1%):  50.000 ₫ ✓                │
+│ Chủ Trọ Nhận (99%): 4.950.000 ₫ ✓                │
+│                                                     │
+│ Total:             5.000.000 ₫ ✓                 │
+└─────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════
+
+📱 **DASHBOARD CẬP NHẬT**
+
+Dashboard hiện tại có 8 stat cards:
+- Tổng phòng trọ + phân loại
+- Tổng người dùng
+- Đơn đặt phòng + phân loại
+- Tổng đánh giá
+
+🆕 Thêm 4 stat cards doanh thu:
+  💰 Tổng doanh thu (tất cả thời gian)
+  📈 Doanh thu tháng hiện tại
+  ✓ Số lần nhận commission
+  📊 Trung bình commission/lần
+
+═══════════════════════════════════════════════════════════════════
+
+🧭 **NAVIGATION UPDATED**
+
+Link "💰 Doanh Thu Admin" được thêm vào tất cả trang:
+
+✅ index.php (Dashboard)
+✅ motels.php / motel_detail.php
+✅ users.php / user_detail.php
+✅ bookings.php / booking_detail.php
+✅ payments.php / payment_detail.php
+✅ reviews.php / review_detail.php
+✅ categories.php
+✅ districts.php
+✅ utilities.php
+
+Tổng: 16+ trang được cập nhật sidebar
+
+═══════════════════════════════════════════════════════════════════
+
+📊 **PAGE DOANH THU ADMIN**
+
+URL: /admin/admin_revenue.php
+
+Nội dung:
+1. 4 Stat Cards (Top)
+   - Tổng doanh thu
+   - Doanh thu tháng
+   - Số commission
+   - Trung bình
+
+2. Bảng Commission Chi Tiết
+   - ID Booking
+   - Tên Phòng & Chủ Trọ
+   - Khách Hàng & Email
+   - Giá Phòng
+   - Commission (1%)
+   - Ngày Nhận
+
+3. Phân Trang: 10 item/page
+
+4. Thông Tin Bổ Sung
+   - Giải thích cơ chế
+   - Ví dụ tính toán
+
+═══════════════════════════════════════════════════════════════════
+
+💾 **DATABASE CHANGES**
+
+Sử dụng table transactions hiện tại:
+
+Thêm type='commission':
+┌──────────────────────────────────────────────────┐
+│ INSERT INTO transactions                         │
+│ (to_user, booking_id, amount, type, created_at)│
+│ VALUES                                           │
+│ (admin_id, booking_id, 50000, 'commission', NOW)│
+└──────────────────────────────────────────────────┘
+
+Không cần import lại database!
+
+═══════════════════════════════════════════════════════════════════
+
+🔐 **BẢOO MẬT**
+
+✅ Chỉ admin (role='admin') có quyền xem
+✅ Commission tính tự động (không thay đổi)
+✅ Admin ID lấy từ session (không giả mạo)
+✅ Tất cả transaction được log (audit trail)
+✅ Setup.php phải xóa (prevent unauthorized access)
+
+═══════════════════════════════════════════════════════════════════
+
+⚙️ **CẤU HÌNH (NẾU CẦN THAY ĐỔI)**
+
+Commission Rate (1%):
+📍 File: core/AdminRevenue.php, Line 10
+
+private $commission_rate = 0.01;  // 1%
+
+Để thay đổi thành 2%:
+private $commission_rate = 0.02;
+
+═══════════════════════════════════════════════════════════════════
+
+📄 **TÀI LIỆU**
+
+✅ ADMIN_REVENUE_FEATURE.md (500+ lines)
+   └─ Tài liệu chi tiết, công thức, FAQ
+
+✅ ADMIN_REVENUE_UPDATE.md (300+ lines)
+   └─ Hướng dẫn nhanh, cách sử dụng
+
+✅ INSTALLATION_COMPLETE.md (400+ lines)
+   └─ Checklist cài đặt, metrics, deployment
+
+✅ README.md (updated)
+✅ SUMMARY.md (updated)
+✅ QUICKSTART.md
+✅ TROUBLESHOOTING.md
+
+═══════════════════════════════════════════════════════════════════
+
+📊 **FILE STATISTICS**
+
+├─ Files Mới: 6
+├─ Files Cập Nhật: 17
+├─ Tổng Files: 49+
+├─ Lines Code Thêm: 500+
+├─ Lines Doc Thêm: 1000+
+└─ Tables Sử Dụng: transactions (existing)
+
+═══════════════════════════════════════════════════════════════════
+
+🚀 **SỬ DỤNG NGAY**
+
+1️⃣ Đăng nhập vào admin
+2️⃣ Vào Payments
+3️⃣ Tìm booking, click "Release"
+4️⃣ Commission tính tự động (1%)
+5️⃣ Vào "Doanh Thu Admin" để xem
+
+═══════════════════════════════════════════════════════════════════
+
+✅ **TÍNH NĂNG HOÀN CHỈNH**
+
+System có:
+✓ Admin authentication & session
+✓ Motel management (list, detail, approve, hide, delete)
+✓ User management (list, detail, delete)
+✓ Booking management (6 status types)
+✓ Payment management (4 status types)
+✓ Review management
+✓ Master data (categories, districts, utilities)
+✓ Dashboard with stats
+✓ Responsive design (Bootstrap 5)
+✓ **NEW: Admin Revenue Tracking (1% commission)**
+
+═══════════════════════════════════════════════════════════════════
+
+🎯 **NEXT STEPS (NẾU CẦN MỞ RỘNG)**
+
+- 📊 Biểu đồ doanh thu theo tháng
+- 📅 Lọc doanh thu theo ngày/tháng
+- 📧 Email thông báo commission mới
+- 💰 Tính năng rút tiền commission
+- 📈 Export report doanh thu
+- 🔄 Hoàn lại commission khi refund
+
+═══════════════════════════════════════════════════════════════════
+
+**Status**: ✅ **PRODUCTION READY - 100% COMPLETE**
+**Version**: 1.2 (Full ActivityLog + Email Notifications)
+**Date**: 25/04/2026
+**Last Updated**: Admin ActivityLog Integration Complete
+
+🎉 **HỆ THỐNG ADMIN HOÀN TOÀN HOÀN THIỆN**
+
+═══════════════════════════════════════════════════════════════════
+
+✅ **PHẦN 1: HỆ THỐNG ADMIN (HOÀN CHỈNH)**
+✅ **PHẦN 2: DOANH THU ADMIN 1% (HOÀN CHỈNH)**
+✅ **PHẦN 3: OWNER APPROVAL WORKFLOW (HOÀN CHỈNH)**
+✅ **PHẦN 4: REPORTS/MODERATION SYSTEM (HOÀN CHỈNH)**
+✅ **PHẦN 5: ACTIVITY LOGGING (HOÀN CHỈNH)**
+✅ **PHẦN 6: EMAIL NOTIFICATIONS (HOÀN CHỈNH)**
+
+═══════════════════════════════════════════════════════════════════
+
+📊 **TÍNH NĂNG CHÍNH**
+
+1. Admin Dashboard
+   - 12+ stat cards with real-time data
+   - Responsive Bootstrap 5 design
+
+2. Motel Management
+   - List, view, approve, hide, delete
+   - Image management
+   - Status tracking (pending/approved/hidden)
+   - ActivityLog integration ✅
+
+3. User Management
+   - List, view, delete users
+   - Role filtering (admin/owner/user)
+   - ActivityLog integration ✅
+
+4. Booking Management
+   - List, view bookings
+   - 6 status types
+   - Status updates with logging ✅
+
+5. Payment Management
+   - List, view payments
+   - 4 status types
+   - Auto-commission on release
+   - Status updates with logging ✅
+
+6. Review Management
+   - List, view, delete reviews
+   - Star ratings
+   - Delete with logging ✅
+
+7. Master Data (Categories, Districts, Utilities)
+   - Create, read, update, delete
+   - Full ActivityLog integration ✅
+
+8. Owner Approval Workflow
+   - Pending users management
+   - Approve/reject/block users
+   - Email notifications ✅
+   - ActivityLog tracking ✅
+
+9. Reports/Moderation
+   - Violation report management
+   - Status workflow (pending → investigating → resolved/rejected → closed)
+   - Admin notes & handling
+   - Full ActivityLog integration ✅
+
+10. Activity Logging (Audit Trail)
+    - All admin actions logged
+    - Change tracking (old/new values)
+    - 6-filter search (admin, entity, action, date range)
+    - IP address + user agent tracking
+    - Stats & analytics
+
+11. Admin Revenue
+    - 1% commission tracking
+    - Auto-calculation on payment release
+    - Monthly analytics
+    - 4 stat cards
+
+12. Email Notifications
+    - Owner approval emails
+    - Owner rejection emails with reason
+    - Account block notifications
+    - Fallback email logging system
+
+═══════════════════════════════════════════════════════════════════
+
+🔐 **SECURITY FEATURES**
+
+✅ All inputs escaped (real_escape_string)
+✅ Session-based authentication
+✅ BCRYPT password hashing
+✅ Role-based access control (admin only)
+✅ 30-minute session timeout
+✅ ActivityLog audit trail
+✅ Email logging for verification
+✅ SQL injection prevention
+
+═══════════════════════════════════════════════════════════════════
+
+📁 **PROJECT STRUCTURE**
+
+QuanLyPhongTro/
+├── app/
+│   └── controller/
+│       ├── MotelController.php ✅ (with logging)
+│       ├── UserController.php ✅ (with logging)
+│       ├── BookingController.php ✅ (with logging)
+│       ├── PaymentController.php ✅ (with logging)
+│       ├── ReviewController.php ✅ (with logging)
+│       ├── CategoryController.php ✅ (with logging)
+│       ├── DistrictController.php ✅ (with logging)
+│       ├── UtilityController.php ✅ (with logging)
+│       ├── ReportController.php ✅ (with logging)
+│       ├── UserApprovalController.php ✅ (with email)
+│       ├── ActivityLogController.php ✅
+│       └── DashboardController.php
+├── core/
+│   ├── Database.php
+│   ├── Auth.php
+│   ├── Motel.php
+│   ├── User.php
+│   ├── Booking.php
+│   ├── Payment.php
+│   ├── Review.php
+│   ├── Category.php
+│   ├── District.php
+│   ├── Utility.php
+│   ├── AdminRevenue.php
+│   ├── Report.php
+│   ├── ActivityLog.php ✅
+│   ├── EmailNotification.php ✅ (NEW)
+│   └── OwnerStatusMiddleware.php ✅ (NEW)
+├── public/admin/
+│   ├── index.php (Dashboard)
+│   ├── motels.php ✅
+│   ├── motel_detail.php ✅
+│   ├── users.php ✅
+│   ├── user_detail.php ✅
+│   ├── bookings.php ✅
+│   ├── booking_detail.php ✅
+│   ├── payments.php ✅
+│   ├── payment_detail.php ✅
+│   ├── reviews.php ✅
+│   ├── review_detail.php ✅
+│   ├── categories.php ✅
+│   ├── districts.php ✅
+│   ├── utilities.php ✅
+│   ├── user_approvals.php ✅ (with email)
+│   ├── user_detail.php ✅
+│   ├── reports.php ✅ (with logging)
+│   ├── report_detail.php ✅
+│   ├── activity_logs.php ✅
+│   ├── activity_log_detail.php ✅
+│   ├── admin_revenue.php ✅
+│   ├── sidebar.php (14 menu items)
+│   ├── login.php
+│   └── setup.php
+└── config/
+    ├── database.php
+    └── constants.php
+
+═══════════════════════════════════════════════════════════════════
