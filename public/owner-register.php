@@ -5,25 +5,13 @@
 @require_once '../core/User.php';
 @require_once '../app/controller/AuthController.php';
 
-session_start();
-
-// Check if already logged in
-if (isset($_SESSION['user_id'])) {
-    /** @var mysqli $conn */
-    $db = new Database($conn);
-    $auth = new AuthController($db->getConnection());
-    if ($auth->checkSessionTimeout()) {
-        header('Location: ./dashboard.php');
-        exit;
-    }
-}
-
 // Initialize
 /** @var mysqli $conn */
 $db = new Database($conn);
+$activityLog = null; // No activity logging for public registration
 $auth = new AuthController($db->getConnection());
 
-$message = ""; 
+$message = "";
 $type = "";
 $name = "";
 $email = "";
@@ -33,17 +21,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $email = $_POST["email"] ?? "";
     $password = $_POST["password"] ?? "";
     $confirm = $_POST["confirm"] ?? "";
-    $role = $_POST["role"] ?? "user";
+    $phone = $_POST["phone"] ?? "";
     
-    // Call AuthController
-    $result = $auth->register($name, $email, $password, $confirm, $role);
+    // Call AuthController with 'owner' role
+    $result = $auth->register($name, $email, $password, $confirm, 'owner');
     
     $message = $result['message'];
     $type = $result['success'] ? 'success' : 'error';
     
     // Clear form on success
     if ($result['success']) {
-        $name = $email = $password = $confirm = "";
+        $name = $email = $password = $confirm = $phone = "";
     }
 }
 ?>
@@ -51,11 +39,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Đăng Ký - QuanLyPhongTro</title>
-
+<title>Đăng Ký Làm Chủ Phòng - QuanLyPhongTro</title>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-
 <style>
 * { box-sizing: border-box; }
 
@@ -75,7 +60,7 @@ body {
     padding: 40px;
     border-radius: 16px;
     width: 100%;
-    max-width: 450px;
+    max-width: 500px;
     box-shadow: 0 20px 40px rgba(0,0,0,0.2);
 }
 
@@ -95,26 +80,17 @@ h2 {
 
 .input-group {
     position: relative;
-    margin-bottom: 15px;
-}
-
-.input-group label {
-    display: block;
-    color: #333;
-    font-weight: 500;
-    margin-bottom: 6px;
-    font-size: 13px;
+    margin-bottom: 20px;
 }
 
 .input-group i {
     position: absolute;
-    top: 35px;
+    top: 12px;
     left: 12px;
     color: #888;
-    font-size: 14px;
 }
 
-input, select {
+input, textarea {
     width: 100%;
     padding: 12px 12px 12px 35px;
     border: 1px solid #ddd;
@@ -125,27 +101,34 @@ input, select {
     font-family: inherit;
 }
 
-input:focus, select:focus {
+input:focus, textarea:focus {
     border-color: #667eea;
     box-shadow: 0 0 5px rgba(102,126,234,0.3);
+}
+
+textarea {
+    resize: vertical;
+    min-height: 80px;
+    padding-left: 12px;
 }
 
 button {
     width: 100%;
     padding: 12px;
-    margin-top: 10px;
     background: linear-gradient(135deg, #667eea, #764ba2);
     color: white;
     border: none;
     border-radius: 8px;
     cursor: pointer;
+    font-size: 16px;
     font-weight: 600;
+    margin-top: 10px;
     transition: 0.3s;
 }
 
 button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(102,126,234,0.4);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
 }
 
 .msg {
@@ -154,19 +137,50 @@ button:hover {
     border-radius: 8px;
     font-size: 14px;
     text-align: center;
-    border: 1px solid;
 }
 
 .error {
     background: #ffe6e6;
     color: #c00;
-    border-color: #ffcccc;
+    border: 1px solid #ffcccc;
 }
 
 .success {
     background: #e6ffe6;
     color: #060;
-    border-color: #ccffcc;
+    border: 1px solid #ccffcc;
+}
+
+.benefits {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.benefits h4 {
+    color: #667eea;
+    margin-bottom: 15px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.benefits ul {
+    list-style: none;
+    padding: 0;
+}
+
+.benefits li {
+    padding: 8px 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.benefits li:before {
+    content: "✓ ";
+    color: #667eea;
+    font-weight: 600;
+    margin-right: 10px;
 }
 
 .links {
@@ -177,13 +191,29 @@ button:hover {
 }
 
 .links a {
-    text-decoration: none;
     color: #667eea;
+    text-decoration: none;
     font-weight: 600;
 }
 
 .links a:hover {
     text-decoration: underline;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+@media (max-width: 600px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .container {
+        padding: 25px;
+    }
 }
 </style>
 </head>
@@ -191,8 +221,8 @@ button:hover {
 <body>
 
 <div class="container">
-    <h2>👤 Đăng Ký Tài Khoản</h2>
-    <p class="subtitle">Tìm kiếm phòng trọ hoàn hảo của bạn</p>
+    <h2>🏠 Đăng Ký Làm Chủ Phòng</h2>
+    <p class="subtitle">Bắt đầu kinh doanh và quản lý phòng trọ của bạn</p>
 
     <?php if($message != ""): ?>
         <div class="msg <?php echo $type; ?>">
@@ -200,37 +230,50 @@ button:hover {
         </div>
     <?php endif; ?>
 
+    <div class="benefits">
+        <h4>✨ Lợi Ích Khi Là Chủ Phòng:</h4>
+        <ul>
+            <li>Quản lý phòng của bạn dễ dàng</li>
+            <li>Tiếp cận hàng ngàn người thuê</li>
+            <li>Nhận thông báo về các yêu cầu mới</li>
+            <li>Nhận thanh toán an toàn</li>
+            <li>Hỗ trợ khách hàng 24/7</li>
+        </ul>
+    </div>
+
     <form method="POST">
-        <div class="input-group">
-            <label for="name">Họ Tên</label>
-            <i class="fa fa-user"></i>
-            <input type="text" id="name" name="name" placeholder="Nhập họ tên của bạn" value="<?php echo htmlspecialchars($name ?? ""); ?>" required>
+        <div class="form-row">
+            <div class="input-group">
+                <i class="fa fa-user"></i>
+                <input type="text" name="name" placeholder="Họ tên" value="<?php echo htmlspecialchars($name); ?>" required>
+            </div>
+            <div class="input-group">
+                <i class="fa fa-phone"></i>
+                <input type="tel" name="phone" placeholder="Số điện thoại">
+            </div>
         </div>
 
         <div class="input-group">
-            <label for="email">Email</label>
             <i class="fa fa-envelope"></i>
-            <input type="email" id="email" name="email" placeholder="Nhập email của bạn" value="<?php echo htmlspecialchars($email ?? ""); ?>" required>
+            <input type="email" name="email" placeholder="Email" value="<?php echo htmlspecialchars($email); ?>" required>
         </div>
 
         <div class="input-group">
-            <label for="password">Mật Khẩu</label>
             <i class="fa fa-lock"></i>
-            <input type="password" id="password" name="password" placeholder="Ít nhất 6 ký tự" required>
+            <input type="password" name="password" placeholder="Mật khẩu (ít nhất 6 ký tự)" required>
         </div>
 
         <div class="input-group">
-            <label for="confirm">Xác Nhận Mật Khẩu</label>
             <i class="fa fa-lock"></i>
-            <input type="password" id="confirm" name="confirm" placeholder="Xác nhận mật khẩu" required>
+            <input type="password" name="confirm" placeholder="Xác nhận mật khẩu" required>
         </div>
 
-        <button type="submit">🚀 Tạo Tài Khoản</button>
+        <button type="submit">Tạo Tài Khoản Chủ Phòng</button>
     </form>
 
     <div class="links">
-        ✅ Đã có tài khoản? <a href="login.php">Đăng nhập ngay</a><br>
-        🏠 Bạn là chủ phòng? <a href="owner-register.php">Đăng ký tại đây</a>
+        Đã có tài khoản? <a href="login.php">Đăng Nhập</a><br>
+        Bạn là người thuê? <a href="register.php">Đăng Ký Tìm Phòng</a>
     </div>
 </div>
 

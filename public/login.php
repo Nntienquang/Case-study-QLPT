@@ -1,13 +1,14 @@
 <?php
-require_once 'config/database.php';
-require_once 'config/constants.php';
-require_once 'core/Database.php';
-require_once 'core/User.php';
-require_once 'app/controller/AuthController.php';
+@require_once '../config/database.php';
+@require_once '../config/constants.php';
+@require_once '../core/Database.php';
+@require_once '../core/User.php';
+@require_once '../app/controller/AuthController.php';
 
 session_start();
 
 // Initialize
+/** @var mysqli $conn */
 $db = new Database($conn);
 $auth = new AuthController($db->getConnection());
 
@@ -16,9 +17,11 @@ if (isset($_SESSION['user_id'])) {
     if ($auth->checkSessionTimeout()) {
         // Redirect based on role
         if ($_SESSION['role'] === 'admin') {
-            header("Location: public/admin/index.php");
+            header("Location: ./admin/index.php");
+        } elseif ($_SESSION['role'] === 'owner') {
+            header("Location: ./owner/dashboard.php");
         } else {
-            header("Location: public/index.php");
+            header("Location: ./user/dashboard.php");
         }
         exit();
     }
@@ -40,9 +43,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Redirect on success
     if ($result['success']) {
         if ($result['role'] === 'admin') {
-            header("Location: public/admin/index.php");
+            header("Location: ./admin/index.php");
+        } elseif ($result['role'] === 'owner') {
+            header("Location: ./owner/dashboard.php");
         } else {
-            header("Location: public/index.php");
+            header("Location: ./user/dashboard.php");
         }
         exit();
     }
