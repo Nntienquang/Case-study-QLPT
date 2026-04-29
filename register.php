@@ -2,24 +2,36 @@
 require_once 'database.php';
 
 $message = ""; 
+$type = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
-    $name = $_POST["name"];
-    $email = $_POST["email"];
-    $password = $_POST["password"];
-    $confirm = $_POST["confirm"];
-    $role = $_POST["role"];
+    $name = trim($_POST["name"] ?? "");
+    $email = trim($_POST["email"] ?? "");
+    $password = $_POST["password"] ?? "";
+    $confirm = $_POST["confirm"] ?? "";
+    $role = $_POST["role"] ?? "user";
 
+    // Validation
     if (empty($name) || empty($email) || empty($password)) {
         $message = "Vui lòng nhập đầy đủ thông tin";
+        $type = "error";
+
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $message = "Email không hợp lệ";
+        $type = "error";
+
+    } elseif (strlen($password) < 6) {
+        $message = "Mật khẩu phải có ít nhất 6 ký tự";
+        $type = "error";
 
     } elseif ($password !== $confirm) {
         $message = "Mật khẩu không khớp";
+        $type = "error";
 
     } else {
 
-        // kiểm tra email đã tồn tại chưa
+        // Check if email exists
         $check = $conn->prepare("SELECT id FROM users WHERE email = ?");
         $check->bind_param("s", $email);
         $check->execute();
@@ -27,18 +39,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         if ($check->num_rows > 0) {
             $message = "Email này đã tồn tại";
+            $type = "error";
 
         } else {
 
-            // thêm dữ liệu vào database
-            $stmt = $conn->prepare("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)");
-            $stmt->bind_param("ssss", $name, $email, $password, $role);
+            // Hash password with bcrypt
+            $hashed_password = password_hash($password, PASSWORD_BCRYPT);
+
+            // Insert into database
+            $stmt = $conn->prepare("INSERT INTO users (name, email, password, role, status, created_at) VALUES (?, ?, ?, ?, 'pending', NOW())");
+            $stmt->bind_param("ssss", $name, $email, $hashed_password, $role);
 
             if ($stmt->execute()) {
-                header("Location: register.php?success=1");
-                exit();
+                $message = "Đăng ký thành công! Vui lòng đăng nhập";
+                $type = "success";
+                // Clear form
+                $name = $email = $password = $confirm = "";
             } else {
-                echo "Lỗi: " . $stmt->error;
+                $message = "Lỗi hệ thống: " . htmlspecialchars($stmt->error);
+                $type = "error";
             }
         }
     }
@@ -111,6 +130,33 @@ button {
     border-radius: 8px;
     cursor: pointer;
 }
+
+.msg {
+    margin: 10px 0;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.error {
+    background: #ffe6e6;
+    color: #c00;
+}
+
+.success {
+    background: #e6ffe6;
+    color: #060;
+}
+
+.links {
+    margin-top: 15px;
+    font-size: 14px;
+}
+
+.links a {
+    text-decoration: none;
+    color: #667eea;
+}
 </style>
 </head>
 
@@ -118,27 +164,28 @@ button {
 
 <div class="container">
     <h2>Đăng ký tài khoản</h2>
-<?php
-if ($message != "") {
-    echo "<p>$message</p>";
-}
-?>
+
+    <?php if($message != ""): ?>
+        <p class="msg <?php echo $type; ?>">
+            <?php echo htmlspecialchars($message); ?>
+        </p>
+    <?php endif; ?>
 
     <form method="POST" enctype="multipart/form-data">
 
         <div class="input-group">
             <i class="fa fa-user"></i>
-            <input type="text" name="name" placeholder="Họ và Tên" required>
+            <input type="text" name="name" placeholder="Họ và Tên" value="<?php echo htmlspecialchars($name ?? ""); ?>" required>
         </div>
 
         <div class="input-group">
             <i class="fa fa-envelope"></i>
-            <input type="email" name="email" placeholder="Email" required>
+            <input type="email" name="email" placeholder="Email" value="<?php echo htmlspecialchars($email ?? ""); ?>" required>
         </div>
 
        <div class="input-group">
     <i class="fa fa-lock"></i>
-    <input type="password" name="password" placeholder="Mật khẩu" required>
+    <input type="password" name="password" placeholder="Mật khẩu (ít nhất 6 ký tự)" required>
 </div>
 
 <div class="input-group">
@@ -161,8 +208,9 @@ if ($message != "") {
         <button type="submit">Đăng ký</button>
     </form>
 
-    <br>
-    <a href="login.php">Quay lại đăng nhập</a>
+    <div class="links">
+        <a href="login.php">Quay lại đăng nhập</a>
+    </div>
 </div>
 
 <script>

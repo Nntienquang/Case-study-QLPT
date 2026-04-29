@@ -5,16 +5,27 @@ session_start();
 $message = "";
 $type = ""; 
 
+// Check session timeout (30 minutes)
+if (isset($_SESSION["user_id"])) {
+    if (time() - $_SESSION["login_time"] > 1800) {
+        session_destroy();
+    } else {
+        $_SESSION["login_time"] = time();
+        header("Location: public/index.php");
+        exit();
+    }
+}
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = $_POST["email"];
-    $password = $_POST["password"];
+    $email = trim($_POST["email"] ?? "");
+    $password = $_POST["password"] ?? "";
 
     if (empty($email) || empty($password)) {
         $message = "Vui lòng nhập đầy đủ thông tin";
         $type = "error";
 
     } else {
-        $stmt = $conn->prepare("SELECT id, name, password, role FROM users WHERE email = ?");
+        $stmt = $conn->prepare("SELECT id, name, password, role, status FROM users WHERE email = ?");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -22,24 +33,33 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         if ($result->num_rows == 1) {
             $user = $result->fetch_assoc();
 
-            
-            if ($password == $user["password"]) {
-
+            // Check status (only approved/pending users for user role, pending/approved for owner)
+            if ($user["status"] === "blocked") {
+                $message = "Tài khoản của bạn bị khóa";
+                $type = "error";
+            } else if ($user["status"] === "rejected" && $user["role"] === "owner") {
+                $message = "Đăng ký owner của bạn bị từ chối";
+                $type = "error";
+            } else if (password_verify($password, $user["password"])) {
+                // Login success
                 $_SESSION["user_id"] = $user["id"];
                 $_SESSION["name"] = $user["name"];
                 $_SESSION["role"] = $user["role"];
+                $_SESSION["login_time"] = time();
 
-                $message = "Đăng nhập thành công";
-                $type = "success";
-
-               
+                if ($user["role"] === "admin") {
+                    header("Location: public/admin/index.php");
+                } else {
+                    header("Location: public/index.php");
+                }
+                exit();
             } else {
-                $message = "Đăng nhập thất bại: Sai mật khẩu hoặc email";
+                $message = "Email hoặc mật khẩu không chính xác";
                 $type = "error";
             }
 
         } else {
-            $message = "Đăng nhập thất bại: Sai mật khẩu hoặc email";
+            $message = "Email hoặc mật khẩu không chính xác";
             $type = "error";
         }
     }
@@ -179,26 +199,22 @@ button:hover {
         <i class="fa-solid fa-user-lock"></i>
     </div>
 
-     <?php if(isset($_GET['success'])): ?>
-    <p class="success">Đăng ký thành công! Vui long  đăng nhập</p>
-<?php endif; ?>
-
     <h2>Đăng nhập</h2>
     <?php if($message != ""): ?>
     <p class="msg <?php echo $type; ?>">
-        <?php echo $message; ?>
+        <?php echo htmlspecialchars($message); ?>
     </p>
 <?php endif; ?>
 
     <form method="POST">
         <div class="input-group">
             <i class="fa fa-envelope"></i>
-            <input type="email" name="email" placeholder="Email">
+            <input type="email" name="email" placeholder="Email" required>
         </div>
 
         <div class="input-group">
             <i class="fa fa-lock"></i>
-            <input type="Password" name="password" placeholder="mật khẩu">
+            <input type="password" name="password" placeholder="Mật khẩu" required>
         </div>
 
         <button type="submit">Đăng nhập</button>

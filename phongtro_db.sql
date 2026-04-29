@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 25, 2026 at 12:55 PM
+-- Generation Time: Apr 29, 2026 at 11:00 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -36,13 +36,6 @@ CREATE TABLE `bookings` (
   `status` enum('pending','paid','accepted','completed','rejected','cancelled') DEFAULT 'pending',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `bookings`
---
-
-INSERT INTO `bookings` (`id`, `user_id`, `motel_id`, `deposit_amount`, `checkin_date`, `status`, `created_at`) VALUES
-(2, 2, 2, 1500000, '2026-05-02', 'accepted', '2026-04-23 08:39:47');
 
 -- --------------------------------------------------------
 
@@ -96,13 +89,6 @@ CREATE TABLE `favorites` (
   `motel_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `favorites`
---
-
-INSERT INTO `favorites` (`id`, `user_id`, `motel_id`) VALUES
-(3, 2, 3);
-
 -- --------------------------------------------------------
 
 --
@@ -128,15 +114,6 @@ CREATE TABLE `motels` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `motels`
---
-
-INSERT INTO `motels` (`id`, `title`, `description`, `price`, `area`, `address`, `lat`, `lng`, `phone`, `user_id`, `category_id`, `district_id`, `status`, `count_view`, `created_at`, `updated_at`) VALUES
-(1, 'Phòng Q1 giá rẻ', NULL, 2000000, 20, 'Q1 HCM', 10.77690000, 106.70090000, NULL, 3, 1, 1, 'approved', 0, '2026-04-23 08:39:47', NULL),
-(2, 'Phòng full nội thất', NULL, 3500000, 30, 'Q3 HCM', 10.78200000, 106.69100000, NULL, 3, 2, 2, 'approved', 0, '2026-04-23 08:39:47', NULL),
-(3, 'Căn hộ mini Q7', NULL, 5000000, 40, 'Q7 HCM', 10.73790000, 106.73100000, NULL, 3, 3, 3, 'approved', 0, '2026-04-23 08:39:47', NULL);
-
 -- --------------------------------------------------------
 
 --
@@ -149,16 +126,6 @@ CREATE TABLE `motel_images` (
   `image_url` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `motel_images`
---
-
-INSERT INTO `motel_images` (`id`, `motel_id`, `image_url`) VALUES
-(1, 1, 'img1.jpg'),
-(2, 1, 'img2.jpg'),
-(3, 2, 'img3.jpg'),
-(4, 3, 'img4.jpg');
-
 -- --------------------------------------------------------
 
 --
@@ -169,18 +136,6 @@ CREATE TABLE `motel_utilities` (
   `motel_id` int(11) NOT NULL,
   `utility_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `motel_utilities`
---
-
-INSERT INTO `motel_utilities` (`motel_id`, `utility_id`) VALUES
-(1, 1),
-(1, 2),
-(2, 1),
-(3, 1),
-(3, 2),
-(3, 3);
 
 -- --------------------------------------------------------
 
@@ -199,13 +154,6 @@ CREATE TABLE `payments` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `payments`
---
-
-INSERT INTO `payments` (`id`, `booking_id`, `amount`, `fee`, `method`, `transaction_code`, `status`, `created_at`) VALUES
-(2, 2, 1500000, 15000, 'momo', 'TXN002', 'held', '2026-04-23 08:39:47');
-
 -- --------------------------------------------------------
 
 --
@@ -220,13 +168,6 @@ CREATE TABLE `reviews` (
   `comment` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `reviews`
---
-
-INSERT INTO `reviews` (`id`, `user_id`, `motel_id`, `rating`, `comment`, `created_at`) VALUES
-(2, 2, 2, 4, 'Ổn áp', '2026-04-23 08:39:47');
 
 -- --------------------------------------------------------
 
@@ -251,7 +192,7 @@ CREATE TABLE `transactions` (
 
 INSERT INTO `transactions` (`id`, `from_user`, `to_user`, `amount`, `fee`, `type`, `booking_id`, `created_at`) VALUES
 (1, NULL, NULL, 1000000, 0, 'deposit', NULL, '2026-04-23 08:39:47'),
-(2, NULL, 3, 990000, 10000, 'release', NULL, '2026-04-23 08:39:47'),
+(2, NULL, NULL, 990000, 10000, 'release', NULL, '2026-04-23 08:39:47'),
 (3, NULL, 4, 10000, 0, 'fee', NULL, '2026-04-23 08:39:47');
 
 -- --------------------------------------------------------
@@ -265,22 +206,23 @@ CREATE TABLE `users` (
   `name` varchar(100) DEFAULT NULL,
   `email` varchar(150) DEFAULT NULL,
   `password` varchar(255) DEFAULT NULL,
+  `reset_token` varchar(64) DEFAULT NULL,
+  `reset_expires` datetime DEFAULT NULL,
   `phone` varchar(20) DEFAULT NULL,
   `avatar` varchar(255) DEFAULT NULL,
   `role` enum('user','owner','admin') DEFAULT 'user',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `status` int(1) NOT NULL DEFAULT 0 COMMENT '0: Pending, 1: Active, 2: Banned.'
+  `status` varchar(20) DEFAULT 'pending' COMMENT 'pending, approved, rejected, blocked'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `name`, `email`, `password`, `phone`, `avatar`, `role`, `created_at`, `status`) VALUES
-(2, 'User 2', 'user2@gmail.com', '123', NULL, NULL, 'user', '2026-04-23 08:39:47', 0),
-(3, 'Owner 1', 'owner1@gmail.com', '123', NULL, NULL, 'owner', '2026-04-23 08:39:47', 0),
-(4, 'Admin', 'admin@gmail.com', '123', NULL, NULL, 'admin', '2026-04-23 08:39:47', 0),
-(5, 'Admin', 'admin123@gmail.com', '$2y$10$o5dhV8yry9Mmv7Cgdq6ZjuWCGYRSNLrReh5G4DTh4eN/xFYhvTNCy', '', NULL, 'admin', '2026-04-25 10:29:43', 0);
+INSERT INTO `users` (`id`, `name`, `email`, `password`, `reset_token`, `reset_expires`, `phone`, `avatar`, `role`, `created_at`, `status`) VALUES
+(2, 'User 2', 'user2@gmail.com', '123', NULL, NULL, NULL, NULL, 'user', '2026-04-23 08:39:47', '0'),
+(4, 'Admin', 'admin@gmail.com', '123', NULL, NULL, NULL, NULL, 'admin', '2026-04-23 08:39:47', '0'),
+(5, 'Admin', 'admin123@gmail.com', '$2y$10$o5dhV8yry9Mmv7Cgdq6ZjuWCGYRSNLrReh5G4DTh4eN/xFYhvTNCy', NULL, NULL, '', NULL, 'admin', '2026-04-25 10:29:43', '0');
 
 -- --------------------------------------------------------
 
@@ -320,7 +262,6 @@ CREATE TABLE `wallets` (
 
 INSERT INTO `wallets` (`id`, `user_id`, `balance`) VALUES
 (2, 2, 3000000),
-(3, 3, -500000),
 (4, 4, 0);
 
 -- --------------------------------------------------------
@@ -336,14 +277,6 @@ CREATE TABLE `withdraw_requests` (
   `status` enum('pending','approved','rejected') DEFAULT 'pending',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `withdraw_requests`
---
-
-INSERT INTO `withdraw_requests` (`id`, `user_id`, `amount`, `status`, `created_at`) VALUES
-(1, 3, 500000, 'approved', '2026-04-23 08:39:47'),
-(2, 3, 1000000, 'approved', '2026-04-23 08:39:47');
 
 --
 -- Indexes for dumped tables
@@ -429,7 +362,10 @@ ALTER TABLE `transactions`
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `email` (`email`);
+  ADD UNIQUE KEY `email` (`email`),
+  ADD KEY `idx_reset_token` (`reset_token`),
+  ADD KEY `idx_email` (`email`),
+  ADD KEY `idx_status` (`status`);
 
 --
 -- Indexes for table `utilities`
