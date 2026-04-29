@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 29, 2026 at 11:00 AM
+-- Generation Time: Apr 29, 2026 at 11:11 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -212,7 +212,7 @@ CREATE TABLE `users` (
   `avatar` varchar(255) DEFAULT NULL,
   `role` enum('user','owner','admin') DEFAULT 'user',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `status` varchar(20) DEFAULT 'pending' COMMENT 'pending, approved, rejected, blocked'
+  `status` varchar(20) DEFAULT 'pending'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -220,9 +220,9 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `name`, `email`, `password`, `reset_token`, `reset_expires`, `phone`, `avatar`, `role`, `created_at`, `status`) VALUES
-(2, 'User 2', 'user2@gmail.com', '123', NULL, NULL, NULL, NULL, 'user', '2026-04-23 08:39:47', '0'),
-(4, 'Admin', 'admin@gmail.com', '123', NULL, NULL, NULL, NULL, 'admin', '2026-04-23 08:39:47', '0'),
-(5, 'Admin', 'admin123@gmail.com', '$2y$10$o5dhV8yry9Mmv7Cgdq6ZjuWCGYRSNLrReh5G4DTh4eN/xFYhvTNCy', NULL, NULL, '', NULL, 'admin', '2026-04-25 10:29:43', '0');
+(2, 'User 2', 'user2@gmail.com', '$2y$10$Tz5aQmEKDmn/eGMa3tFX6.xd8RJDCWxR5LXnKr3RjpZ/DQbZ7YYFy', NULL, NULL, NULL, NULL, 'user', '2026-04-23 08:39:47', 'pending'),
+(4, 'Admin', 'admin@gmail.com', '$2y$10$Tz5aQmEKDmn/eGMa3tFX6.xd8RJDCWxR5LXnKr3RjpZ/DQbZ7YYFy', NULL, NULL, NULL, NULL, 'admin', '2026-04-23 08:39:47', 'pending'),
+(5, 'Admin', 'admin123@gmail.com', '$2y$10$o5dhV8yry9Mmv7Cgdq6ZjuWCGYRSNLrReh5G4DTh4eN/xFYhvTNCy', NULL, NULL, '', NULL, 'admin', '2026-04-25 10:29:43', 'pending');
 
 -- --------------------------------------------------------
 
@@ -363,9 +363,11 @@ ALTER TABLE `transactions`
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `email` (`email`),
+  ADD UNIQUE KEY `unique_email` (`email`),
   ADD KEY `idx_reset_token` (`reset_token`),
   ADD KEY `idx_email` (`email`),
-  ADD KEY `idx_status` (`status`);
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_role` (`role`);
 
 --
 -- Indexes for table `utilities`

@@ -1,48 +1,32 @@
 <?php
-require_once 'database.php';
+require_once 'config/database.php';
+require_once 'config/constants.php';
+require_once 'core/Database.php';
+require_once 'core/User.php';
+require_once 'app/controller/AuthController.php';
+
+// Initialize
+$db = new Database($conn);
+$auth = new AuthController($db->getConnection());
 
 $message = "";
 $type = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = trim($_POST["email"] ?? "");
-
-    if (empty($email)) {
-        $message = "Vui lòng nhập email của bạn";
-        $type = "error";
-
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $message = "Email không hợp lệ";
-        $type = "error";
-
-    } else {
-
-        // Check if user exists
-        $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
-        $stmt->bind_param("s", $email);
-        $stmt->execute();
-        $result = $stmt->get_result();
-
-        if ($result->num_rows > 0) {
-            // Generate reset token
-            $reset_token = bin2hex(random_bytes(32));
-            $token_expires = date("Y-m-d H:i:s", strtotime("+1 hour"));
-
-            // Store token in database
-            $update = $conn->prepare("UPDATE users SET reset_token = ?, reset_expires = ? WHERE email = ?");
-            $update->bind_param("sss", $reset_token, $token_expires, $email);
-            $update->execute();
-
-            // Email sending would go here (for now just show success)
-            $message = "Email xác nhận đã được gửi. Vui lòng kiểm tra hộp thư của bạn";
-            $type = "success";
-
-        } else {
-            // Don't reveal if email exists (security)
-            $message = "Nếu email này tồn tại, bạn sẽ nhận được email xác nhận";
-            $type = "success";
-        }
-    }
+    $email = $_POST["email"] ?? "";
+    
+    // Call AuthController
+    $result = $auth->requestPasswordReset($email);
+    
+    $message = $result['message'];
+    $type = $result['success'] ? 'success' : 'error';
+    
+    // TODO: Gửi email reset nếu token tồn tại
+    // if ($result['success'] && isset($result['token'])) {
+    //     $reset_url = $result['reset_url'];
+    //     // require_once 'core/EmailNotification.php';
+    //     // EmailNotification::sendPasswordReset($email, $reset_url);
+    // }
 }
 ?>
 <html lang="en">

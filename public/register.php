@@ -1,65 +1,35 @@
 <?php
-require_once 'database.php';
+require_once 'config/database.php';
+require_once 'config/constants.php';
+require_once 'core/Database.php';
+require_once 'core/User.php';
+require_once 'app/controller/AuthController.php';
+
+// Initialize
+$db = new Database($conn);
+$auth = new AuthController($db->getConnection());
 
 $message = ""; 
 $type = "";
+$name = "";
+$email = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-
-    $name = trim($_POST["name"] ?? "");
-    $email = trim($_POST["email"] ?? "");
+    $name = $_POST["name"] ?? "";
+    $email = $_POST["email"] ?? "";
     $password = $_POST["password"] ?? "";
     $confirm = $_POST["confirm"] ?? "";
     $role = $_POST["role"] ?? "user";
-
-    // Validation
-    if (empty($name) || empty($email) || empty($password)) {
-        $message = "Vui lòng nhập đầy đủ thông tin";
-        $type = "error";
-
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $message = "Email không hợp lệ";
-        $type = "error";
-
-    } elseif (strlen($password) < 6) {
-        $message = "Mật khẩu phải có ít nhất 6 ký tự";
-        $type = "error";
-
-    } elseif ($password !== $confirm) {
-        $message = "Mật khẩu không khớp";
-        $type = "error";
-
-    } else {
-
-        // Check if email exists
-        $check = $conn->prepare("SELECT id FROM users WHERE email = ?");
-        $check->bind_param("s", $email);
-        $check->execute();
-        $check->store_result();
-
-        if ($check->num_rows > 0) {
-            $message = "Email này đã tồn tại";
-            $type = "error";
-
-        } else {
-
-            // Hash password with bcrypt
-            $hashed_password = password_hash($password, PASSWORD_BCRYPT);
-
-            // Insert into database
-            $stmt = $conn->prepare("INSERT INTO users (name, email, password, role, status, created_at) VALUES (?, ?, ?, ?, 'pending', NOW())");
-            $stmt->bind_param("ssss", $name, $email, $hashed_password, $role);
-
-            if ($stmt->execute()) {
-                $message = "Đăng ký thành công! Vui lòng đăng nhập";
-                $type = "success";
-                // Clear form
-                $name = $email = $password = $confirm = "";
-            } else {
-                $message = "Lỗi hệ thống: " . htmlspecialchars($stmt->error);
-                $type = "error";
-            }
-        }
+    
+    // Call AuthController
+    $result = $auth->register($name, $email, $password, $confirm, $role);
+    
+    $message = $result['message'];
+    $type = $result['success'] ? 'success' : 'error';
+    
+    // Clear form on success
+    if ($result['success']) {
+        $name = $email = $password = $confirm = "";
     }
 }
 ?>

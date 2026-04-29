@@ -1,25 +1,33 @@
 <?php
-require_once 'database.php';
+require_once 'config/database.php';
+require_once 'config/constants.php';
+require_once 'core/Database.php';
+require_once 'core/User.php';
+require_once 'app/controller/AuthController.php';
+
+// Initialize
+$db = new Database($conn);
+$auth = new AuthController($db->getConnection());
 
 $message = "";
 $type = "";
 $token = $_GET["token"] ?? "";
-$user_id = null;
+$show_form = !empty($token);
 
-// Validate token
-if (!empty($token)) {
-    $stmt = $conn->prepare("SELECT id FROM users WHERE reset_token = ? AND reset_expires > NOW()");
-    $stmt->bind_param("s", $token);
-    $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result->num_rows == 0) {
-        $message = "Liên kết không hợp lệ hoặc đã hết hạn";
-        $type = "error";
-        $token = ""; // Invalid token
-    } else {
-        $user = $result->fetch_assoc();
-        $user_id = $user["id"];
+// Validate token on page load
+if ($show_form) {
+    $stmt = $db->getConnection()->prepare("SELECT id FROM users WHERE reset_token = ? AND reset_expires > NOW()");
+    if ($stmt) {
+        $stmt->bind_param("s", $token);
+        $stmt->execute();
+        $stmt->store_result();
+        
+        if ($stmt->num_rows == 0) {
+            $message = "Liên kết không hợp lệ hoặc đã hết hạn";
+            $type = "error";
+            $show_form = false;
+        }
+        $stmt->close();
     }
 }
 
@@ -27,33 +35,15 @@ if (!empty($token)) {
 if ($_SERVER["REQUEST_METHOD"] == "POST" && !empty($token)) {
     $password = $_POST["password"] ?? "";
     $confirm = $_POST["confirm"] ?? "";
-
-    if (empty($password) || empty($confirm)) {
-        $message = "Vui lòng nhập đầy đủ mật khẩu";
-        $type = "error";
-
-    } elseif (strlen($password) < 6) {
-        $message = "Mật khẩu phải có ít nhất 6 ký tự";
-        $type = "error";
-
-    } elseif ($password !== $confirm) {
-        $message = "Mật khẩu không khớp";
-        $type = "error";
-
-    } else {
-        // Hash and update password
-        $hashed = password_hash($password, PASSWORD_BCRYPT);
-        $update = $conn->prepare("UPDATE users SET password = ?, reset_token = NULL, reset_expires = NULL WHERE id = ?");
-        $update->bind_param("si", $hashed, $user_id);
-
-        if ($update->execute()) {
-            $message = "Mật khẩu đã được thay đổi thành công. Vui lòng đăng nhập";
-            $type = "success";
-            $token = ""; // Clear token to hide form
-        } else {
-            $message = "Lỗi hệ thống: " . htmlspecialchars($update->error);
-            $type = "error";
-        }
+    
+    // Call AuthController
+    $result = $auth->resetPassword($token, $password, $confirm);
+    
+    $message = $result['message'];
+    $type = $result['success'] ? 'success' : 'error';
+    
+    if ($result['success']) {
+        $show_form = false; // Hide form on success
     }
 }
 ?>
@@ -176,7 +166,7 @@ button:hover {
         </p>
     <?php endif; ?>
 
-    <?php if(!empty($token)): ?>
+    <?php if(!empty($show_form)): ?>
     <form method="POST">
         <div class="input-group">
             <i class="fa fa-lock"></i>

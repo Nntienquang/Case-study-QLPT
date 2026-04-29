@@ -1,67 +1,50 @@
 <?php
-require_once 'database.php';
+require_once 'config/database.php';
+require_once 'config/constants.php';
+require_once 'core/Database.php';
+require_once 'core/User.php';
+require_once 'app/controller/AuthController.php';
+
 session_start();
 
-$message = "";
-$type = ""; 
+// Initialize
+$db = new Database($conn);
+$auth = new AuthController($db->getConnection());
 
-// Check session timeout (30 minutes)
-if (isset($_SESSION["user_id"])) {
-    if (time() - $_SESSION["login_time"] > 1800) {
-        session_destroy();
-    } else {
-        $_SESSION["login_time"] = time();
-        header("Location: public/index.php");
+// Check if already logged in
+if (isset($_SESSION['user_id'])) {
+    if ($auth->checkSessionTimeout()) {
+        // Redirect based on role
+        if ($_SESSION['role'] === 'admin') {
+            header("Location: public/admin/index.php");
+        } else {
+            header("Location: public/index.php");
+        }
         exit();
     }
 }
 
+$message = "";
+$type = "";
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $email = trim($_POST["email"] ?? "");
+    $email = $_POST["email"] ?? "";
     $password = $_POST["password"] ?? "";
-
-    if (empty($email) || empty($password)) {
-        $message = "Vui lòng nhập đầy đủ thông tin";
-        $type = "error";
-
-    } else {
-        $stmt = $conn->prepare("SELECT id, name, password, role, status FROM users WHERE email = ?");
-        $stmt->bind_param("s", $email);
-        $stmt->execute();
-        $result = $stmt->get_result();
-
-        if ($result->num_rows == 1) {
-            $user = $result->fetch_assoc();
-
-            // Check status (only approved/pending users for user role, pending/approved for owner)
-            if ($user["status"] === "blocked") {
-                $message = "Tài khoản của bạn bị khóa";
-                $type = "error";
-            } else if ($user["status"] === "rejected" && $user["role"] === "owner") {
-                $message = "Đăng ký owner của bạn bị từ chối";
-                $type = "error";
-            } else if (password_verify($password, $user["password"])) {
-                // Login success
-                $_SESSION["user_id"] = $user["id"];
-                $_SESSION["name"] = $user["name"];
-                $_SESSION["role"] = $user["role"];
-                $_SESSION["login_time"] = time();
-
-                if ($user["role"] === "admin") {
-                    header("Location: public/admin/index.php");
-                } else {
-                    header("Location: public/index.php");
-                }
-                exit();
-            } else {
-                $message = "Email hoặc mật khẩu không chính xác";
-                $type = "error";
-            }
-
+    
+    // Call AuthController
+    $result = $auth->login($email, $password);
+    
+    $message = $result['message'];
+    $type = $result['success'] ? 'success' : 'error';
+    
+    // Redirect on success
+    if ($result['success']) {
+        if ($result['role'] === 'admin') {
+            header("Location: public/admin/index.php");
         } else {
-            $message = "Email hoặc mật khẩu không chính xác";
-            $type = "error";
+            header("Location: public/index.php");
         }
+        exit();
     }
 }
 ?>
