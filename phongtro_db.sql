@@ -31,9 +31,6 @@ CREATE TABLE `bookings` (
   `id` int(11) NOT NULL,
   `user_id` int(11) DEFAULT NULL,
   `motel_id` int(11) DEFAULT NULL,
-  `check_in_date` date DEFAULT NULL,
-  `check_out_date` date DEFAULT NULL,
-  `note` text DEFAULT NULL,
   `deposit_amount` int(11) DEFAULT NULL,
   `checkin_date` date DEFAULT NULL,
   `status` enum('pending','paid','accepted','completed','rejected','cancelled') DEFAULT 'pending',
@@ -225,8 +222,7 @@ CREATE TABLE `users` (
 INSERT INTO `users` (`id`, `name`, `email`, `password`, `reset_token`, `reset_expires`, `phone`, `avatar`, `role`, `created_at`, `status`) VALUES
 (2, 'User 2', 'user2@gmail.com', '123', NULL, NULL, NULL, NULL, 'user', '2026-04-23 08:39:47', '0'),
 (4, 'Admin', 'admin@gmail.com', '123', NULL, NULL, NULL, NULL, 'admin', '2026-04-23 08:39:47', '0'),
-(5, 'Admin', 'admin123@gmail.com', '$2y$10$o5dhV8yry9Mmv7Cgdq6ZjuWCGYRSNLrReh5G4DTh4eN/xFYhvTNCy', NULL, NULL, '', NULL, 'admin', '2026-04-25 10:29:43', '0'),
-(6, 'Chủ trọ 1', 'owner@gmail.com', '$2y$10$gU1LggXMYCfg4nEh8NZIv.hcB1L1kTxSJMsiMuwvy2mCzRdact4i2', NULL, NULL, NULL, NULL, 'owner', '2026-04-29 09:27:23', 'pending');
+(5, 'Admin', 'admin123@gmail.com', '$2y$10$o5dhV8yry9Mmv7Cgdq6ZjuWCGYRSNLrReh5G4DTh4eN/xFYhvTNCy', NULL, NULL, '', NULL, 'admin', '2026-04-25 10:29:43', '0');
 
 -- --------------------------------------------------------
 
@@ -455,7 +451,7 @@ ALTER TABLE `transactions`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `utilities`
