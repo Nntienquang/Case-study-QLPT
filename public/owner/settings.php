@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 @require_once '../../config/database.php';
 @require_once '../../core/Database.php';
 
@@ -29,16 +29,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
     $confirm_password = $_POST['confirm_password'] ?? '';
 
     if (empty($old_password) || empty($new_password)) {
-        $message = 'Vui lòng điền đầy đủ mật khẩu!';
+        $message = 'Vui lÃ²ng Ä‘iá»n Ä‘áº§y Ä‘á»§ máº­t kháº©u!';
         $message_type = 'danger';
     } elseif (strlen($new_password) < 6) {
-        $message = 'Mật khẩu mới phải ít nhất 6 ký tự!';
+        $message = 'Máº­t kháº©u má»›i pháº£i Ã­t nháº¥t 6 kÃ½ tá»±!';
         $message_type = 'danger';
     } elseif ($new_password !== $confirm_password) {
-        $message = 'Mật khẩu xác nhận không khớp!';
+        $message = 'Máº­t kháº©u xÃ¡c nháº­n khÃ´ng khá»›p!';
         $message_type = 'danger';
     } elseif (!password_verify($old_password, $user['password'])) {
-        $message = 'Mật khẩu cũ không chính xác!';
+        $message = 'Máº­t kháº©u cÅ© khÃ´ng chÃ­nh xÃ¡c!';
         $message_type = 'danger';
     } else {
         $hashed = password_hash($new_password, PASSWORD_BCRYPT);
@@ -46,10 +46,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
         $stmt->bind_param("si", $hashed, $owner_id);
         
         if ($stmt->execute()) {
-            $message = 'Mật khẩu đã thay đổi thành công!';
+            $message = 'Máº­t kháº©u Ä‘Ã£ thay Ä‘á»•i thÃ nh cÃ´ng!';
             $message_type = 'success';
         } else {
-            $message = 'Lỗi thay đổi mật khẩu!';
+            $message = 'Lá»—i thay Ä‘á»•i máº­t kháº©u!';
             $message_type = 'danger';
         }
         $stmt->close();
@@ -61,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cài Đặt - Owner</title>
+    <title>CÃ i Äáº·t - Owner</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -81,6 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
         .danger-zone { background: #fff5f5; border-left: 4px solid #d32f2f; padding: 20px; border-radius: 6px; }
         .danger-zone h6 { color: #d32f2f; font-weight: 700; }
     </style>
+    <link href="../assets/css/modern.css" rel="stylesheet">
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
@@ -97,16 +98,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
                 <div class="sidebar">
                     <h5>Menu</h5>
                     <a href="dashboard.php"><i class="fas fa-chart-line"></i> Dashboard</a>
-                    <a href="profile.php"><i class="fas fa-user"></i> Hồ Sơ</a>
-                    <a href="settings.php" class="active"><i class="fas fa-cog"></i> Cài Đặt</a>
-                    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Đăng Xuất</a>
+                    <a href="profile.php"><i class="fas fa-user"></i> Há»“ SÆ¡</a>
+                    <a href="settings.php" class="active"><i class="fas fa-cog"></i> CÃ i Äáº·t</a>
+                    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> ÄÄƒng Xuáº¥t</a>
                 </div>
             </div>
 
             <div class="col-lg-9">
                 <div class="main-content">
                     <h1 style="font-size: 28px; font-weight: 700; margin-bottom: 30px;">
-                        <i class="fas fa-cog"></i> Cài Đặt
+                        <i class="fas fa-cog"></i> CÃ i Äáº·t
                     </h1>
 
                     <?php if ($message): ?>
@@ -118,34 +119,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
 
                     <!-- Password Change -->
                     <div class="settings-card">
-                        <h5><i class="fas fa-lock"></i> Thay Đổi Mật Khẩu</h5>
+                        <h5><i class="fas fa-lock"></i> Thay Äá»•i Máº­t Kháº©u</h5>
                         <form method="POST">
                             <div class="mb-3">
-                                <label class="form-label">Mật Khẩu Cũ</label>
+                                <label class="form-label">Máº­t Kháº©u CÅ©</label>
                                 <input type="password" name="old_password" class="form-control" required>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Mật Khẩu Mới</label>
+                                <label class="form-label">Máº­t Kháº©u Má»›i</label>
                                 <input type="password" name="new_password" class="form-control" required>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Xác Nhận Mật Khẩu Mới</label>
+                                <label class="form-label">XÃ¡c Nháº­n Máº­t Kháº©u Má»›i</label>
                                 <input type="password" name="confirm_password" class="form-control" required>
                             </div>
                             <button type="submit" name="change_password" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Thay Đổi Mật Khẩu
+                                <i class="fas fa-save"></i> Thay Äá»•i Máº­t Kháº©u
                             </button>
                         </form>
                     </div>
 
                     <!-- Notification Settings -->
                     <div class="settings-card">
-                        <h5><i class="fas fa-bell"></i> Thông Báo</h5>
+                        <h5><i class="fas fa-bell"></i> ThÃ´ng BÃ¡o</h5>
                         <div class="mb-3">
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" id="email_notify" checked>
                                 <label class="form-check-label" for="email_notify">
-                                    Nhận thông báo qua email
+                                    Nháº­n thÃ´ng bÃ¡o qua email
                                 </label>
                             </div>
                         </div>
@@ -153,7 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" id="booking_notify" checked>
                                 <label class="form-check-label" for="booking_notify">
-                                    Thông báo khi có đơn đặt phòng
+                                    ThÃ´ng bÃ¡o khi cÃ³ Ä‘Æ¡n Ä‘áº·t phÃ²ng
                                 </label>
                             </div>
                         </div>
@@ -161,20 +162,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
 
                     <!-- Account Information -->
                     <div class="settings-card">
-                        <h5><i class="fas fa-info-circle"></i> Thông Tin Tài Khoản</h5>
+                        <h5><i class="fas fa-info-circle"></i> ThÃ´ng Tin TÃ i Khoáº£n</h5>
                         <div class="info-item" style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 10px;">
                             <strong>Email:</strong> <?php echo htmlspecialchars($user['email']); ?><br>
-                            <small style="color: #666;">Không thể thay đổi email. Liên hệ admin nếu cần.</small>
+                            <small style="color: #666;">KhÃ´ng thá»ƒ thay Ä‘á»•i email. LiÃªn há»‡ admin náº¿u cáº§n.</small>
                         </div>
                     </div>
 
                     <!-- Danger Zone -->
                     <div class="settings-card">
                         <div class="danger-zone">
-                            <h6><i class="fas fa-exclamation-triangle"></i> Vùng Nguy Hiểm</h6>
-                            <p style="color: #666; margin-top: 10px;">Thao tác này sẽ xóa vĩnh viễn tài khoản của bạn và tất cả dữ liệu.</p>
+                            <h6><i class="fas fa-exclamation-triangle"></i> VÃ¹ng Nguy Hiá»ƒm</h6>
+                            <p style="color: #666; margin-top: 10px;">Thao tÃ¡c nÃ y sáº½ xÃ³a vÄ©nh viá»…n tÃ i khoáº£n cá»§a báº¡n vÃ  táº¥t cáº£ dá»¯ liá»‡u.</p>
                             <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
-                                <i class="fas fa-trash-alt"></i> Xóa Tài Khoản
+                                <i class="fas fa-trash-alt"></i> XÃ³a TÃ i Khoáº£n
                             </button>
                         </div>
                     </div>
@@ -188,17 +189,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title"><i class="fas fa-exclamation-circle"></i> Xóa Tài Khoản</h5>
+                    <h5 class="modal-title"><i class="fas fa-exclamation-circle"></i> XÃ³a TÃ i Khoáº£n</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p><strong>Cảnh báo:</strong> Thao tác này không thể hoàn tác!</p>
-                    <p>Toàn bộ dữ liệu tài khoản của bạn sẽ bị xóa vĩnh viễn.</p>
-                    <p>Bạn có chắc muốn tiếp tục?</p>
+                    <p><strong>Cáº£nh bÃ¡o:</strong> Thao tÃ¡c nÃ y khÃ´ng thá»ƒ hoÃ n tÃ¡c!</p>
+                    <p>ToÃ n bá»™ dá»¯ liá»‡u tÃ i khoáº£n cá»§a báº¡n sáº½ bá»‹ xÃ³a vÄ©nh viá»…n.</p>
+                    <p>Báº¡n cÃ³ cháº¯c muá»‘n tiáº¿p tá»¥c?</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="button" class="btn btn-danger">Xóa Tài Khoản</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Há»§y</button>
+                    <button type="button" class="btn btn-danger">XÃ³a TÃ i Khoáº£n</button>
                 </div>
             </div>
         </div>

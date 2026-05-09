@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 @require_once '../../config/database.php';
 @require_once '../../core/Database.php';
 
@@ -44,7 +44,7 @@ $stmt->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đơn Đặt của Tôi - QuanLyPhongTro</title>
+    <title>ÄÆ¡n Äáº·t cá»§a TÃ´i - QuanLyPhongTro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -66,6 +66,7 @@ $stmt->close();
         .badge-cancelled { background: #f8d7da; color: #721c24; }
         .empty-state { text-align: center; padding: 60px 30px; background: white; border-radius: 12px; }
     </style>
+    <link href="../assets/css/modern.css" rel="stylesheet">
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
@@ -82,18 +83,18 @@ $stmt->close();
                 <div class="sidebar">
                     <h5>Menu</h5>
                     <a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
-                    <a href="search.php"><i class="fas fa-search"></i> Tìm Phòng</a>
-                    <a href="my-bookings.php" class="active"><i class="fas fa-calendar"></i> Đơn Đặt của Tôi</a>
-                    <a href="saved-motels.php"><i class="fas fa-heart"></i> Phòng Yêu Thích</a>
-                    <a href="profile.php"><i class="fas fa-user"></i> Hồ Sơ</a>
-                    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Đăng Xuất</a>
+                    <a href="search.php"><i class="fas fa-search"></i> TÃ¬m PhÃ²ng</a>
+                    <a href="my-bookings.php" class="active"><i class="fas fa-calendar"></i> ÄÆ¡n Äáº·t cá»§a TÃ´i</a>
+                    <a href="saved-motels.php"><i class="fas fa-heart"></i> PhÃ²ng YÃªu ThÃ­ch</a>
+                    <a href="profile.php"><i class="fas fa-user"></i> Há»“ SÆ¡</a>
+                    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> ÄÄƒng Xuáº¥t</a>
                 </div>
             </div>
 
             <div class="col-lg-9">
                 <div class="main-content">
                     <h1 style="font-size: 28px; font-weight: 700; margin-bottom: 30px;">
-                        <i class="fas fa-calendar"></i> Đơn Đặt của Tôi
+                        <i class="fas fa-calendar"></i> ÄÆ¡n Äáº·t cá»§a TÃ´i
                     </h1>
 
                     <?php if (count($bookings) > 0): ?>
@@ -107,7 +108,7 @@ $stmt->close();
                                 </div>
                                 <div class="booking-info">
                                     <div class="booking-info-item">
-                                        <strong>Địa Chỉ:</strong><br><?php echo htmlspecialchars($booking['address']); ?>
+                                        <strong>Äá»‹a Chá»‰:</strong><br><?php echo htmlspecialchars($booking['address']); ?>
                                     </div>
                                     <div class="booking-info-item">
                                         <strong>Check-in:</strong><br><?php echo date('d/m/Y', strtotime($booking['check_in_date'])); ?>
@@ -116,10 +117,10 @@ $stmt->close();
                                         <strong>Check-out:</strong><br><?php echo date('d/m/Y', strtotime($booking['check_out_date'])); ?>
                                     </div>
                                     <div class="booking-info-item">
-                                        <strong>Đặt Cọc:</strong><br><span style="color: #667eea; font-weight: 700;"><?php echo number_format($booking['deposit_amount']); ?> VNĐ</span>
+                                        <strong>Äáº·t Cá»c:</strong><br><span style="color: #667eea; font-weight: 700;"><?php echo number_format($booking['deposit_amount']); ?> VNÄ</span>
                                     </div>
                                     <div class="booking-info-item">
-                                        <strong>Ngày Đặt:</strong><br><?php echo date('d/m/Y H:i', strtotime($booking['created_at'])); ?>
+                                        <strong>NgÃ y Äáº·t:</strong><br><?php echo date('d/m/Y H:i', strtotime($booking['created_at'])); ?>
                                     </div>
                                 </div>
                             </div>
@@ -139,9 +140,9 @@ $stmt->close();
                     <?php else: ?>
                         <div class="empty-state">
                             <div style="font-size: 60px; color: #ddd; margin-bottom: 20px;"><i class="fas fa-inbox"></i></div>
-                            <p style="color: #999; margin-bottom: 20px;">Bạn chưa đặt phòng nào</p>
+                            <p style="color: #999; margin-bottom: 20px;">Báº¡n chÆ°a Ä‘áº·t phÃ²ng nÃ o</p>
                             <a href="search.php" class="btn btn-primary">
-                                <i class="fas fa-search"></i> Tìm Phòng
+                                <i class="fas fa-search"></i> TÃ¬m PhÃ²ng
                             </a>
                         </div>
                     <?php endif; ?>

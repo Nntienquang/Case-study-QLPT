@@ -5,303 +5,401 @@
 session_start();
 
 /** @var mysqli $conn */
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'user') {
+if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'user') {
     header('Location: ../login.php');
     exit;
 }
 
 $db = new Database($conn);
-$user_id = $_SESSION['user_id'];
-$user_name = $_SESSION['name'];
+$user_id = (int)$_SESSION['user_id'];
+$user_name = $_SESSION['name'] ?? $_SESSION['user_name'] ?? 'User';
 
-// Get search parameters
-$keyword = $_GET['keyword'] ?? '';
-$district = $_GET['district'] ?? '';
+$keyword = trim($_GET['keyword'] ?? '');
+$district_id = $_GET['district_id'] ?? ($_GET['district'] ?? '');
+$category_id = $_GET['category_id'] ?? ($_GET['category'] ?? '');
 $min_price = $_GET['min_price'] ?? '';
 $max_price = $_GET['max_price'] ?? '';
-$category = $_GET['category'] ?? '';
+$area_min = $_GET['area_min'] ?? '';
+$available_from = $_GET['available_from'] ?? '';
+$sort = $_GET['sort'] ?? 'featured';
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $limit = 12;
 $offset = ($page - 1) * $limit;
+$flash = '';
 
-// Get districts and categories for filter
-$stmt = $db->prepare("SELECT id, name FROM districts ORDER BY name");
+$stmt = $db->prepare('SELECT id, name FROM districts ORDER BY name');
 $stmt->execute();
 $districts_list = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-$stmt = $db->prepare("SELECT id, name FROM categories ORDER BY name");
+$stmt = $db->prepare('SELECT id, name FROM categories ORDER BY name');
 $stmt->execute();
 $categories_list = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// Build search query
-$query = "SELECT m.*, d.name as district_name FROM motels m LEFT JOIN districts d ON m.district_id = d.id WHERE m.status = 'approved'";
+if (isset($_GET['save_search'])) {
+    $hasFilter = $keyword !== '' || $district_id !== '' || $category_id !== '' || $min_price !== '' || $max_price !== '' || $area_min !== '';
+    if ($hasFilter) {
+        $searchName = $keyword !== '' ? $keyword : 'Bo loc phong tro';
+        $stmt = $db->prepare('
+            INSERT INTO saved_searches (user_id, name, keyword, district_id, category_id, price_min, price_max, area_min, alert_enabled)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+        ');
+        $districtValue = $district_id !== '' ? (int)$district_id : null;
+        $categoryValue = $category_id !== '' ? (int)$category_id : null;
+        $minValue = $min_price !== '' ? (int)$min_price : null;
+        $maxValue = $max_price !== '' ? (int)$max_price : null;
+        $areaValue = $area_min !== '' ? (int)$area_min : null;
+        $stmt->bind_param('issiiiii', $user_id, $searchName, $keyword, $districtValue, $categoryValue, $minValue, $maxValue, $areaValue);
+        if ($stmt->execute()) {
+            $flash = 'Da luu bo loc tim kiem. Sau nay he thong co the dung bo loc nay de tao thong bao phong moi.';
+        }
+        $stmt->close();
+    }
+}
+
+$fromSql = '
+    FROM motels m
+    LEFT JOIN districts d ON m.district_id = d.id
+    LEFT JOIN categories c ON m.category_id = c.id
+    LEFT JOIN users u ON m.user_id = u.id
+    WHERE m.status = "approved"
+';
+$where = '';
 $params = [];
-$types = "";
+$types = '';
 
-if (!empty($keyword)) {
-    $query .= " AND (m.title LIKE ? OR m.description LIKE ? OR m.address LIKE ?)";
-    $kw = "%$keyword%";
+if ($keyword !== '') {
+    $where .= ' AND (m.title LIKE ? OR m.description LIKE ? OR m.address LIKE ?)';
+    $kw = '%' . $keyword . '%';
     array_push($params, $kw, $kw, $kw);
-    $types .= "sss";
+    $types .= 'sss';
 }
-if (!empty($district)) {
-    $query .= " AND m.district_id = ?";
-    array_push($params, (int)$district);
-    $types .= "i";
+if ($district_id !== '') {
+    $where .= ' AND m.district_id = ?';
+    $params[] = (int)$district_id;
+    $types .= 'i';
 }
-if (!empty($min_price)) {
-    $query .= " AND m.price >= ?";
-    array_push($params, (int)$min_price);
-    $types .= "i";
+if ($category_id !== '') {
+    $where .= ' AND m.category_id = ?';
+    $params[] = (int)$category_id;
+    $types .= 'i';
 }
-if (!empty($max_price)) {
-    $query .= " AND m.price <= ?";
-    array_push($params, (int)$max_price);
-    $types .= "i";
+if ($min_price !== '') {
+    $where .= ' AND m.price >= ?';
+    $params[] = (int)$min_price;
+    $types .= 'i';
 }
-if (!empty($category)) {
-    $query .= " AND m.category_id = ?";
-    array_push($params, (int)$category);
-    $types .= "i";
+if ($max_price !== '') {
+    $where .= ' AND m.price <= ?';
+    $params[] = (int)$max_price;
+    $types .= 'i';
+}
+if ($area_min !== '') {
+    $where .= ' AND m.area >= ?';
+    $params[] = (float)$area_min;
+    $types .= 'd';
+}
+if ($available_from !== '') {
+    $where .= ' AND (m.available_from IS NULL OR m.available_from <= ?)';
+    $params[] = $available_from;
+    $types .= 's';
 }
 
-// Get total count
-$count_query = $query;
-$stmt = $db->prepare($count_query);
+$stmt = $db->prepare('SELECT COUNT(*) as count ' . $fromSql . $where);
 if ($params) {
     $stmt->bind_param($types, ...$params);
 }
 $stmt->execute();
-$total = $stmt->get_result()->fetch_assoc();
-$total = $total ? $total['COUNT(*)'] : 0;
-
-if (!$total) {
-    $count_stmt = $db->prepare(str_replace("SELECT m.*, d.name as district_name", "SELECT COUNT(*) as cnt", $count_query));
-    if ($params) {
-        $count_stmt->bind_param($types, ...$params);
-    }
-    $count_stmt->execute();
-    $total = $count_stmt->get_result()->fetch_assoc()['cnt'];
-    $count_stmt->close();
-}
+$total = (int)($stmt->get_result()->fetch_assoc()['count'] ?? 0);
 $stmt->close();
 
-$total_pages = ceil($total / $limit);
+$orderBy = 'm.is_featured DESC, m.health_score DESC, m.created_at DESC';
+if ($sort === 'price_asc') {
+    $orderBy = 'm.price ASC, m.health_score DESC';
+} elseif ($sort === 'price_desc') {
+    $orderBy = 'm.price DESC, m.health_score DESC';
+} elseif ($sort === 'newest') {
+    $orderBy = 'm.created_at DESC';
+}
 
-// Get motels
-$query .= " ORDER BY m.created_at DESC LIMIT ? OFFSET ?";
-$params[] = $limit;
-$params[] = $offset;
-$types .= "ii";
+$query = '
+    SELECT m.*, d.name as district_name, c.name as category_name, u.name as owner_name, u.verified_at, u.trust_score
+    ' . $fromSql . $where . '
+    ORDER BY ' . $orderBy . '
+    LIMIT ? OFFSET ?
+';
+$queryParams = $params;
+$queryTypes = $types . 'ii';
+$queryParams[] = $limit;
+$queryParams[] = $offset;
 
 $stmt = $db->prepare($query);
-if ($params) {
-    $stmt->bind_param($types, ...$params);
-}
+$stmt->bind_param($queryTypes, ...$queryParams);
 $stmt->execute();
 $motels = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// Check favorites
 $favorite_ids = [];
 if ($motels) {
     $motel_ids = implode(',', array_map(fn($m) => (int)$m['id'], $motels));
     $fav_stmt = $db->prepare("SELECT motel_id FROM favorites WHERE user_id = ? AND motel_id IN ($motel_ids)");
-    $fav_stmt->bind_param("i", $user_id);
+    $fav_stmt->bind_param('i', $user_id);
     $fav_stmt->execute();
     $favs = $fav_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    $favorite_ids = array_map(fn($f) => $f['motel_id'], $favs);
+    $favorite_ids = array_map(fn($f) => (int)$f['motel_id'], $favs);
     $fav_stmt->close();
 }
+
+function match_score(array $motel, string $district_id, string $category_id, string $min_price, string $max_price, string $area_min): int
+{
+    $score = 40;
+    if ($district_id !== '' && (int)$motel['district_id'] === (int)$district_id) {
+        $score += 18;
+    }
+    if ($category_id !== '' && (int)$motel['category_id'] === (int)$category_id) {
+        $score += 14;
+    }
+    if ($min_price !== '' && (int)$motel['price'] >= (int)$min_price) {
+        $score += 8;
+    }
+    if ($max_price !== '' && (int)$motel['price'] <= (int)$max_price) {
+        $score += 8;
+    }
+    if ($area_min !== '' && (float)$motel['area'] >= (float)$area_min) {
+        $score += 7;
+    }
+    if ((int)($motel['is_featured'] ?? 0) === 1) {
+        $score += 3;
+    }
+    if ((int)($motel['health_score'] ?? 0) >= 80) {
+        $score += 2;
+    }
+    return min(100, $score);
+}
+
+foreach ($motels as $index => $motel) {
+    $motels[$index]['match_score'] = match_score($motel, (string)$district_id, (string)$category_id, (string)$min_price, (string)$max_price, (string)$area_min);
+}
+
+if ($sort === 'match') {
+    usort($motels, fn($a, $b) => $b['match_score'] <=> $a['match_score']);
+}
+
+$total_pages = (int)ceil($total / $limit);
+$baseQuery = $_GET;
+unset($baseQuery['page'], $baseQuery['save_search']);
 ?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tìm Phòng - QuanLyPhongTro</title>
+    <title>Tim phong - QuanLyPhongTro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="../assets/css/modern.css" rel="stylesheet">
     <style>
-        body { background: #f8f9fa; font-family: 'Segoe UI', sans-serif; }
-        .navbar { background: linear-gradient(135deg, #667eea, #764ba2); }
-        .navbar-brand { font-size: 22px; font-weight: 700; color: white !important; }
-        .navbar-nav .nav-link { color: rgba(255,255,255,0.9) !important; margin-left: 20px; }
-        .navbar-nav .nav-link:hover { color: white !important; }
-        .filter-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .filter-card h5 { font-weight: 700; margin-bottom: 20px; color: #333; }
-        .form-label { font-weight: 600; color: #333; }
-        .form-control, .form-select { border-radius: 6px; border: 1px solid #ddd; }
-        .btn-search { background: linear-gradient(135deg, #667eea, #764ba2); border: none; color: white; }
-        .btn-search:hover { color: white; }
-        .results-container { padding: 30px 0; }
-        .motel-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: 0.3s; height: 100%; }
-        .motel-card:hover { transform: translateY(-5px); box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
-        .motel-image { height: 200px; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; color: white; position: relative; }
-        .motel-image i { font-size: 50px; }
-        .favorite-btn { position: absolute; top: 10px; right: 10px; background: white; border: none; color: #667eea; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 18px; }
-        .favorite-btn.active { color: #d32f2f; }
-        .motel-body { padding: 20px; }
-        .motel-title { font-size: 16px; font-weight: 600; margin-bottom: 10px; color: #333; }
-        .motel-price { font-size: 20px; font-weight: 700; color: #667eea; margin-bottom: 10px; }
-        .motel-info { color: #666; font-size: 13px; margin-bottom: 15px; }
-        .motel-info-item { margin-bottom: 8px; }
-        .btn-view { background: linear-gradient(135deg, #667eea, #764ba2); border: none; color: white; padding: 8px 15px; border-radius: 6px; cursor: pointer; text-decoration: none; }
-        .btn-view:hover { color: white; }
-        .empty-state { text-align: center; padding: 60px 30px; background: white; border-radius: 12px; }
-        .empty-state-icon { font-size: 60px; color: #ddd; margin-bottom: 20px; }
-        .pagination { justify-content: center; margin-top: 30px; }
-        .result-count { color: #666; margin-bottom: 25px; }
+        body { background: #f4f7fb; font-family: 'Segoe UI', sans-serif; color: #111827; }
+        .navbar { background: #0f172a; }
+        .search-shell { padding: 28px 0 44px; }
+        .filter-card, .result-toolbar, .motel-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; box-shadow: 0 16px 45px rgba(15, 23, 42, .07); }
+        .filter-card { padding: 22px; position: sticky; top: 84px; }
+        .result-toolbar { padding: 18px 20px; margin-bottom: 18px; display: flex; justify-content: space-between; gap: 14px; align-items: center; flex-wrap: wrap; }
+        .motel-card { overflow: hidden; height: 100%; display: flex; flex-direction: column; }
+        .motel-image { height: 190px; background: linear-gradient(135deg, #1d4ed8, #14b8a6); color: white; position: relative; display: flex; align-items: center; justify-content: center; }
+        .motel-image i { font-size: 46px; opacity: .82; }
+        .favorite-btn { position: absolute; top: 12px; right: 12px; border: 0; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.95); color: #64748b; box-shadow: 0 12px 30px rgba(15,23,42,.18); }
+        .favorite-btn.active { color: #dc2626; }
+        .motel-body { padding: 18px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+        .motel-title { font-size: 17px; font-weight: 800; color: #0f172a; line-height: 1.35; min-height: 46px; }
+        .motel-price { color: #2563eb; font-size: 20px; font-weight: 900; }
+        .meta-line { color: #64748b; font-size: 13px; display: flex; gap: 8px; align-items: flex-start; }
+        .score-row { display: flex; gap: 8px; flex-wrap: wrap; }
+        .score-pill { padding: 6px 10px; border-radius: 999px; background: #ecfeff; color: #0f766e; font-weight: 700; font-size: 12px; }
+        .verified-pill { background: #eef2ff; color: #4338ca; }
+        .btn-view { display: block; margin-top: auto; text-align: center; text-decoration: none; border-radius: 10px; padding: 10px 14px; color: #fff; background: linear-gradient(135deg, #2563eb, #14b8a6); font-weight: 800; }
+        .btn-view:hover { color: #fff; }
+        .empty-state { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; padding: 54px 24px; text-align: center; }
     </style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
         <div class="container-lg">
-            <a class="navbar-brand" href="../index.php">
-                <i class="fas fa-home"></i> QuanLyPhongTro
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user"></i> <?php echo htmlspecialchars($user_name); ?>
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="dashboard.php">Dashboard</a></li>
-                            <li><a class="dropdown-item" href="../logout.php">Đăng Xuất</a></li>
-                        </ul>
-                    </li>
+            <a class="navbar-brand fw-bold" href="../index.php"><i class="fas fa-home"></i> QuanLyPhongTro</a>
+            <div class="ms-auto dropdown">
+                <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-user"></i> <?php echo htmlspecialchars($user_name); ?>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="dashboard.php">Dashboard</a></li>
+                    <li><a class="dropdown-item" href="favorites.php">Phong yeu thich</a></li>
+                    <li><a class="dropdown-item" href="../logout.php">Dang xuat</a></li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <div class="container-lg" style="padding: 30px 0;">
-        <h1 style="font-size: 28px; font-weight: 700; margin-bottom: 30px;">
-            <i class="fas fa-search"></i> Tìm Phòng
-        </h1>
-
-        <div class="row">
-            <!-- Filters -->
-            <div class="col-lg-3">
-                <div class="filter-card">
-                    <h5>Bộ Lọc</h5>
-                    <form method="GET">
-                        <div class="mb-3">
-                            <label class="form-label">Từ Khóa</label>
-                            <input type="text" name="keyword" class="form-control" value="<?php echo htmlspecialchars($keyword); ?>" placeholder="Tên, địa chỉ...">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Quận</label>
-                            <select name="district" class="form-select">
-                                <option value="">-- Tất Cả --</option>
-                                <?php foreach ($districts_list as $dist): ?>
-                                    <option value="<?php echo $dist['id']; ?>" <?php echo $district == $dist['id'] ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($dist['name']); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Danh Mục</label>
-                            <select name="category" class="form-select">
-                                <option value="">-- Tất Cả --</option>
-                                <?php foreach ($categories_list as $cat): ?>
-                                    <option value="<?php echo $cat['id']; ?>" <?php echo $category == $cat['id'] ? 'selected' : ''; ?>>
-                                        <?php echo htmlspecialchars($cat['name']); ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="row">
-                            <div class="col-6 mb-3">
-                                <label class="form-label">Giá Từ</label>
-                                <input type="number" name="min_price" class="form-control" value="<?php echo htmlspecialchars($min_price); ?>" placeholder="VNĐ">
-                            </div>
-                            <div class="col-6 mb-3">
-                                <label class="form-label">Đến</label>
-                                <input type="number" name="max_price" class="form-control" value="<?php echo htmlspecialchars($max_price); ?>" placeholder="VNĐ">
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-search w-100">
-                            <i class="fas fa-search"></i> Tìm Kiếm
-                        </button>
-                    </form>
-                </div>
+    <main class="search-shell">
+        <div class="container-lg">
+            <div class="mb-4">
+                <h1 class="fw-black mb-2">Tim phong phu hop</h1>
+                <p class="text-muted mb-0">Loc theo nhu cau thuc te, luu bo loc va xem diem phu hop cua tung phong.</p>
             </div>
 
-            <!-- Results -->
-            <div class="col-lg-9">
-                <div class="result-count">
-                    Tìm thấy <strong><?php echo $total; ?></strong> phòng
-                </div>
+            <?php if ($flash): ?>
+                <div class="alert alert-success"><?php echo htmlspecialchars($flash); ?></div>
+            <?php endif; ?>
 
-                <?php if (count($motels) > 0): ?>
-                    <div class="row">
-                        <?php foreach ($motels as $motel): ?>
-                            <div class="col-md-6 col-lg-4 mb-4">
-                                <div class="motel-card">
-                                    <div class="motel-image">
-                                        <i class="fas fa-image"></i>
-                                        <button class="favorite-btn <?php echo in_array($motel['id'], $favorite_ids) ? 'active' : ''; ?>" onclick="toggleFavorite(<?php echo $motel['id']; ?>)">
-                                            <i class="fas fa-heart"></i>
-                                        </button>
-                                    </div>
-                                    <div class="motel-body">
-                                        <div class="motel-title"><?php echo htmlspecialchars($motel['title']); ?></div>
-                                        <div class="motel-price"><?php echo number_format($motel['price']); ?> VNĐ</div>
-                                        <div class="motel-info">
-                                            <div class="motel-info-item"><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($motel['address']); ?></div>
-                                            <div class="motel-info-item"><i class="fas fa-door-open"></i> Quận: <?php echo htmlspecialchars($motel['district_name']); ?></div>
-                                            <div class="motel-info-item"><i class="fas fa-eye"></i> <?php echo $motel['count_view']; ?> lượt xem</div>
-                                        </div>
-                                        <a href="motel-detail.php?id=<?php echo $motel['id']; ?>" class="btn-view" style="display: block; text-align: center;">
-                                            Xem Chi Tiết
-                                        </a>
-                                    </div>
+            <div class="row g-4">
+                <div class="col-lg-3">
+                    <aside class="filter-card">
+                        <h5 class="fw-bold mb-3">Bo loc</h5>
+                        <form method="GET">
+                            <div class="mb-3">
+                                <label class="form-label">Tu khoa</label>
+                                <input type="text" name="keyword" class="form-control" value="<?php echo htmlspecialchars($keyword); ?>" placeholder="Gan truong, ten duong...">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Quan/Huyen</label>
+                                <select name="district_id" class="form-select">
+                                    <option value="">Tat ca</option>
+                                    <?php foreach ($districts_list as $dist): ?>
+                                        <option value="<?php echo $dist['id']; ?>" <?php echo (string)$district_id === (string)$dist['id'] ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($dist['name']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Danh muc</label>
+                                <select name="category_id" class="form-select">
+                                    <option value="">Tat ca</option>
+                                    <?php foreach ($categories_list as $cat): ?>
+                                        <option value="<?php echo $cat['id']; ?>" <?php echo (string)$category_id === (string)$cat['id'] ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($cat['name']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="row">
+                                <div class="col-6 mb-3">
+                                    <label class="form-label">Gia tu</label>
+                                    <input type="number" name="min_price" class="form-control" value="<?php echo htmlspecialchars($min_price); ?>">
+                                </div>
+                                <div class="col-6 mb-3">
+                                    <label class="form-label">Den</label>
+                                    <input type="number" name="max_price" class="form-control" value="<?php echo htmlspecialchars($max_price); ?>">
                                 </div>
                             </div>
-                        <?php endforeach; ?>
+                            <div class="mb-3">
+                                <label class="form-label">Dien tich toi thieu</label>
+                                <input type="number" step="0.5" name="area_min" class="form-control" value="<?php echo htmlspecialchars($area_min); ?>">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Can vao o truoc ngay</label>
+                                <input type="date" name="available_from" class="form-control" value="<?php echo htmlspecialchars($available_from); ?>">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Sap xep</label>
+                                <select name="sort" class="form-select">
+                                    <option value="featured" <?php echo $sort === 'featured' ? 'selected' : ''; ?>>Noi bat</option>
+                                    <option value="match" <?php echo $sort === 'match' ? 'selected' : ''; ?>>Phu hop nhat</option>
+                                    <option value="newest" <?php echo $sort === 'newest' ? 'selected' : ''; ?>>Moi nhat</option>
+                                    <option value="price_asc" <?php echo $sort === 'price_asc' ? 'selected' : ''; ?>>Gia thap den cao</option>
+                                    <option value="price_desc" <?php echo $sort === 'price_desc' ? 'selected' : ''; ?>>Gia cao den thap</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 mb-2">
+                                <i class="fas fa-search"></i> Tim kiem
+                            </button>
+                            <button type="submit" name="save_search" value="1" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-bell"></i> Luu bo loc
+                            </button>
+                        </form>
+                    </aside>
+                </div>
+
+                <div class="col-lg-9">
+                    <div class="result-toolbar">
+                        <div>
+                            <strong><?php echo number_format($total); ?></strong> phong dang duoc duyet
+                            <?php if ($keyword !== ''): ?>
+                                <span class="text-muted">cho "<?php echo htmlspecialchars($keyword); ?>"</span>
+                            <?php endif; ?>
+                        </div>
+                        <a href="search.php" class="btn btn-sm btn-outline-secondary">Xoa bo loc</a>
                     </div>
 
-                    <?php if ($total_pages > 1): ?>
-                        <nav aria-label="Pagination">
-                            <ul class="pagination">
-                                <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-                                    <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
-                                        <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['page' => $i])); ?>"><?php echo $i; ?></a>
-                                    </li>
-                                <?php endfor; ?>
-                            </ul>
-                        </nav>
+                    <?php if ($motels): ?>
+                        <div class="row g-4">
+                            <?php foreach ($motels as $motel): ?>
+                                <?php
+                                    $moveInCost = (int)$motel['price'] + (int)($motel['service_fee'] ?? 0) + (int)round((int)$motel['price'] * (float)($motel['deposit_months'] ?? 1));
+                                ?>
+                                <div class="col-md-6 col-xl-4">
+                                    <article class="motel-card">
+                                        <div class="motel-image">
+                                            <i class="fas fa-building"></i>
+                                            <button class="favorite-btn <?php echo in_array((int)$motel['id'], $favorite_ids, true) ? 'active' : ''; ?>" onclick="toggleFavorite(<?php echo (int)$motel['id']; ?>, this)" type="button" aria-label="Yeu thich">
+                                                <i class="fas fa-heart"></i>
+                                            </button>
+                                        </div>
+                                        <div class="motel-body">
+                                            <div class="score-row">
+                                                <span class="score-pill"><?php echo (int)$motel['match_score']; ?>% phu hop</span>
+                                                <?php if (!empty($motel['verified_at'])): ?>
+                                                    <span class="score-pill verified-pill"><i class="fas fa-shield-alt"></i> Owner verified</span>
+                                                <?php endif; ?>
+                                            </div>
+                                            <div class="motel-title"><?php echo htmlspecialchars($motel['title']); ?></div>
+                                            <div class="motel-price"><?php echo number_format((int)$motel['price']); ?> VND/thang</div>
+                                            <div class="meta-line"><i class="fas fa-map-marker-alt"></i><span><?php echo htmlspecialchars($motel['address']); ?></span></div>
+                                            <div class="meta-line"><i class="fas fa-location-dot"></i><span><?php echo htmlspecialchars($motel['district_name'] ?? 'Chua ro quan'); ?> · <?php echo htmlspecialchars($motel['category_name'] ?? 'Phong tro'); ?></span></div>
+                                            <div class="meta-line"><i class="fas fa-ruler-combined"></i><span><?php echo (float)$motel['area']; ?> m2 · <?php echo (int)$motel['count_view']; ?> luot xem</span></div>
+                                            <div class="meta-line"><i class="fas fa-wallet"></i><span>Uoc tinh vao o: <?php echo number_format($moveInCost); ?> VND</span></div>
+                                            <a href="motel-detail.php?id=<?php echo (int)$motel['id']; ?>" class="btn-view">Xem chi tiet</a>
+                                        </div>
+                                    </article>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <?php if ($total_pages > 1): ?>
+                            <nav class="mt-4" aria-label="Pagination">
+                                <ul class="pagination justify-content-center">
+                                    <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                                        <li class="page-item <?php echo $i === $page ? 'active' : ''; ?>">
+                                            <a class="page-link" href="?<?php echo http_build_query(array_merge($baseQuery, ['page' => $i])); ?>"><?php echo $i; ?></a>
+                                        </li>
+                                    <?php endfor; ?>
+                                </ul>
+                            </nav>
+                        <?php endif; ?>
+                    <?php else: ?>
+                        <div class="empty-state">
+                            <div class="display-6 mb-3"><i class="fas fa-magnifying-glass"></i></div>
+                            <h4>Chua co phong phu hop</h4>
+                            <p class="text-muted">Hay giam bot bo loc gia, khu vuc hoac dien tich de mo rong ket qua.</p>
+                            <a href="search.php" class="btn btn-primary">Dat lai bo loc</a>
+                        </div>
                     <?php endif; ?>
-                <?php else: ?>
-                    <div class="empty-state">
-                        <div class="empty-state-icon"><i class="fas fa-inbox"></i></div>
-                        <p>Không tìm thấy phòng nào phù hợp</p>
-                        <a href="search.php" class="btn btn-primary" style="margin-top: 15px;">Xóa Bộ Lọc</a>
-                    </div>
-                <?php endif; ?>
+                </div>
             </div>
         </div>
-    </div>
+    </main>
 
     <script>
-        function toggleFavorite(motelId) {
+        function toggleFavorite(motelId, button) {
             fetch('../ajax/toggle-favorite.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ motel_id: motelId })
             })
-            .then(r => r.json())
+            .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    event.target.closest('.favorite-btn').classList.toggle('active');
+                    button.classList.toggle('active');
                 }
             });
         }
@@ -309,3 +407,4 @@ if ($motels) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+

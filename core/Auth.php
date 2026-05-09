@@ -24,6 +24,9 @@ class Auth {
             $_SESSION['user_email'] = $user['email'];
             $_SESSION['user_name'] = $user['name'];
             $_SESSION['user_role'] = $user['role'];
+            $_SESSION['name'] = $user['name'];
+            $_SESSION['role'] = $user['role'];
+            $_SESSION['status'] = $user['status'];
             $_SESSION['login_time'] = time();
             return true;
         }
@@ -77,7 +80,8 @@ class Auth {
             'email' => $email_escaped,
             'password' => password_hash($password, PASSWORD_BCRYPT),
             'phone' => $phone,
-            'role' => ROLE_ADMIN
+            'role' => ROLE_ADMIN,
+            'status' => 'approved'
         ];
         
         return $this->db->insert('users', $data);

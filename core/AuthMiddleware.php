@@ -37,7 +37,7 @@ class AuthMiddleware {
         $this->requireLogin();
         
         if ($_SESSION['role'] !== 'admin') {
-            header("Location: " . BASE_URL . "public/index.php");
+            header("Location: " . BASE_URL . "index.php");
             exit();
         }
     }
@@ -49,7 +49,7 @@ class AuthMiddleware {
         $this->requireLogin();
         
         if ($_SESSION['role'] !== 'owner') {
-            header("Location: " . BASE_URL . "public/index.php");
+            header("Location: " . BASE_URL . "index.php");
             exit();
         }
     }
@@ -61,7 +61,7 @@ class AuthMiddleware {
         $this->requireOwner();
         
         if ($_SESSION['status'] !== 'approved') {
-            header("Location: " . BASE_URL . "public/index.php?error=owner_not_approved");
+            header("Location: " . BASE_URL . "index.php?error=owner_not_approved");
             exit();
         }
     }
@@ -89,9 +89,9 @@ class AuthMiddleware {
         
         if (isset($_SESSION['user_id'])) {
             if ($_SESSION['role'] === 'admin') {
-                header("Location: " . BASE_URL . "public/admin/index.php");
+                header("Location: " . BASE_URL . "admin/index.php");
             } else {
-                header("Location: " . BASE_URL . "public/index.php");
+                header("Location: " . BASE_URL . "index.php");
             }
             exit();
         }

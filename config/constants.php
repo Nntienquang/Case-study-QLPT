@@ -8,7 +8,7 @@ define('ADMIN_URL', BASE_URL . 'admin/');
 
 // Upload directories
 define('UPLOAD_DIR', __DIR__ . '/../public/uploads/');
-define('UPLOAD_URL', BASE_URL . 'public/uploads/');
+define('UPLOAD_URL', BASE_URL . 'uploads/');
 
 // Session timeout (in minutes)
 define('SESSION_TIMEOUT', 30);

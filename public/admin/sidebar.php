@@ -23,16 +23,16 @@ $pages = [
 
 <div class="sidebar">
     <div class="logo">
-        <h2>🏠 Admin</h2>
+        <h2>Admin</h2>
         <p>Quản Lý Phòng Trọ</p>
     </div>
-    
+
     <ul class="nav-menu">
         <?php foreach ($pages as $key => $page): ?>
             <li>
-                <a href="<?php echo ADMIN_URL . $page['url']; ?>" 
+                <a href="<?php echo ADMIN_URL . $page['url']; ?>"
                    class="<?php echo ($current_page === $key) ? 'active' : ''; ?>">
-                    <i class="<?php echo $page['icon']; ?>"></i> 
+                    <i class="<?php echo $page['icon']; ?>"></i>
                     <?php echo $page['label']; ?>
                 </a>
             </li>

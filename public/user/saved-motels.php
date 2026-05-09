@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 @require_once '../../config/database.php';
 @require_once '../../core/Database.php';
 
@@ -43,7 +43,7 @@ $stmt->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phòng Yêu Thích - QuanLyPhongTro</title>
+    <title>PhÃ²ng YÃªu ThÃ­ch - QuanLyPhongTro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -67,6 +67,7 @@ $stmt->close();
         .btn-view:hover { color: white; }
         .empty-state { text-align: center; padding: 60px 30px; background: white; border-radius: 12px; }
     </style>
+    <link href="../assets/css/modern.css" rel="stylesheet">
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
@@ -83,18 +84,18 @@ $stmt->close();
                 <div class="sidebar">
                     <h5>Menu</h5>
                     <a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
-                    <a href="search.php"><i class="fas fa-search"></i> Tìm Phòng</a>
-                    <a href="my-bookings.php"><i class="fas fa-calendar"></i> Đơn Đặt của Tôi</a>
-                    <a href="saved-motels.php" class="active"><i class="fas fa-heart"></i> Phòng Yêu Thích</a>
-                    <a href="profile.php"><i class="fas fa-user"></i> Hồ Sơ</a>
-                    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Đăng Xuất</a>
+                    <a href="search.php"><i class="fas fa-search"></i> TÃ¬m PhÃ²ng</a>
+                    <a href="my-bookings.php"><i class="fas fa-calendar"></i> ÄÆ¡n Äáº·t cá»§a TÃ´i</a>
+                    <a href="saved-motels.php" class="active"><i class="fas fa-heart"></i> PhÃ²ng YÃªu ThÃ­ch</a>
+                    <a href="profile.php"><i class="fas fa-user"></i> Há»“ SÆ¡</a>
+                    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> ÄÄƒng Xuáº¥t</a>
                 </div>
             </div>
 
             <div class="col-lg-9">
                 <div class="main-content">
                     <h1 style="font-size: 28px; font-weight: 700; margin-bottom: 30px;">
-                        <i class="fas fa-heart"></i> Phòng Yêu Thích
+                        <i class="fas fa-heart"></i> PhÃ²ng YÃªu ThÃ­ch
                     </h1>
 
                     <?php if (count($motels) > 0): ?>
@@ -110,13 +111,13 @@ $stmt->close();
                                         </div>
                                         <div class="motel-body">
                                             <div class="motel-title"><?php echo htmlspecialchars($motel['title']); ?></div>
-                                            <div class="motel-price"><?php echo number_format($motel['price']); ?> VNĐ</div>
+                                            <div class="motel-price"><?php echo number_format($motel['price']); ?> VNÄ</div>
                                             <div class="motel-info">
                                                 <div style="margin-bottom: 8px;"><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($motel['address']); ?></div>
-                                                <div><i class="fas fa-eye"></i> <?php echo $motel['count_view']; ?> lượt xem</div>
+                                                <div><i class="fas fa-eye"></i> <?php echo $motel['count_view']; ?> lÆ°á»£t xem</div>
                                             </div>
                                             <a href="motel-detail.php?id=<?php echo $motel['id']; ?>" class="btn-view" style="display: block; text-align: center;">
-                                                Xem Chi Tiết
+                                                Xem Chi Tiáº¿t
                                             </a>
                                         </div>
                                     </div>
@@ -138,9 +139,9 @@ $stmt->close();
                     <?php else: ?>
                         <div class="empty-state">
                             <div style="font-size: 60px; color: #ddd; margin-bottom: 20px;"><i class="fas fa-heart"></i></div>
-                            <p style="color: #999; margin-bottom: 20px;">Bạn chưa lưu phòng nào</p>
+                            <p style="color: #999; margin-bottom: 20px;">Báº¡n chÆ°a lÆ°u phÃ²ng nÃ o</p>
                             <a href="search.php" class="btn btn-primary">
-                                <i class="fas fa-search"></i> Tìm Phòng
+                                <i class="fas fa-search"></i> TÃ¬m PhÃ²ng
                             </a>
                         </div>
                     <?php endif; ?>
@@ -151,7 +152,7 @@ $stmt->close();
 
     <script>
         function removeFavorite(motelId) {
-            if (confirm('Xóa khỏi yêu thích?')) {
+            if (confirm('XÃ³a khá»i yÃªu thÃ­ch?')) {
                 fetch('../ajax/toggle-favorite.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 @require_once '../../config/database.php';
 @require_once '../../core/Database.php';
 
@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $address = $_POST['address'] ?? '';
 
     if (empty($name)) {
-        $message = 'Vui lòng nhập tên!';
+        $message = 'Vui lÃ²ng nháº­p tÃªn!';
         $message_type = 'danger';
     } else {
         $stmt = $db->prepare("UPDATE users SET name = ?, phone = ?, address = ? WHERE id = ?");
@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($stmt->execute()) {
             $_SESSION['name'] = $name;
-            $message = 'Hồ sơ cập nhật thành công!';
+            $message = 'Há»“ sÆ¡ cáº­p nháº­t thÃ nh cÃ´ng!';
             $message_type = 'success';
             // Refresh
             $stmt = $db->prepare("SELECT id, name, email, phone, address, created_at FROM users WHERE id = ?");
@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = $stmt->get_result()->fetch_assoc();
             $stmt->close();
         } else {
-            $message = 'Lỗi cập nhật!';
+            $message = 'Lá»—i cáº­p nháº­t!';
             $message_type = 'danger';
         }
         $stmt->close();
@@ -58,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hồ Sơ - QuanLyPhongTro</title>
+    <title>Há»“ SÆ¡ - QuanLyPhongTro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -78,6 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .info-label { font-weight: 600; color: #333; }
         .info-value { color: #666; margin-top: 5px; }
     </style>
+    <link href="../assets/css/modern.css" rel="stylesheet">
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
@@ -94,17 +95,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="sidebar">
                     <h5>Menu</h5>
                     <a href="dashboard.php"><i class="fas fa-home"></i> Dashboard</a>
-                    <a href="search.php"><i class="fas fa-search"></i> Tìm Phòng</a>
-                    <a href="profile.php" class="active"><i class="fas fa-user"></i> Hồ Sơ</a>
-                    <a href="settings.php"><i class="fas fa-cog"></i> Cài Đặt</a>
-                    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Đăng Xuất</a>
+                    <a href="search.php"><i class="fas fa-search"></i> TÃ¬m PhÃ²ng</a>
+                    <a href="profile.php" class="active"><i class="fas fa-user"></i> Há»“ SÆ¡</a>
+                    <a href="settings.php"><i class="fas fa-cog"></i> CÃ i Äáº·t</a>
+                    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> ÄÄƒng Xuáº¥t</a>
                 </div>
             </div>
 
             <div class="col-lg-9">
                 <div class="main-content">
                     <h1 style="font-size: 28px; font-weight: 700; margin-bottom: 30px;">
-                        <i class="fas fa-user"></i> Hồ Sơ Của Tôi
+                        <i class="fas fa-user"></i> Há»“ SÆ¡ Cá»§a TÃ´i
                     </h1>
 
                     <?php if ($message): ?>
@@ -118,28 +119,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="col-lg-8">
                             <div class="profile-card">
                                 <h5 style="font-weight: 700; margin-bottom: 20px; border-bottom: 2px solid #667eea; padding-bottom: 10px;">
-                                    Thông Tin Cơ Bản
+                                    ThÃ´ng Tin CÆ¡ Báº£n
                                 </h5>
 
                                 <form method="POST">
                                     <div class="mb-3">
-                                        <label class="form-label">Tên Đầy Đủ</label>
+                                        <label class="form-label">TÃªn Äáº§y Äá»§</label>
                                         <input type="text" name="name" class="form-control" value="<?php echo htmlspecialchars($user['name']); ?>" required>
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label">Email (Không thể thay đổi)</label>
+                                        <label class="form-label">Email (KhÃ´ng thá»ƒ thay Ä‘á»•i)</label>
                                         <input type="email" class="form-control" value="<?php echo htmlspecialchars($user['email']); ?>" disabled>
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label">Số Điện Thoại</label>
+                                        <label class="form-label">Sá»‘ Äiá»‡n Thoáº¡i</label>
                                         <input type="tel" name="phone" class="form-control" value="<?php echo htmlspecialchars($user['phone'] ?? ''); ?>" placeholder="0912345678">
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label">Địa Chỉ</label>
-                                        <textarea name="address" class="form-control" rows="3" placeholder="Địa chỉ của bạn"><?php echo htmlspecialchars($user['address'] ?? ''); ?></textarea>
+                                        <label class="form-label">Äá»‹a Chá»‰</label>
+                                        <textarea name="address" class="form-control" rows="3" placeholder="Äá»‹a chá»‰ cá»§a báº¡n"><?php echo htmlspecialchars($user['address'] ?? ''); ?></textarea>
                                     </div>
                                     <button type="submit" class="btn btn-primary">
-                                        <i class="fas fa-save"></i> Lưu Thay Đổi
+                                        <i class="fas fa-save"></i> LÆ°u Thay Äá»•i
                                     </button>
                                 </form>
                             </div>
@@ -147,22 +148,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         <div class="col-lg-4">
                             <div class="profile-card">
-                                <h5 style="font-weight: 700; margin-bottom: 20px;">Thông Tin Tài Khoản</h5>
+                                <h5 style="font-weight: 700; margin-bottom: 20px;">ThÃ´ng Tin TÃ i Khoáº£n</h5>
                                 <div class="info-item">
                                     <div class="info-label"><i class="fas fa-envelope"></i> Email</div>
                                     <div class="info-value"><?php echo htmlspecialchars($user['email']); ?></div>
                                 </div>
                                 <div class="info-item">
-                                    <div class="info-label"><i class="fas fa-user-tag"></i> Vai Trò</div>
-                                    <div class="info-value">Người Dùng Bình Thường</div>
+                                    <div class="info-label"><i class="fas fa-user-tag"></i> Vai TrÃ²</div>
+                                    <div class="info-value">NgÆ°á»i DÃ¹ng BÃ¬nh ThÆ°á»ng</div>
                                 </div>
                                 <div class="info-item">
-                                    <div class="info-label"><i class="fas fa-calendar"></i> Ngày Tạo</div>
+                                    <div class="info-label"><i class="fas fa-calendar"></i> NgÃ y Táº¡o</div>
                                     <div class="info-value"><?php echo date('d/m/Y', strtotime($user['created_at'])); ?></div>
                                 </div>
                                 <div class="info-item">
-                                    <div class="info-label"><i class="fas fa-shield-alt"></i> Trạng Thái</div>
-                                    <div class="info-value"><span class="badge bg-success">Hoạt Động</span></div>
+                                    <div class="info-label"><i class="fas fa-shield-alt"></i> Tráº¡ng ThÃ¡i</div>
+                                    <div class="info-value"><span class="badge bg-success">Hoáº¡t Äá»™ng</span></div>
                                 </div>
                             </div>
                         </div>

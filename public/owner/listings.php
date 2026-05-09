@@ -1,7 +1,8 @@
-<?php
+﻿<?php
 @require_once '../../config/database.php';
 @require_once '../../config/constants.php';
 @require_once '../../core/Database.php';
+@require_once '../../core/ListingQuality.php';
 
 session_start();
 
@@ -23,7 +24,7 @@ if (isset($_POST['delete_motel'])) {
     $stmt = $db->prepare("DELETE FROM motels WHERE id = ? AND user_id = ?");
     $stmt->bind_param("ii", $motel_id, $owner_id);
     if ($stmt->execute()) {
-        $_SESSION['message'] = "Phòng đã bị xóa thành công!";
+        $_SESSION['message'] = "PhÃ²ng Ä‘Ã£ bá»‹ xÃ³a thÃ nh cÃ´ng!";
         $_SESSION['message_type'] = "success";
     }
     $stmt->close();
@@ -52,13 +53,20 @@ $stmt->bind_param("iii", $owner_id, $limit, $offset);
 $stmt->execute();
 $listings = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
+
+$qualityMap = [];
+foreach ($listings as $index => $listing) {
+    $quality = ListingQuality::sync($conn, $listing);
+    $qualityMap[$listing['id']] = $quality;
+    $listings[$index]['health_score'] = $quality['score'];
+}
 ?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phòng của Tôi - Owner Dashboard</title>
+    <title>PhÃ²ng cá»§a TÃ´i - Owner Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -93,7 +101,15 @@ $stmt->close();
         .empty-state-icon { font-size: 60px; color: #ddd; margin-bottom: 20px; }
         .pagination { margin-top: 20px; }
         .alert { border-radius: 12px; }
+        .quality-meter { min-width: 150px; }
+        .quality-bar { height: 8px; background: #e9ecef; border-radius: 999px; overflow: hidden; margin: 6px 0; }
+        .quality-fill { height: 100%; border-radius: 999px; }
+        .quality-fill.success { background: #16a34a; }
+        .quality-fill.warning { background: #f59e0b; }
+        .quality-fill.danger { background: #dc2626; }
+        .quality-hint { max-width: 260px; color: #6b7280; font-size: 12px; line-height: 1.4; }
     </style>
+    <link href="../assets/css/modern.css" rel="stylesheet">
 </head>
 <body>
     <!-- Navbar -->
@@ -113,9 +129,9 @@ $stmt->close();
                         </a>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="dashboard.php">Dashboard</a></li>
-                            <li><a class="dropdown-item" href="profile.php">Hồ Sơ</a></li>
+                            <li><a class="dropdown-item" href="profile.php">Há»“ SÆ¡</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="../logout.php">Đăng Xuất</a></li>
+                            <li><a class="dropdown-item" href="../logout.php">ÄÄƒng Xuáº¥t</a></li>
                         </ul>
                     </li>
                 </ul>
@@ -130,13 +146,13 @@ $stmt->close();
                 <div class="sidebar">
                     <h5>Menu</h5>
                     <a href="dashboard.php"><i class="fas fa-chart-line"></i> Dashboard</a>
-                    <a href="listings.php" class="active"><i class="fas fa-list"></i> Phòng của Tôi</a>
-                    <a href="add-listing.php"><i class="fas fa-plus"></i> Thêm Phòng Mới</a>
-                    <a href="bookings.php"><i class="fas fa-calendar"></i> Đơn Đặt Phòng</a>
+                    <a href="listings.php" class="active"><i class="fas fa-list"></i> PhÃ²ng cá»§a TÃ´i</a>
+                    <a href="add-listing.php"><i class="fas fa-plus"></i> ThÃªm PhÃ²ng Má»›i</a>
+                    <a href="bookings.php"><i class="fas fa-calendar"></i> ÄÆ¡n Äáº·t PhÃ²ng</a>
                     <a href="revenue.php"><i class="fas fa-chart-bar"></i> Doanh Thu</a>
-                    <a href="profile.php"><i class="fas fa-user"></i> Hồ Sơ</a>
-                    <a href="settings.php"><i class="fas fa-cog"></i> Cài Đặt</a>
-                    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Đăng Xuất</a>
+                    <a href="profile.php"><i class="fas fa-user"></i> Há»“ SÆ¡</a>
+                    <a href="settings.php"><i class="fas fa-cog"></i> CÃ i Äáº·t</a>
+                    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> ÄÄƒng Xuáº¥t</a>
                 </div>
             </div>
 
@@ -152,8 +168,8 @@ $stmt->close();
                     <?php endif; ?>
 
                     <div class="page-header">
-                        <h1 class="page-title"><i class="fas fa-list"></i> Phòng của Tôi</h1>
-                        <p class="page-subtitle">Quản lý tất cả phòng trọ của bạn</p>
+                        <h1 class="page-title"><i class="fas fa-list"></i> PhÃ²ng cá»§a TÃ´i</h1>
+                        <p class="page-subtitle">Quáº£n lÃ½ táº¥t cáº£ phÃ²ng trá» cá»§a báº¡n</p>
                     </div>
 
                     <?php if (count($listings) > 0): ?>
@@ -161,12 +177,13 @@ $stmt->close();
                             <table class="table">
                                 <thead>
                                     <tr>
-                                        <th>Tên Phòng</th>
-                                        <th>Danh Mục</th>
-                                        <th>Giá (VNĐ)</th>
-                                        <th>Lượt Xem</th>
-                                        <th>Trạng Thái</th>
-                                        <th>Thao Tác</th>
+                                        <th>TÃªn PhÃ²ng</th>
+                                        <th>Danh Má»¥c</th>
+                                        <th>GiÃ¡ (VNÄ)</th>
+                                        <th>LÆ°á»£t Xem</th>
+                                        <th>Chat luong tin</th>
+                                        <th>Tráº¡ng ThÃ¡i</th>
+                                        <th>Thao TÃ¡c</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -180,16 +197,33 @@ $stmt->close();
                                             <td><?php echo number_format($listing['price']); ?></td>
                                             <td><?php echo $listing['count_view']; ?></td>
                                             <td>
+                                                <?php
+                                                    $score = (int)$listing['health_score'];
+                                                    $quality = $qualityMap[$listing['id']] ?? ['suggestions' => ''];
+                                                    $qualityClass = ListingQuality::badgeClass($score);
+                                                ?>
+                                                <div class="quality-meter">
+                                                    <strong><?php echo $score; ?>/100</strong>
+                                                    <span class="badge text-bg-<?php echo $qualityClass; ?>"><?php echo ListingQuality::label($score); ?></span>
+                                                    <div class="quality-bar">
+                                                        <div class="quality-fill <?php echo $qualityClass; ?>" style="width: <?php echo $score; ?>%;"></div>
+                                                    </div>
+                                                    <?php if (!empty($quality['suggestions'])): ?>
+                                                        <div class="quality-hint"><?php echo htmlspecialchars($quality['suggestions']); ?></div>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </td>
+                                            <td>
                                                 <span class="badge-status badge-<?php echo strtolower($listing['status']); ?>">
                                                     <?php echo ucfirst($listing['status']); ?>
                                                 </span>
                                             </td>
                                             <td>
                                                 <div class="action-buttons">
-                                                    <a href="edit-listing.php?id=<?php echo $listing['id']; ?>" class="btn btn-warning btn-sm">Sửa</a>
-                                                    <form method="POST" style="display: inline;" onsubmit="return confirm('Bạn chắc chắn muốn xóa?');">
+                                                    <a href="edit-listing.php?id=<?php echo $listing['id']; ?>" class="btn btn-warning btn-sm">Sá»­a</a>
+                                                    <form method="POST" style="display: inline;" onsubmit="return confirm('Báº¡n cháº¯c cháº¯n muá»‘n xÃ³a?');">
                                                         <input type="hidden" name="motel_id" value="<?php echo $listing['id']; ?>">
-                                                        <button type="submit" name="delete_motel" class="btn btn-danger btn-sm">Xóa</button>
+                                                        <button type="submit" name="delete_motel" class="btn btn-danger btn-sm">XÃ³a</button>
                                                     </form>
                                                 </div>
                                             </td>
@@ -213,9 +247,9 @@ $stmt->close();
                     <?php else: ?>
                         <div class="empty-state">
                             <div class="empty-state-icon"><i class="fas fa-inbox"></i></div>
-                            <p>Bạn chưa có phòng nào</p>
+                            <p>Báº¡n chÆ°a cÃ³ phÃ²ng nÃ o</p>
                             <a href="add-listing.php" class="btn btn-primary">
-                                <i class="fas fa-plus"></i> Thêm Phòng Mới
+                                <i class="fas fa-plus"></i> ThÃªm PhÃ²ng Má»›i
                             </a>
                         </div>
                     <?php endif; ?>

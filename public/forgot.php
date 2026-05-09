@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 @require_once '../config/database.php';
 @require_once '../config/constants.php';
 @require_once '../core/Database.php';
@@ -35,7 +35,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $message = $result['message'];
     $type = $result['success'] ? 'success' : 'error';
     
-    // TODO: Gửi email reset nếu token tồn tại
+    // TODO: Gá»­i email reset náº¿u token tá»“n táº¡i
     // if ($result['success'] && isset($result['token'])) {
     //     $reset_url = $result['reset_url'];
     //     // require_once 'core/EmailNotification.php';
@@ -48,7 +48,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quên Mật Khẩu - QuanLyPhongTro</title>
+<title>QuÃªn Máº­t Kháº©u - QuanLyPhongTro</title>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 <style>
 * { box-sizing: border-box; }
@@ -192,16 +192,17 @@ button:hover {
     text-decoration: underline;
 }
 </style>
+    <link href="assets/css/modern.css" rel="stylesheet">
 </head>
 
 <body>
 
 <div class="container">
-    <h2>🔑 Quên Mật Khẩu?</h2>
-    <p class="subtitle">Nhập email của bạn để nhận liên kết đặt lại</p>
+    <h2>ðŸ”‘ QuÃªn Máº­t Kháº©u?</h2>
+    <p class="subtitle">Nháº­p email cá»§a báº¡n Ä‘á»ƒ nháº­n liÃªn káº¿t Ä‘áº·t láº¡i</p>
 
     <div class="info-box">
-        <i class="fas fa-info-circle"></i> Nhập email liên kết với tài khoản của bạn, chúng tôi sẽ gửi cho bạn liên kết để đặt lại mật khẩu.
+        <i class="fas fa-info-circle"></i> Nháº­p email liÃªn káº¿t vá»›i tÃ i khoáº£n cá»§a báº¡n, chÃºng tÃ´i sáº½ gá»­i cho báº¡n liÃªn káº¿t Ä‘á»ƒ Ä‘áº·t láº¡i máº­t kháº©u.
     </div>
 
     <?php if($message != ""): ?>
@@ -214,15 +215,15 @@ button:hover {
         <div class="input-group">
             <label for="email">Email</label>
             <i class="fa fa-envelope"></i>
-            <input type="email" id="email" name="email" placeholder="Nhập email của bạn" required>
+            <input type="email" id="email" name="email" placeholder="Nháº­p email cá»§a báº¡n" required>
         </div>
 
-        <button type="submit">📧 Gửi Liên Kết Đặt Lại</button>
+        <button type="submit">ðŸ“§ Gá»­i LiÃªn Káº¿t Äáº·t Láº¡i</button>
     </form>
 
     <div class="links">
-        ← <a href="login.php">Quay lại đăng nhập</a><br style="margin: 10px 0;">
-        Chưa có tài khoản? <a href="register.php">Đăng ký ngay</a>
+        â† <a href="login.php">Quay láº¡i Ä‘Äƒng nháº­p</a><br style="margin: 10px 0;">
+        ChÆ°a cÃ³ tÃ i khoáº£n? <a href="register.php">ÄÄƒng kÃ½ ngay</a>
     </div>
 </div>
 

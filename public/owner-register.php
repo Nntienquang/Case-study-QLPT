@@ -5,277 +5,132 @@
 @require_once '../core/User.php';
 @require_once '../app/controller/AuthController.php';
 
-// Initialize
+session_start();
+
 /** @var mysqli $conn */
 $db = new Database($conn);
-$activityLog = null; // No activity logging for public registration
 $auth = new AuthController($db->getConnection());
 
-$message = "";
-$type = "";
-$name = "";
-$email = "";
+if (isset($_SESSION['user_id']) && $auth->checkSessionTimeout()) {
+    $role = $_SESSION['role'] ?? $_SESSION['user_role'] ?? 'user';
+    if ($role === 'admin') {
+        header('Location: ./admin/index.php');
+    } elseif ($role === 'owner') {
+        header('Location: ./owner/dashboard.php');
+    } else {
+        header('Location: ./user/dashboard.php');
+    }
+    exit;
+}
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $name = $_POST["name"] ?? "";
-    $email = $_POST["email"] ?? "";
-    $password = $_POST["password"] ?? "";
-    $confirm = $_POST["confirm"] ?? "";
-    $phone = $_POST["phone"] ?? "";
-    
-    // Call AuthController with 'owner' role
-    $result = $auth->register($name, $email, $password, $confirm, 'owner');
-    
+$message = '';
+$type = '';
+$name = '';
+$email = '';
+$phone = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $name = trim($_POST['name'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $confirm = $_POST['confirm'] ?? '';
+    $phone = trim($_POST['phone'] ?? '');
+
+    $result = $auth->register($name, $email, $password, $confirm, 'owner', $phone);
     $message = $result['message'];
     $type = $result['success'] ? 'success' : 'error';
-    
-    // Clear form on success
+
     if ($result['success']) {
-        $name = $email = $password = $confirm = $phone = "";
+        $name = '';
+        $email = '';
+        $phone = '';
     }
 }
 ?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8">
-<title>Đăng Ký Làm Chủ Phòng - QuanLyPhongTro</title>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-<style>
-* { box-sizing: border-box; }
-
-body {
-    margin: 0;
-    font-family: 'Segoe UI', sans-serif;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
-}
-
-.container {
-    background: white;
-    padding: 40px;
-    border-radius: 16px;
-    width: 100%;
-    max-width: 500px;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
-}
-
-h2 {
-    text-align: center;
-    color: #333;
-    margin-bottom: 10px;
-    font-weight: 700;
-}
-
-.subtitle {
-    text-align: center;
-    color: #666;
-    margin-bottom: 30px;
-    font-size: 14px;
-}
-
-.input-group {
-    position: relative;
-    margin-bottom: 20px;
-}
-
-.input-group i {
-    position: absolute;
-    top: 12px;
-    left: 12px;
-    color: #888;
-}
-
-input, textarea {
-    width: 100%;
-    padding: 12px 12px 12px 35px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    outline: none;
-    transition: 0.3s;
-    font-size: 14px;
-    font-family: inherit;
-}
-
-input:focus, textarea:focus {
-    border-color: #667eea;
-    box-shadow: 0 0 5px rgba(102,126,234,0.3);
-}
-
-textarea {
-    resize: vertical;
-    min-height: 80px;
-    padding-left: 12px;
-}
-
-button {
-    width: 100%;
-    padding: 12px;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 16px;
-    font-weight: 600;
-    margin-top: 10px;
-    transition: 0.3s;
-}
-
-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-}
-
-.msg {
-    margin: 20px 0;
-    padding: 15px;
-    border-radius: 8px;
-    font-size: 14px;
-    text-align: center;
-}
-
-.error {
-    background: #ffe6e6;
-    color: #c00;
-    border: 1px solid #ffcccc;
-}
-
-.success {
-    background: #e6ffe6;
-    color: #060;
-    border: 1px solid #ccffcc;
-}
-
-.benefits {
-    background: #f8f9fa;
-    padding: 20px;
-    border-radius: 8px;
-    margin-bottom: 30px;
-}
-
-.benefits h4 {
-    color: #667eea;
-    margin-bottom: 15px;
-    font-size: 16px;
-    font-weight: 600;
-}
-
-.benefits ul {
-    list-style: none;
-    padding: 0;
-}
-
-.benefits li {
-    padding: 8px 0;
-    color: #666;
-    font-size: 14px;
-}
-
-.benefits li:before {
-    content: "✓ ";
-    color: #667eea;
-    font-weight: 600;
-    margin-right: 10px;
-}
-
-.links {
-    text-align: center;
-    margin-top: 20px;
-    font-size: 14px;
-    color: #666;
-}
-
-.links a {
-    color: #667eea;
-    text-decoration: none;
-    font-weight: 600;
-}
-
-.links a:hover {
-    text-decoration: underline;
-}
-
-.form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-}
-
-@media (max-width: 600px) {
-    .form-row {
-        grid-template-columns: 1fr;
-    }
-    
-    .container {
-        padding: 25px;
-    }
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng ký chủ phòng - QuanLyPhongTro</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="assets/css/modern.css" rel="stylesheet">
 </head>
+<body class="auth-dark">
+    <div class="three-stage auth-scene" data-three-scene data-scene="housing" data-accent="#14b8a6" data-accent2="#2563eb"></div>
 
-<body>
+    <main class="auth-3d-page">
+        <a href="index.php" class="auth-home-link"><i class="fas fa-arrow-left"></i> Trang chủ</a>
+        <div class="auth-3d-shell">
+            <section class="auth-3d-copy">
+                <div class="eyebrow"><i class="fas fa-building-user"></i> Dành cho chủ phòng</div>
+                <h1>Đăng phòng đẹp, nhận lịch xem và quản lý doanh thu.</h1>
+                <p>
+                    Tài khoản owner cần admin duyệt trước khi đăng tin. Sau khi được duyệt,
+                    bạn có dashboard riêng để quản lý phòng, booking và chất lượng tin đăng.
+                </p>
+                <div class="auth-3d-points">
+                    <div class="auth-3d-point"><strong>Xác minh</strong><span>Admin duyệt owner</span></div>
+                    <div class="auth-3d-point"><strong>Đăng tin</strong><span>Quản lý phòng và ảnh</span></div>
+                    <div class="auth-3d-point"><strong>Vận hành</strong><span>Lịch xem, booking, doanh thu</span></div>
+                </div>
+            </section>
 
-<div class="container">
-    <h2>🏠 Đăng Ký Làm Chủ Phòng</h2>
-    <p class="subtitle">Bắt đầu kinh doanh và quản lý phòng trọ của bạn</p>
+            <section class="auth-card-3d">
+                <div class="auth-card-head">
+                    <div class="brand-mark"><i class="fa-solid fa-building"></i></div>
+                    <div>
+                        <h2>Đăng ký chủ phòng</h2>
+                        <p class="subtitle">Gửi thông tin để bắt đầu đăng và quản lý phòng cho thuê.</p>
+                    </div>
+                </div>
 
-    <?php if($message != ""): ?>
-        <div class="msg <?php echo $type; ?>">
-            <?php echo htmlspecialchars($message); ?>
+                <?php if ($message !== ''): ?>
+                    <div class="msg <?php echo htmlspecialchars($type); ?>"><?php echo htmlspecialchars($message); ?></div>
+                <?php endif; ?>
+
+                <form method="POST">
+                    <label>Họ tên chủ phòng</label>
+                    <div class="input-group">
+                        <i class="fa fa-user"></i>
+                        <input type="text" name="name" placeholder="Nguyễn Văn A" value="<?php echo htmlspecialchars($name); ?>" required>
+                    </div>
+
+                    <label>Số điện thoại</label>
+                    <div class="input-group">
+                        <i class="fa fa-phone"></i>
+                        <input type="tel" name="phone" placeholder="09xxxxxxxx" value="<?php echo htmlspecialchars($phone); ?>">
+                    </div>
+
+                    <label>Email</label>
+                    <div class="input-group">
+                        <i class="fa fa-envelope"></i>
+                        <input type="email" name="email" placeholder="owner@example.com" value="<?php echo htmlspecialchars($email); ?>" required>
+                    </div>
+
+                    <label>Mật khẩu</label>
+                    <div class="input-group">
+                        <i class="fa fa-lock"></i>
+                        <input type="password" name="password" placeholder="Ít nhất 6 ký tự" required>
+                    </div>
+
+                    <label>Xác nhận mật khẩu</label>
+                    <div class="input-group">
+                        <i class="fa fa-lock"></i>
+                        <input type="password" name="confirm" placeholder="Nhập lại mật khẩu" required>
+                    </div>
+
+                    <button type="submit"><i class="fas fa-paper-plane"></i> Gửi hồ sơ owner</button>
+                </form>
+
+                <div class="links">
+                    Đã có tài khoản? <a href="login.php">Đăng nhập</a><br>
+                    Là người thuê? <a href="register.php">Đăng ký người thuê</a>
+                </div>
+            </section>
         </div>
-    <?php endif; ?>
+    </main>
 
-    <div class="benefits">
-        <h4>✨ Lợi Ích Khi Là Chủ Phòng:</h4>
-        <ul>
-            <li>Quản lý phòng của bạn dễ dàng</li>
-            <li>Tiếp cận hàng ngàn người thuê</li>
-            <li>Nhận thông báo về các yêu cầu mới</li>
-            <li>Nhận thanh toán an toàn</li>
-            <li>Hỗ trợ khách hàng 24/7</li>
-        </ul>
-    </div>
-
-    <form method="POST">
-        <div class="form-row">
-            <div class="input-group">
-                <i class="fa fa-user"></i>
-                <input type="text" name="name" placeholder="Họ tên" value="<?php echo htmlspecialchars($name); ?>" required>
-            </div>
-            <div class="input-group">
-                <i class="fa fa-phone"></i>
-                <input type="tel" name="phone" placeholder="Số điện thoại">
-            </div>
-        </div>
-
-        <div class="input-group">
-            <i class="fa fa-envelope"></i>
-            <input type="email" name="email" placeholder="Email" value="<?php echo htmlspecialchars($email); ?>" required>
-        </div>
-
-        <div class="input-group">
-            <i class="fa fa-lock"></i>
-            <input type="password" name="password" placeholder="Mật khẩu (ít nhất 6 ký tự)" required>
-        </div>
-
-        <div class="input-group">
-            <i class="fa fa-lock"></i>
-            <input type="password" name="confirm" placeholder="Xác nhận mật khẩu" required>
-        </div>
-
-        <button type="submit">Tạo Tài Khoản Chủ Phòng</button>
-    </form>
-
-    <div class="links">
-        Đã có tài khoản? <a href="login.php">Đăng Nhập</a><br>
-        Bạn là người thuê? <a href="register.php">Đăng Ký Tìm Phòng</a>
-    </div>
-</div>
-
+    <script type="module" src="assets/js/three-interface.js"></script>
 </body>
 </html>

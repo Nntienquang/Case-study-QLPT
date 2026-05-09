@@ -2,461 +2,209 @@
 @require_once '../../config/database.php';
 @require_once '../../config/constants.php';
 @require_once '../../core/Database.php';
+@require_once '../../core/ListingQuality.php';
 
 session_start();
 
 /** @var mysqli $conn */
-// Check if logged in
 if (!isset($_SESSION['user_id'])) {
     header('Location: ../login.php');
     exit;
 }
 
-// Redirect non-owners to their dashboard
-if ($_SESSION['role'] !== 'owner') {
-    if ($_SESSION['role'] === 'admin') {
-        header('Location: ../admin/index.php');
-    } else {
-        header('Location: ../dashboard.php');
-    }
+if (($_SESSION['role'] ?? '') !== 'owner') {
+    header('Location: ../dashboard.php');
     exit;
 }
 
 $db = new Database($conn);
-$owner_id = $_SESSION['user_id'];
-$owner_name = $_SESSION['name'];
+$owner_id = (int)$_SESSION['user_id'];
+$owner_name = $_SESSION['name'] ?? $_SESSION['user_name'] ?? 'Chủ phòng';
 
-// Get owner's listings
-$stmt = $db->prepare("
-    SELECT id, title, price, address, status, count_view, created_at
-    FROM motels
-    WHERE user_id = ?
-    ORDER BY created_at DESC
-");
-$stmt->bind_param("i", $owner_id);
+$stmt = $db->prepare('SELECT * FROM motels WHERE user_id = ? ORDER BY created_at DESC');
+$stmt->bind_param('i', $owner_id);
 $stmt->execute();
 $listings = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-// Count stats
+$qualityTotal = 0;
+$lowQualityCount = 0;
+foreach ($listings as $index => $listing) {
+    $quality = ListingQuality::sync($conn, $listing);
+    $listings[$index]['health_score'] = $quality['score'];
+    $qualityTotal += $quality['score'];
+    if ($quality['score'] < 70) {
+        $lowQualityCount++;
+    }
+}
+
 $stats = [];
 $stats['total_listings'] = count($listings);
+$stats['avg_health_score'] = $stats['total_listings'] > 0 ? round($qualityTotal / $stats['total_listings']) : 0;
+$stats['low_quality'] = $lowQualityCount;
 
 $stmt = $db->prepare("SELECT COUNT(*) as count FROM bookings b JOIN motels m ON b.motel_id = m.id WHERE m.user_id = ? AND b.status = 'pending'");
-$stmt->bind_param("i", $owner_id);
+$stmt->bind_param('i', $owner_id);
 $stmt->execute();
-$stats['pending_bookings'] = $stmt->get_result()->fetch_assoc()['count'];
+$stats['pending_bookings'] = (int)($stmt->get_result()->fetch_assoc()['count'] ?? 0);
 $stmt->close();
 
-$stmt = $db->prepare("SELECT SUM(count_view) as total FROM motels WHERE user_id = ?");
-$stmt->bind_param("i", $owner_id);
+$stmt = $db->prepare('SELECT COALESCE(SUM(count_view), 0) as total FROM motels WHERE user_id = ?');
+$stmt->bind_param('i', $owner_id);
 $stmt->execute();
-$view_result = $stmt->get_result()->fetch_assoc();
-$stats['total_views'] = $view_result['total'] ?? 0;
+$stats['total_views'] = (int)($stmt->get_result()->fetch_assoc()['total'] ?? 0);
 $stmt->close();
 
-$stmt = $db->prepare("SELECT COUNT(*) as count FROM bookings b JOIN motels m ON b.motel_id = m.id WHERE m.user_id = ? AND b.status = 'completed'");
-$stmt->bind_param("i", $owner_id);
+$stmt = $db->prepare("SELECT COUNT(*) as count FROM viewing_appointments WHERE owner_id = ? AND status = 'pending'");
+$stmt->bind_param('i', $owner_id);
 $stmt->execute();
-$stats['completed_bookings'] = $stmt->get_result()->fetch_assoc()['count'];
+$stats['pending_viewings'] = (int)($stmt->get_result()->fetch_assoc()['count'] ?? 0);
 $stmt->close();
+
+function motel_status_label(string $status): string
+{
+    return [
+        'pending' => 'Chờ duyệt',
+        'approved' => 'Đang hiển thị',
+        'hidden' => 'Đã ẩn',
+        'rejected' => 'Từ chối',
+    ][strtolower($status)] ?? ucfirst($status);
+}
 ?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Owner Dashboard - QuanLyPhongTro</title>
+    <title>Quản lý phòng - QuanLyPhongTro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="../assets/css/modern.css" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            background: #f8f9fa;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        .navbar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        .navbar-brand {
-            font-size: 22px;
-            font-weight: 700;
-            color: white !important;
-        }
-        
-        .navbar-nav .nav-link {
-            color: rgba(255,255,255,0.9) !important;
-            margin-left: 20px;
-            transition: 0.3s;
-        }
-        
-        .navbar-nav .nav-link:hover {
-            color: white !important;
-        }
-        
-        .sidebar {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            height: fit-content;
-            position: sticky;
-            top: 80px;
-        }
-        
-        .sidebar h5 {
-            font-weight: 700;
-            margin-bottom: 20px;
-            color: #333;
-        }
-        
-        .sidebar a, .sidebar button {
-            display: block;
-            padding: 12px 15px;
-            margin-bottom: 8px;
-            border-radius: 6px;
-            color: #666;
-            text-decoration: none;
-            border: none;
-            background: transparent;
-            cursor: pointer;
-            transition: 0.3s;
-            text-align: left;
-            width: 100%;
-        }
-        
-        .sidebar a:hover, .sidebar a.active, .sidebar button:hover {
-            background: #f0f0f0;
-            color: #667eea;
-        }
-        
-        .main-content {
-            padding: 30px;
-        }
-        
-        .welcome-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 40px;
-            border-radius: 12px;
-            margin-bottom: 30px;
-        }
-        
-        .welcome-card h1 {
-            font-size: 32px;
-            font-weight: 700;
-            margin-bottom: 10px;
-        }
-        
-        .welcome-card p {
-            font-size: 16px;
-            opacity: 0.9;
-        }
-        
-        .stats-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 40px;
-        }
-        
-        .stat-card {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            text-align: center;
-        }
-        
-        .stat-icon {
-            font-size: 40px;
-            color: #667eea;
-            margin-bottom: 15px;
-        }
-        
-        .stat-number {
-            font-size: 32px;
-            font-weight: 700;
-            color: #333;
-            margin-bottom: 5px;
-        }
-        
-        .stat-label {
-            font-size: 14px;
-            color: #666;
-        }
-        
-        .section-title {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 25px;
-            color: #333;
-        }
-        
-        .listing-card {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            transition: 0.3s;
-        }
-        
-        .listing-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        }
-        
-        .listing-info h3 {
-            font-size: 18px;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 8px;
-        }
-        
-        .listing-info p {
-            color: #666;
-            font-size: 14px;
-            margin: 5px 0;
-        }
-        
-        .listing-actions {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .btn-action {
-            padding: 8px 15px;
-            border-radius: 6px;
-            border: none;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
-            transition: 0.3s;
-        }
-        
-        .btn-edit {
-            background: #e3f2fd;
-            color: #1976d2;
-        }
-        
-        .btn-edit:hover {
-            background: #1976d2;
-            color: white;
-        }
-        
-        .btn-delete {
-            background: #ffebee;
-            color: #d32f2f;
-        }
-        
-        .btn-delete:hover {
-            background: #d32f2f;
-            color: white;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
-            color: white;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102,126,234,0.4);
-        }
-        
-        .empty-state {
-            text-align: center;
-            padding: 60px 30px;
-            background: white;
-            border-radius: 12px;
-        }
-        
-        .empty-state-icon {
-            font-size: 60px;
-            color: #ddd;
-            margin-bottom: 20px;
-        }
-        
-        .empty-state p {
-            color: #999;
-            font-size: 16px;
-            margin-bottom: 20px;
-        }
-        
-        .badge-status {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        
-        .badge-pending {
-            background: #fff3cd;
-            color: #856404;
-        }
-        
-        .badge-approved {
-            background: #d4edda;
-            color: #155724;
-        }
-        
-        .badge-hidden {
-            background: #f8d7da;
-            color: #721c24;
-        }
+        body { background: #f6f8fb !important; }
+        .app-shell { padding: 28px 0 44px; }
+        .app-nav { background: #fff !important; border-bottom: 1px solid #e5e7eb; box-shadow: 0 8px 30px rgba(15,23,42,.06) !important; }
+        .layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 22px; }
+        .side-panel, .hero-panel, .stat-card, .listing-card { background: #fff; border: 1px solid #e5eaf2; border-radius: 18px; box-shadow: 0 18px 50px rgba(15,23,42,.07); }
+        .side-panel { padding: 18px; height: fit-content; position: sticky; top: 88px; }
+        .side-title { font-weight: 950; color: #101828; margin-bottom: 12px; }
+        .side-link { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 12px; color: #475467; text-decoration: none; font-weight: 750; }
+        .side-link:hover, .side-link.active { background: #f2f4f7; color: #101828; }
+        .hero-panel { padding: 26px; display: flex; justify-content: space-between; gap: 18px; align-items: center; background: linear-gradient(135deg, #ffffff, #f0fdf4); }
+        .hero-panel h1 { font-size: 30px; font-weight: 950; margin-bottom: 8px; }
+        .hero-panel p { color: #667085; margin: 0; }
+        .stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin: 18px 0; }
+        .stat-card { padding: 18px; }
+        .stat-card i { color: #0e7490; margin-bottom: 12px; font-size: 22px; }
+        .stat-value { font-size: 30px; line-height: 1; font-weight: 950; color: #101828; }
+        .stat-label { color: #667085; font-size: 13px; margin-top: 6px; }
+        .section-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 28px 0 14px; }
+        .section-head h2 { font-size: 22px; font-weight: 950; margin: 0; }
+        .listing-card { padding: 18px; margin-bottom: 14px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: center; }
+        .listing-title { font-weight: 950; color: #101828; font-size: 18px; }
+        .muted { color: #667085; font-size: 14px; }
+        .pill { display: inline-flex; padding: 6px 10px; border-radius: 999px; background: #ecfeff; color: #0e7490; font-size: 12px; font-weight: 850; }
+        .quality { margin-top: 10px; max-width: 360px; }
+        .quality-top { display: flex; justify-content: space-between; color: #475467; font-size: 13px; margin-bottom: 5px; }
+        .quality-bar { height: 8px; border-radius: 999px; background: #e5e7eb; overflow: hidden; }
+        .quality-fill { height: 100%; border-radius: 999px; background: #0e7490; }
+        .price { color: #0e7490; font-size: 20px; font-weight: 950; white-space: nowrap; }
+        .empty-state { background:#fff; border:1px solid #e5eaf2; border-radius:18px; padding:34px; text-align:center; color:#667085; }
+        @media (max-width: 991px) { .layout, .stats, .listing-card { grid-template-columns: 1fr; } .side-panel { position: static; } .hero-panel { align-items: start; flex-direction: column; } }
     </style>
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+    <nav class="navbar app-nav navbar-expand-lg sticky-top">
         <div class="container-lg">
-            <a class="navbar-brand" href="../index.php">
-                <i class="fas fa-home"></i> QuanLyPhongTro
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="userMenu" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user"></i> <?php echo htmlspecialchars($owner_name); ?>
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="userMenu">
-                            <li><a class="dropdown-item" href="dashboard.php">Dashboard</a></li>
-                            <li><a class="dropdown-item" href="profile.php">Hồ Sơ</a></li>
-                            <li><a class="dropdown-item" href="settings.php">Cài Đặt</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="../logout.php">Đăng Xuất</a></li>
-                        </ul>
-                    </li>
-                </ul>
+            <a class="navbar-brand" href="../index.php"><i class="fas fa-house-chimney"></i> QuanLyPhongTro</a>
+            <div class="ms-auto d-flex align-items-center gap-3">
+                <span class="text-muted d-none d-md-inline"><?php echo htmlspecialchars($owner_name); ?></span>
+                <a class="btn btn-outline-secondary btn-sm" href="../logout.php">Đăng xuất</a>
             </div>
         </div>
     </nav>
-    
-    <!-- Main Content -->
-    <div class="container-lg" style="padding: 30px 0;">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-lg-3">
-                <div class="sidebar">
-                    <h5>Menu</h5>
-                    <a href="dashboard.php" class="active"><i class="fas fa-chart-line"></i> Dashboard</a>
-                    <a href="listings.php"><i class="fas fa-list"></i> Phòng của Tôi</a>
-                    <a href="add-listing.php"><i class="fas fa-plus"></i> Thêm Phòng Mới</a>
-                    <a href="bookings.php"><i class="fas fa-calendar"></i> Đơn Đặt Phòng</a>
-                    <a href="revenue.php"><i class="fas fa-chart-bar"></i> Doanh Thu</a>
-                    <a href="profile.php"><i class="fas fa-user"></i> Hồ Sơ</a>
-                    <a href="settings.php"><i class="fas fa-cog"></i> Cài Đặt</a>
-                    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Đăng Xuất</a>
+
+    <main class="app-shell">
+        <div class="container-lg layout">
+            <aside class="side-panel">
+                <div class="side-title">Chủ phòng</div>
+                <a class="side-link active" href="dashboard.php"><i class="fas fa-chart-line"></i> Tổng quan</a>
+                <a class="side-link" href="listings.php"><i class="fas fa-list"></i> Phòng của tôi</a>
+                <a class="side-link" href="add-listing.php"><i class="fas fa-plus"></i> Đăng phòng</a>
+                <a class="side-link" href="bookings.php"><i class="fas fa-calendar-check"></i> Booking</a>
+                <a class="side-link" href="revenue.php"><i class="fas fa-chart-column"></i> Doanh thu</a>
+                <a class="side-link" href="profile.php"><i class="fas fa-user"></i> Hồ sơ</a>
+                <a class="side-link" href="settings.php"><i class="fas fa-gear"></i> Cài đặt</a>
+            </aside>
+
+            <section>
+                <?php if (isset($_SESSION['warning'])): ?>
+                    <div class="alert alert-warning alert-dismissible fade show">
+                        <?php echo htmlspecialchars($_SESSION['warning']); unset($_SESSION['warning']); ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <?php endif; ?>
+
+                <div class="hero-panel">
+                    <div>
+                        <h1>Xin chào, <?php echo htmlspecialchars($owner_name); ?></h1>
+                        <p>Theo dõi hiệu quả tin đăng, lịch xem và booking mới của phòng bạn đang cho thuê.</p>
+                    </div>
+                    <a href="add-listing.php" class="btn btn-primary"><i class="fas fa-plus"></i> Đăng phòng</a>
                 </div>
-            </div>
-            
-            <!-- Main Content -->
-            <div class="col-lg-9">
-                <div class="main-content">
-                    <!-- Welcome Card -->
-                    <div class="welcome-card">
-                        <h1>🏢 Xin Chào, <?php echo htmlspecialchars($owner_name); ?>!</h1>
-                        <p>Quản lý phòng trọ của bạn một cách chuyên nghiệp. Tăng doanh thu và quản lý khách hàng hiệu quả.</p>
-                    </div>
-                    
-                    <!-- Stats -->
-                    <div class="stats-container">
-                        <div class="stat-card">
-                            <div class="stat-icon"><i class="fas fa-home"></i></div>
-                            <div class="stat-number"><?php echo $stats['total_listings']; ?></div>
-                            <div class="stat-label">Phòng Đang Cho Thuê</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon"><i class="fas fa-eye"></i></div>
-                            <div class="stat-number"><?php echo $stats['total_views']; ?></div>
-                            <div class="stat-label">Tổng Lượt Xem</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon"><i class="fas fa-hourglass-end"></i></div>
-                            <div class="stat-number"><?php echo $stats['pending_bookings']; ?></div>
-                            <div class="stat-label">Đơn Đặt Chờ Duyệt</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-                            <div class="stat-number"><?php echo $stats['completed_bookings']; ?></div>
-                            <div class="stat-label">Đơn Hoàn Thành</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Listings Section -->
-                    <div style="margin-top: 40px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-                            <h2 class="section-title" style="margin: 0;">
-                                <i class="fas fa-home"></i> Phòng của Tôi
-                            </h2>
-                            <a href="add-listing.php" class="btn-primary">
-                                <i class="fas fa-plus"></i> Thêm Phòng Mới
-                            </a>
-                        </div>
-                        
-                        <?php if (count($listings) > 0): ?>
-                            <?php foreach ($listings as $listing): ?>
-                                <div class="listing-card">
-                                    <div class="listing-info" style="flex: 1;">
-                                        <h3><?php echo htmlspecialchars($listing['title']); ?></h3>
-                                        <p><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($listing['address']); ?></p>
-                                        <p>
-                                            <i class="fas fa-eye"></i> Lượt xem: <?php echo $listing['count_view']; ?> | 
-                                            <i class="fas fa-calendar"></i> Đăng: <?php echo date('d/m/Y', strtotime($listing['created_at'])); ?>
-                                        </p>
-                                        <p>
-                                            <span class="badge-status badge-<?php echo strtolower($listing['status']); ?>">
-                                                <?php 
-                                                    $status_map = ['pending' => 'Chờ Duyệt', 'approved' => 'Đang Cho Thuê', 'hidden' => 'Đã Ẩn'];
-                                                    echo $status_map[strtolower($listing['status'])] ?? ucfirst($listing['status']); 
-                                                ?>
-                                            </span>
-                                        </p>
-                                    </div>
-                                    <div style="text-align: right;">
-                                        <div style="font-size: 18px; font-weight: 700; color: #667eea; margin-bottom: 10px;">
-                                            <?php echo number_format($listing['price']); ?> VNĐ
-                                        </div>
-                                        <div class="listing-actions">
-                                            <button class="btn-action btn-edit">Chỉnh Sửa</button>
-                                            <button class="btn-action btn-delete">Xóa</button>
-                                        </div>
-                                    </div>
+
+                <div class="stats">
+                    <div class="stat-card"><i class="fas fa-house"></i><div class="stat-value"><?php echo $stats['total_listings']; ?></div><div class="stat-label">Tin đăng</div></div>
+                    <div class="stat-card"><i class="fas fa-eye"></i><div class="stat-value"><?php echo $stats['total_views']; ?></div><div class="stat-label">Lượt xem</div></div>
+                    <div class="stat-card"><i class="fas fa-calendar-day"></i><div class="stat-value"><?php echo $stats['pending_viewings']; ?></div><div class="stat-label">Lịch xem</div></div>
+                    <div class="stat-card"><i class="fas fa-inbox"></i><div class="stat-value"><?php echo $stats['pending_bookings']; ?></div><div class="stat-label">Booking chờ</div></div>
+                    <div class="stat-card"><i class="fas fa-gauge-high"></i><div class="stat-value"><?php echo $stats['avg_health_score']; ?></div><div class="stat-label">Điểm tin TB</div></div>
+                </div>
+
+                <div class="section-head">
+                    <h2>Phòng đang quản lý</h2>
+                    <a href="listings.php" class="btn btn-outline-primary btn-sm">Xem tất cả</a>
+                </div>
+
+                <?php if ($listings): ?>
+                    <?php foreach (array_slice($listings, 0, 6) as $listing): ?>
+                        <?php
+                            $score = (int)($listing['health_score'] ?? 0);
+                        ?>
+                        <article class="listing-card">
+                            <div>
+                                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                                    <div class="listing-title"><?php echo htmlspecialchars($listing['title']); ?></div>
+                                    <span class="pill"><?php echo motel_status_label($listing['status']); ?></span>
                                 </div>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <div class="empty-state">
-                                <div class="empty-state-icon"><i class="fas fa-home"></i></div>
-                                <p>Bạn chưa có phòng nào</p>
-                                <a href="add-listing.php" class="btn-primary">Thêm Phòng Mới Ngay</a>
+                                <div class="muted"><i class="fas fa-location-dot"></i> <?php echo htmlspecialchars($listing['address']); ?></div>
+                                <div class="quality">
+                                    <div class="quality-top">
+                                        <span>Chất lượng tin</span>
+                                        <strong><?php echo $score; ?>/100</strong>
+                                    </div>
+                                    <div class="quality-bar"><div class="quality-fill" style="width: <?php echo max(0, min(100, $score)); ?>%;"></div></div>
+                                </div>
                             </div>
-                        <?php endif; ?>
+                            <div class="text-end">
+                                <div class="price"><?php echo number_format((int)$listing['price']); ?> VND</div>
+                                <div class="muted mb-3"><?php echo (int)$listing['count_view']; ?> lượt xem</div>
+                                <a href="edit-listing.php?id=<?php echo (int)$listing['id']; ?>" class="btn btn-primary btn-sm">Chỉnh sửa</a>
+                            </div>
+                        </article>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div class="empty-state">
+                        <h3 class="fw-bold">Bạn chưa có phòng nào</h3>
+                        <p>Đăng phòng đầu tiên để bắt đầu nhận lịch xem và booking.</p>
+                        <a href="add-listing.php" class="btn btn-primary">Đăng phòng ngay</a>
                     </div>
-                </div>
-            </div>
+                <?php endif; ?>
+            </section>
         </div>
-    </div>
-    
+    </main>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+

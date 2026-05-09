@@ -2,6 +2,8 @@
 @require_once '../../config/database.php';
 @require_once '../../config/constants.php';
 @require_once '../../core/Database.php';
+@require_once '../../core/OwnerStatusMiddleware.php';
+@require_once '../../core/ListingQuality.php';
 
 session_start();
 
@@ -13,6 +15,8 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'owner') {
 
 $db = new Database($conn);
 $owner_id = $_SESSION['user_id'];
+$ownerStatus = new OwnerStatusMiddleware($db);
+$ownerStatus->checkOwnerAccess($owner_id, 'dashboard.php');
 $motel_id = (int)($_GET['id'] ?? 0);
 $message = '';
 $message_type = '';
@@ -52,20 +56,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $category_id = (int)($_POST['category_id'] ?? 0);
     $district_id = (int)($_POST['district_id'] ?? 0);
     $utilities = isset($_POST['utilities']) ? implode(',', $_POST['utilities']) : '';
+    $available_from = $_POST['available_from'] ?? null;
+    $available_from = $available_from !== '' ? $available_from : null;
+    $service_fee = (int)($_POST['service_fee'] ?? 0);
+    $deposit_months = (float)($_POST['deposit_months'] ?? 1);
+    $quality = ListingQuality::evaluate([
+        'title' => $title,
+        'description' => $description,
+        'price' => $price,
+        'area' => $area,
+        'address' => $address,
+        'category_id' => $category_id,
+        'district_id' => $district_id,
+        'utilities' => $utilities,
+        'available_from' => $available_from,
+        'service_fee' => $service_fee,
+        'deposit_months' => $deposit_months,
+    ]);
+    $health_score = $quality['score'];
 
     if (empty($title) || empty($price) || empty($address)) {
-        $message = 'Vui lòng điền đầy đủ thông tin bắt buộc!';
+        $message = 'Vui lÃ²ng Ä‘iá»n Ä‘áº§y Ä‘á»§ thÃ´ng tin báº¯t buá»™c!';
         $message_type = 'danger';
     } else {
         $stmt = $db->prepare("
             UPDATE motels
-            SET title = ?, description = ?, price = ?, area = ?, bedrooms = ?, bathrooms = ?, address = ?, category_id = ?, district_id = ?, utilities = ?
+            SET title = ?, description = ?, price = ?, area = ?, bedrooms = ?, bathrooms = ?, address = ?, category_id = ?, district_id = ?, utilities = ?, available_from = ?, service_fee = ?, deposit_months = ?, health_score = ?
             WHERE id = ? AND user_id = ?
         ");
-        $stmt->bind_param("ssiiddsisii", $title, $description, $price, $area, $bedrooms, $bathrooms, $address, $category_id, $district_id, $utilities, $motel_id, $owner_id);
+        $stmt->bind_param("ssidiisiissidiii", $title, $description, $price, $area, $bedrooms, $bathrooms, $address, $category_id, $district_id, $utilities, $available_from, $service_fee, $deposit_months, $health_score, $motel_id, $owner_id);
         
         if ($stmt->execute()) {
-            $message = 'Phòng đã cập nhật thành công!';
+            $message = 'PhÃ²ng Ä‘Ã£ cáº­p nháº­t thÃ nh cÃ´ng!';
             $message_type = 'success';
             // Refresh motel data
             $stmt = $db->prepare("SELECT * FROM motels WHERE id = ? AND user_id = ?");
@@ -74,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $motel = $stmt->get_result()->fetch_assoc();
             $stmt->close();
         } else {
-            $message = 'Lỗi: ' . $stmt->error;
+            $message = 'Lá»—i: ' . $stmt->error;
             $message_type = 'danger';
         }
         $stmt->close();
@@ -88,7 +110,7 @@ $utilities_array = array_filter(explode(',', $motel['utilities']));
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sửa Phòng - Owner</title>
+    <title>Sá»­a PhÃ²ng - Owner</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -112,6 +134,7 @@ $utilities_array = array_filter(explode(',', $motel['utilities']));
         .utility-check label { margin: 0 0 0 8px; cursor: pointer; }
         .alert { border-radius: 12px; }
     </style>
+    <link href="../assets/css/modern.css" rel="stylesheet">
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
@@ -128,18 +151,18 @@ $utilities_array = array_filter(explode(',', $motel['utilities']));
                 <div class="sidebar">
                     <h5>Menu</h5>
                     <a href="dashboard.php"><i class="fas fa-chart-line"></i> Dashboard</a>
-                    <a href="listings.php" class="active"><i class="fas fa-list"></i> Phòng của Tôi</a>
-                    <a href="bookings.php"><i class="fas fa-calendar"></i> Đơn Đặt Phòng</a>
+                    <a href="listings.php" class="active"><i class="fas fa-list"></i> PhÃ²ng cá»§a TÃ´i</a>
+                    <a href="bookings.php"><i class="fas fa-calendar"></i> ÄÆ¡n Äáº·t PhÃ²ng</a>
                     <a href="revenue.php"><i class="fas fa-chart-bar"></i> Doanh Thu</a>
-                    <a href="profile.php"><i class="fas fa-user"></i> Hồ Sơ</a>
-                    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Đăng Xuất</a>
+                    <a href="profile.php"><i class="fas fa-user"></i> Há»“ SÆ¡</a>
+                    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> ÄÄƒng Xuáº¥t</a>
                 </div>
             </div>
 
             <div class="col-lg-9">
                 <div class="main-content">
                     <h1 style="font-size: 28px; font-weight: 700; margin-bottom: 30px;">
-                        <i class="fas fa-edit"></i> Chỉnh Sửa Phòng
+                        <i class="fas fa-edit"></i> Chá»‰nh Sá»­a PhÃ²ng
                     </h1>
 
                     <?php if ($message): ?>
@@ -151,30 +174,30 @@ $utilities_array = array_filter(explode(',', $motel['utilities']));
 
                     <form method="POST" class="form-card">
                         <div class="form-section">
-                            <h5><i class="fas fa-info-circle"></i> Thông Tin Cơ Bản</h5>
+                            <h5><i class="fas fa-info-circle"></i> ThÃ´ng Tin CÆ¡ Báº£n</h5>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Tên Phòng *</label>
+                                    <label class="form-label">TÃªn PhÃ²ng *</label>
                                     <input type="text" name="title" class="form-control" required value="<?php echo htmlspecialchars($motel['title']); ?>">
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Giá Thuê (VNĐ/tháng) *</label>
+                                    <label class="form-label">GiÃ¡ ThuÃª (VNÄ/thÃ¡ng) *</label>
                                     <input type="number" name="price" class="form-control" required value="<?php echo $motel['price']; ?>">
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Mô Tả Chi Tiết</label>
+                                <label class="form-label">MÃ´ Táº£ Chi Tiáº¿t</label>
                                 <textarea name="description" class="form-control" rows="5"><?php echo htmlspecialchars($motel['description']); ?></textarea>
                             </div>
                         </div>
 
                         <div class="form-section">
-                            <h5><i class="fas fa-map-marker-alt"></i> Địa Điểm</h5>
+                            <h5><i class="fas fa-map-marker-alt"></i> Äá»‹a Äiá»ƒm</h5>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Quận *</label>
+                                    <label class="form-label">Quáº­n *</label>
                                     <select name="district_id" class="form-select" required>
-                                        <option value="">-- Chọn Quận --</option>
+                                        <option value="">-- Chá»n Quáº­n --</option>
                                         <?php foreach ($districts as $district): ?>
                                             <option value="<?php echo $district['id']; ?>" <?php echo $motel['district_id'] == $district['id'] ? 'selected' : ''; ?>>
                                                 <?php echo htmlspecialchars($district['name']); ?>
@@ -183,9 +206,9 @@ $utilities_array = array_filter(explode(',', $motel['utilities']));
                                     </select>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Danh Mục *</label>
+                                    <label class="form-label">Danh Má»¥c *</label>
                                     <select name="category_id" class="form-select" required>
-                                        <option value="">-- Chọn Danh Mục --</option>
+                                        <option value="">-- Chá»n Danh Má»¥c --</option>
                                         <?php foreach ($categories as $cat): ?>
                                             <option value="<?php echo $cat['id']; ?>" <?php echo $motel['category_id'] == $cat['id'] ? 'selected' : ''; ?>>
                                                 <?php echo htmlspecialchars($cat['name']); ?>
@@ -195,65 +218,83 @@ $utilities_array = array_filter(explode(',', $motel['utilities']));
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Địa Chỉ Chi Tiết *</label>
+                                <label class="form-label">Äá»‹a Chá»‰ Chi Tiáº¿t *</label>
                                 <input type="text" name="address" class="form-control" required value="<?php echo htmlspecialchars($motel['address']); ?>">
                             </div>
                         </div>
 
                         <div class="form-section">
-                            <h5><i class="fas fa-ruler-combined"></i> Thông Tin Phòng</h5>
+                            <h5><i class="fas fa-ruler-combined"></i> ThÃ´ng Tin PhÃ²ng</h5>
                             <div class="row">
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label">Diện Tích (m²)</label>
+                                    <label class="form-label">Diá»‡n TÃ­ch (mÂ²)</label>
                                     <input type="number" step="0.01" name="area" class="form-control" value="<?php echo $motel['area']; ?>">
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label">Phòng Ngủ</label>
+                                    <label class="form-label">PhÃ²ng Ngá»§</label>
                                     <input type="number" name="bedrooms" class="form-control" value="<?php echo $motel['bedrooms']; ?>">
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label">Phòng Tắm</label>
+                                    <label class="form-label">PhÃ²ng Táº¯m</label>
                                     <input type="number" name="bathrooms" class="form-control" value="<?php echo $motel['bathrooms']; ?>">
                                 </div>
                             </div>
                         </div>
 
                         <div class="form-section">
-                            <h5><i class="fas fa-star"></i> Tiện Nghi</h5>
+                            <h5><i class="fas fa-wallet"></i> Chi Phi Va Ngay Trong</h5>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Ngay Co The Vao O</label>
+                                    <input type="date" name="available_from" class="form-control" value="<?php echo htmlspecialchars($motel['available_from'] ?? ''); ?>">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">Phi Dich Vu / Thang (VND)</label>
+                                    <input type="number" name="service_fee" class="form-control" min="0" value="<?php echo (int)($motel['service_fee'] ?? 0); ?>">
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">So Thang Coc</label>
+                                    <input type="number" step="0.5" min="0.5" name="deposit_months" class="form-control" value="<?php echo htmlspecialchars($motel['deposit_months'] ?? '1'); ?>">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h5><i class="fas fa-star"></i> Tiá»‡n Nghi</h5>
                             <div class="utilities-grid">
                                 <div class="utility-check">
-                                    <input type="checkbox" name="utilities" value="wifi" id="util_wifi" <?php echo in_array('wifi', $utilities_array) ? 'checked' : ''; ?>>
+                                    <input type="checkbox" name="utilities[]" value="wifi" id="util_wifi" <?php echo in_array('wifi', $utilities_array) ? 'checked' : ''; ?>>
                                     <label for="util_wifi">Wi-Fi</label>
                                 </div>
                                 <div class="utility-check">
-                                    <input type="checkbox" name="utilities" value="air_conditioner" id="util_ac" <?php echo in_array('air_conditioner', $utilities_array) ? 'checked' : ''; ?>>
-                                    <label for="util_ac">Điều Hòa</label>
+                                    <input type="checkbox" name="utilities[]" value="air_conditioner" id="util_ac" <?php echo in_array('air_conditioner', $utilities_array) ? 'checked' : ''; ?>>
+                                    <label for="util_ac">Äiá»u HÃ²a</label>
                                 </div>
                                 <div class="utility-check">
-                                    <input type="checkbox" name="utilities" value="water_heater" id="util_water" <?php echo in_array('water_heater', $utilities_array) ? 'checked' : ''; ?>>
-                                    <label for="util_water">Nước Nóng</label>
+                                    <input type="checkbox" name="utilities[]" value="water_heater" id="util_water" <?php echo in_array('water_heater', $utilities_array) ? 'checked' : ''; ?>>
+                                    <label for="util_water">NÆ°á»›c NÃ³ng</label>
                                 </div>
                                 <div class="utility-check">
-                                    <input type="checkbox" name="utilities" value="kitchen" id="util_kitchen" <?php echo in_array('kitchen', $utilities_array) ? 'checked' : ''; ?>>
-                                    <label for="util_kitchen">Bếp</label>
+                                    <input type="checkbox" name="utilities[]" value="kitchen" id="util_kitchen" <?php echo in_array('kitchen', $utilities_array) ? 'checked' : ''; ?>>
+                                    <label for="util_kitchen">Báº¿p</label>
                                 </div>
                                 <div class="utility-check">
-                                    <input type="checkbox" name="utilities" value="washing_machine" id="util_wash" <?php echo in_array('washing_machine', $utilities_array) ? 'checked' : ''; ?>>
-                                    <label for="util_wash">Máy Giặt</label>
+                                    <input type="checkbox" name="utilities[]" value="washing_machine" id="util_wash" <?php echo in_array('washing_machine', $utilities_array) ? 'checked' : ''; ?>>
+                                    <label for="util_wash">MÃ¡y Giáº·t</label>
                                 </div>
                                 <div class="utility-check">
-                                    <input type="checkbox" name="utilities" value="parking" id="util_parking" <?php echo in_array('parking', $utilities_array) ? 'checked' : ''; ?>>
-                                    <label for="util_parking">Chỗ Đỗ Xe</label>
+                                    <input type="checkbox" name="utilities[]" value="parking" id="util_parking" <?php echo in_array('parking', $utilities_array) ? 'checked' : ''; ?>>
+                                    <label for="util_parking">Chá»— Äá»— Xe</label>
                                 </div>
                             </div>
                         </div>
 
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Cập Nhật
+                                <i class="fas fa-save"></i> Cáº­p Nháº­t
                             </button>
                             <a href="listings.php" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left"></i> Quay Lại
+                                <i class="fas fa-arrow-left"></i> Quay Láº¡i
                             </a>
                         </div>
                     </form>

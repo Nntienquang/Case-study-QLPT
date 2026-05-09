@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 @require_once '../../config/database.php';
 @require_once '../../core/Database.php';
 
@@ -44,7 +44,7 @@ $stmt->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đơn Đặt Phòng - Owner</title>
+    <title>ÄÆ¡n Äáº·t PhÃ²ng - Owner</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -65,6 +65,7 @@ $stmt->close();
         .badge-cancelled { background: #f8d7da; color: #721c24; }
         .empty-state { text-align: center; padding: 60px 30px; background: white; border-radius: 12px; }
     </style>
+    <link href="../assets/css/modern.css" rel="stylesheet">
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
@@ -81,18 +82,18 @@ $stmt->close();
                 <div class="sidebar">
                     <h5>Menu</h5>
                     <a href="dashboard.php"><i class="fas fa-chart-line"></i> Dashboard</a>
-                    <a href="listings.php"><i class="fas fa-list"></i> Phòng của Tôi</a>
-                    <a href="bookings.php" class="active"><i class="fas fa-calendar"></i> Đơn Đặt Phòng</a>
+                    <a href="listings.php"><i class="fas fa-list"></i> PhÃ²ng cá»§a TÃ´i</a>
+                    <a href="bookings.php" class="active"><i class="fas fa-calendar"></i> ÄÆ¡n Äáº·t PhÃ²ng</a>
                     <a href="revenue.php"><i class="fas fa-chart-bar"></i> Doanh Thu</a>
-                    <a href="profile.php"><i class="fas fa-user"></i> Hồ Sơ</a>
-                    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Đăng Xuất</a>
+                    <a href="profile.php"><i class="fas fa-user"></i> Há»“ SÆ¡</a>
+                    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> ÄÄƒng Xuáº¥t</a>
                 </div>
             </div>
 
             <div class="col-lg-9">
                 <div class="main-content">
                     <h1 style="font-size: 28px; font-weight: 700; margin-bottom: 30px;">
-                        <i class="fas fa-calendar"></i> Đơn Đặt Phòng của Tôi
+                        <i class="fas fa-calendar"></i> ÄÆ¡n Äáº·t PhÃ²ng cá»§a TÃ´i
                     </h1>
 
                     <?php if (count($bookings) > 0): ?>
@@ -106,7 +107,7 @@ $stmt->close();
                                 </div>
                                 <div class="booking-info">
                                     <div class="booking-info-item">
-                                        <strong>Khách:</strong> <?php echo htmlspecialchars($booking['tenant_name']); ?>
+                                        <strong>KhÃ¡ch:</strong> <?php echo htmlspecialchars($booking['tenant_name']); ?>
                                     </div>
                                     <div class="booking-info-item">
                                         <strong>Email:</strong> <?php echo htmlspecialchars($booking['tenant_email']); ?>
@@ -118,10 +119,10 @@ $stmt->close();
                                         <strong>Check-out:</strong> <?php echo date('d/m/Y', strtotime($booking['check_out_date'])); ?>
                                     </div>
                                     <div class="booking-info-item">
-                                        <strong>Đặt cọc:</strong> <?php echo number_format($booking['deposit_amount']); ?> VNĐ
+                                        <strong>Äáº·t cá»c:</strong> <?php echo number_format($booking['deposit_amount']); ?> VNÄ
                                     </div>
                                     <div class="booking-info-item">
-                                        <strong>Ngày đặt:</strong> <?php echo date('d/m/Y H:i', strtotime($booking['created_at'])); ?>
+                                        <strong>NgÃ y Ä‘áº·t:</strong> <?php echo date('d/m/Y H:i', strtotime($booking['created_at'])); ?>
                                     </div>
                                 </div>
                             </div>
@@ -141,7 +142,7 @@ $stmt->close();
                     <?php else: ?>
                         <div class="empty-state">
                             <div style="font-size: 60px; color: #ddd; margin-bottom: 20px;"><i class="fas fa-inbox"></i></div>
-                            <p style="color: #999;">Không có đơn đặt phòng</p>
+                            <p style="color: #999;">KhÃ´ng cÃ³ Ä‘Æ¡n Ä‘áº·t phÃ²ng</p>
                         </div>
                     <?php endif; ?>
                 </div>

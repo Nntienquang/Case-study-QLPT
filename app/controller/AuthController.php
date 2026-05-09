@@ -18,7 +18,7 @@ class AuthController {
     /**
      * Register user
      */
-    public function register($name, $email, $password, $confirm, $role = 'user') {
+    public function register($name, $email, $password, $confirm, $role = 'user', $phone = '') {
         $errors = [];
         
         // Validation
@@ -26,6 +26,11 @@ class AuthController {
         $email = trim($email ?? "");
         $password = $password ?? "";
         $confirm = $confirm ?? "";
+        $phone = trim($phone ?? "");
+        $allowed_roles = ['user', 'owner'];
+        if (!in_array($role, $allowed_roles, true)) {
+            $role = 'user';
+        }
         
         if (empty($name)) {
             $errors[] = "Họ tên không được để trống";
@@ -65,11 +70,11 @@ class AuthController {
         // Register if no errors
         if (empty($errors)) {
             $hashed_password = password_hash($password, PASSWORD_BCRYPT);
-            $status = 'pending'; // Pending approval
+            $status = $role === 'owner' ? 'pending' : 'approved';
             
-            $stmt = $this->db->prepare("INSERT INTO users (name, email, password, role, status, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
+            $stmt = $this->db->prepare("INSERT INTO users (name, email, password, phone, role, status, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
             if ($stmt) {
-                $stmt->bind_param("sssss", $name, $email, $hashed_password, $role, $status);
+                $stmt->bind_param("ssssss", $name, $email, $hashed_password, $phone, $role, $status);
                 
                 if ($stmt->execute()) {
                     $stmt->close();
@@ -88,7 +93,9 @@ class AuthController {
                     
                     return [
                         'success' => true,
-                        'message' => 'Đăng ký thành công! Vui lòng đăng nhập'
+                        'message' => $role === 'owner'
+                            ? 'Đăng ký chủ phòng thành công! Tài khoản đang chờ admin duyệt.'
+                            : 'Đăng ký thành công! Vui lòng đăng nhập'
                     ];
                 } else {
                     return [
@@ -126,7 +133,7 @@ class AuthController {
         }
         
         // Get user
-        $stmt = $this->db->prepare("SELECT id, name, password, role, status FROM users WHERE email = ?");
+        $stmt = $this->db->prepare("SELECT id, name, email, password, role, status FROM users WHERE email = ?");
         if (!$stmt) {
             return [
                 'success' => false,
@@ -198,8 +205,11 @@ class AuthController {
         // Login success - set session
         session_start();
         $_SESSION['user_id'] = $user['id'];
+        $_SESSION['user_email'] = $user['email'];
         $_SESSION['name'] = $user['name'];
+        $_SESSION['user_name'] = $user['name'];
         $_SESSION['role'] = $user['role'];
+        $_SESSION['user_role'] = $user['role'];
         $_SESSION['status'] = $user['status'];
         $_SESSION['login_time'] = time();
         

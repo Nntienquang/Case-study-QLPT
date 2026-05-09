@@ -10,6 +10,14 @@ if (!$is_logged_in) {
 $dashboard = new DashboardController($db);
 $data = $dashboard->index();
 
+$adminQueue = [
+    'pending_owners' => (int)($db->getRow("SELECT COUNT(*) as count FROM users WHERE role = 'owner' AND status = 'pending'")['count'] ?? 0),
+    'pending_motels' => (int)($db->getRow("SELECT COUNT(*) as count FROM motels WHERE status = 'pending'")['count'] ?? 0),
+    'pending_reports' => (int)($db->getRow("SELECT COUNT(*) as count FROM reports WHERE status = 'pending'")['count'] ?? 0),
+    'pending_viewings' => (int)($db->getRow("SELECT COUNT(*) as count FROM viewing_appointments WHERE status = 'pending'")['count'] ?? 0),
+    'low_quality' => (int)($db->getRow("SELECT COUNT(*) as count FROM motels WHERE health_score > 0 AND health_score < 70")['count'] ?? 0),
+];
+
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -215,6 +223,39 @@ $data = $dashboard->index();
             border-radius: 3px;
             font-size: 12px;
         }
+        .queue-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+        .queue-card {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 18px;
+            text-decoration: none;
+            color: #111827;
+            box-shadow: 0 12px 32px rgba(15, 23, 42, .06);
+            display: flex;
+            justify-content: space-between;
+            gap: 14px;
+            align-items: center;
+        }
+        .queue-card:hover {
+            color: #111827;
+            transform: translateY(-2px);
+        }
+        .queue-value {
+            font-size: 30px;
+            font-weight: 800;
+            color: #2563eb;
+        }
+        .queue-label {
+            font-size: 13px;
+            color: #64748b;
+            margin-top: 3px;
+        }
         
         @media (max-width: 768px) {
             .sidebar {
@@ -229,6 +270,7 @@ $data = $dashboard->index();
             }
         }
     </style>
+    <link href="../assets/css/modern.css" rel="stylesheet">
 </head>
 <body>
     <div class="sidebar">
@@ -276,6 +318,45 @@ $data = $dashboard->index();
             </div>
             <?php unset($_SESSION['error']); ?>
         <?php endif; ?>
+
+        <div class="section-title" style="margin-top: 0;">Hang doi can xu ly</div>
+        <div class="queue-grid">
+            <a class="queue-card" href="<?php echo ADMIN_URL; ?>users.php">
+                <div>
+                    <div class="queue-value"><?php echo $adminQueue['pending_owners']; ?></div>
+                    <div class="queue-label">Owner cho duyet</div>
+                </div>
+                <i class="fa fa-user-plus fa-2x" style="color:#2563eb;"></i>
+            </a>
+            <a class="queue-card" href="<?php echo ADMIN_URL; ?>motels.php">
+                <div>
+                    <div class="queue-value"><?php echo $adminQueue['pending_motels']; ?></div>
+                    <div class="queue-label">Phong cho duyet</div>
+                </div>
+                <i class="fa fa-home fa-2x" style="color:#16a34a;"></i>
+            </a>
+            <a class="queue-card" href="<?php echo ADMIN_URL; ?>reports.php">
+                <div>
+                    <div class="queue-value"><?php echo $adminQueue['pending_reports']; ?></div>
+                    <div class="queue-label">Report pending</div>
+                </div>
+                <i class="fa fa-flag fa-2x" style="color:#dc2626;"></i>
+            </a>
+            <a class="queue-card" href="<?php echo ADMIN_URL; ?>bookings.php">
+                <div>
+                    <div class="queue-value"><?php echo $adminQueue['pending_viewings']; ?></div>
+                    <div class="queue-label">Lich xem moi</div>
+                </div>
+                <i class="fa fa-calendar fa-2x" style="color:#f59e0b;"></i>
+            </a>
+            <a class="queue-card" href="<?php echo ADMIN_URL; ?>motels.php">
+                <div>
+                    <div class="queue-value"><?php echo $adminQueue['low_quality']; ?></div>
+                    <div class="queue-label">Tin chat luong thap</div>
+                </div>
+                <i class="fa fa-warning fa-2x" style="color:#9333ea;"></i>
+            </a>
+        </div>
         
         <!-- Statistics -->
         <div class="row">

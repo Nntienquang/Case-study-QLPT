@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 @require_once '../../config/database.php';
 @require_once '../../core/Database.php';
 
@@ -67,6 +67,7 @@ $stmt->close();
         .transaction-info { flex: 1; }
         .transaction-amount { font-size: 18px; font-weight: 700; color: #667eea; }
     </style>
+    <link href="../assets/css/modern.css" rel="stylesheet">
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
@@ -83,18 +84,18 @@ $stmt->close();
                 <div class="sidebar">
                     <h5>Menu</h5>
                     <a href="dashboard.php"><i class="fas fa-chart-line"></i> Dashboard</a>
-                    <a href="listings.php"><i class="fas fa-list"></i> Phòng của Tôi</a>
-                    <a href="bookings.php"><i class="fas fa-calendar"></i> Đơn Đặt Phòng</a>
+                    <a href="listings.php"><i class="fas fa-list"></i> PhÃ²ng cá»§a TÃ´i</a>
+                    <a href="bookings.php"><i class="fas fa-calendar"></i> ÄÆ¡n Äáº·t PhÃ²ng</a>
                     <a href="revenue.php" class="active"><i class="fas fa-chart-bar"></i> Doanh Thu</a>
-                    <a href="profile.php"><i class="fas fa-user"></i> Hồ Sơ</a>
-                    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> Đăng Xuất</a>
+                    <a href="profile.php"><i class="fas fa-user"></i> Há»“ SÆ¡</a>
+                    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> ÄÄƒng Xuáº¥t</a>
                 </div>
             </div>
 
             <div class="col-lg-9">
                 <div class="main-content">
                     <h1 style="font-size: 28px; font-weight: 700; margin-bottom: 30px;">
-                        <i class="fas fa-chart-bar"></i> Doanh Thu của Tôi
+                        <i class="fas fa-chart-bar"></i> Doanh Thu cá»§a TÃ´i
                     </h1>
 
                     <div class="row mb-4">
@@ -102,34 +103,34 @@ $stmt->close();
                             <div class="stat-card">
                                 <div class="stat-icon"><i class="fas fa-home"></i></div>
                                 <div class="stat-number"><?php echo $stats['total_listings']; ?></div>
-                                <div class="stat-label">Phòng Đang Cho Thuê</div>
+                                <div class="stat-label">PhÃ²ng Äang Cho ThuÃª</div>
                             </div>
                         </div>
                         <div class="col-md-6 col-lg-3">
                             <div class="stat-card">
                                 <div class="stat-icon"><i class="fas fa-calendar"></i></div>
                                 <div class="stat-number"><?php echo $stats['total_bookings']; ?></div>
-                                <div class="stat-label">Tổng Đơn Đặt</div>
+                                <div class="stat-label">Tá»•ng ÄÆ¡n Äáº·t</div>
                             </div>
                         </div>
                         <div class="col-md-6 col-lg-3">
                             <div class="stat-card">
                                 <div class="stat-icon"><i class="fas fa-hourglass"></i></div>
                                 <div class="stat-number"><?php echo $stats['pending_bookings']; ?></div>
-                                <div class="stat-label">Đơn Chưa Hoàn Thành</div>
+                                <div class="stat-label">ÄÆ¡n ChÆ°a HoÃ n ThÃ nh</div>
                             </div>
                         </div>
                         <div class="col-md-6 col-lg-3">
                             <div class="stat-card">
                                 <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
                                 <div class="stat-number"><?php echo number_format($stats['total_revenue'] ?? 0); ?></div>
-                                <div class="stat-label">Tổng Doanh Thu (VNĐ)</div>
+                                <div class="stat-label">Tá»•ng Doanh Thu (VNÄ)</div>
                             </div>
                         </div>
                     </div>
 
                     <h3 style="font-weight: 700; margin-top: 40px; margin-bottom: 20px;">
-                        <i class="fas fa-list"></i> Lịch Sử Giao Dịch
+                        <i class="fas fa-list"></i> Lá»‹ch Sá»­ Giao Dá»‹ch
                     </h3>
 
                     <?php if (count($transactions) > 0): ?>
@@ -140,13 +141,13 @@ $stmt->close();
                                     <small style="color: #666;">Check-in: <?php echo date('d/m/Y', strtotime($trans['check_in_date'])); ?></small>
                                 </div>
                                 <div class="transaction-amount">
-                                    +<?php echo number_format($trans['deposit_amount']); ?> VNĐ
+                                    +<?php echo number_format($trans['deposit_amount']); ?> VNÄ
                                 </div>
                             </div>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <div style="text-align: center; padding: 40px; background: white; border-radius: 12px; color: #999;">
-                            Không có giao dịch hoàn thành
+                            KhÃ´ng cÃ³ giao dá»‹ch hoÃ n thÃ nh
                         </div>
                     <?php endif; ?>
                 </div>

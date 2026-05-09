@@ -1,3 +1,5 @@
+@import url("../../../assets/css/modern.css");
+
 /* Admin Dashboard Styles */
 
 * {
@@ -12,12 +14,12 @@ body {
 }
 
 .sidebar {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #0f172a;
     color: white;
     min-height: 100vh;
-    padding: 20px;
+    padding: 18px;
     position: fixed;
-    width: 250px;
+    width: 270px;
     left: 0;
     top: 0;
     overflow-y: auto;
@@ -50,18 +52,19 @@ body {
 }
 
 .sidebar .nav-menu a {
-    color: white;
+    color: rgba(255, 255, 255, 0.78);
     text-decoration: none;
     display: block;
     padding: 12px 15px;
-    border-radius: 5px;
+    border-radius: 8px;
     transition: all 0.3s;
     font-size: 14px;
 }
 
 .sidebar .nav-menu a:hover,
 .sidebar .nav-menu a.active {
-    background-color: rgba(255, 255, 255, 0.2);
+    background-color: rgba(37, 99, 235, 0.24);
+    color: #ffffff;
 }
 
 .sidebar .nav-menu a i {
@@ -70,7 +73,7 @@ body {
 }
 
 .main-content {
-    margin-left: 250px;
+    margin-left: 270px;
     padding: 20px;
     min-height: 100vh;
 }
@@ -78,8 +81,9 @@ body {
 .topbar {
     background: white;
     padding: 15px 20px;
-    border-radius: 5px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e5eaf2;
+    border-radius: 8px;
+    box-shadow: 0 14px 40px rgba(15, 23, 42, 0.08);
     display: flex;
     justify-content: space-between;
     align-items: center;
