@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../admin_init.php';
+require_once __DIR__ . '/layout.php';
 
 if (!$is_logged_in) {
     header('Location: ' . ADMIN_URL . 'login.php');
@@ -8,7 +9,7 @@ if (!$is_logged_in) {
 
 $activityLog = new ActivityLog($db);
 $controller = new DistrictController($db, $activityLog);
-$action = isset($_GET['action']) ? $_GET['action'] : '';
+$action = $_GET['action'] ?? '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'add') {
@@ -23,136 +24,60 @@ if ($action === 'delete' && isset($_GET['id'])) {
 }
 
 $data = $controller->listDistricts();
-$edit_district = null;
-
+$editDistrict = null;
 if ($action === 'edit' && isset($_GET['id'])) {
-    foreach ($data['districts'] as $dist) {
-        if ($dist['id'] == $_GET['id']) {
-            $edit_district = $dist;
+    foreach ($data['districts'] as $district) {
+        if ((int)$district['id'] === (int)$_GET['id']) {
+            $editDistrict = $district;
             break;
         }
     }
 }
 
+admin_layout_start('Quản lý quận', 'Quản trị khu vực để tin đăng có dữ liệu vị trí rõ ràng và dễ lọc.', 'districts');
+admin_flash_messages();
 ?>
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản Lý Quận - Admin</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <link href="<?php echo ADMIN_URL; ?>assets/css/style.css" rel="stylesheet">
-</head>
-<body>
-    <div class="sidebar">
-        <div class="logo">
-            <h2>🏠 Admin</h2>
-            <p>Quản Lý Phòng Trọ</p>
+
+<div class="wb-card mb-3">
+    <form method="POST" class="row g-3 align-items-end">
+        <div class="col-md-8">
+            <label class="form-label fw-semibold">Tên quận</label>
+            <input type="text" name="name" class="form-control" value="<?php echo admin_e($editDistrict['name'] ?? ''); ?>" placeholder="Ví dụ: Quận 1, Quận 7" required>
         </div>
-        
-        <ul class="nav-menu">
-            <li><a href="<?php echo ADMIN_URL; ?>index.php"><i class="fa fa-dashboard"></i> Dashboard</a></li>
-            <li><a href="<?php echo ADMIN_URL; ?>motels.php"><i class="fa fa-home"></i> Phòng Trọ</a></li>
-            <li><a href="<?php echo ADMIN_URL; ?>users.php"><i class="fa fa-users"></i> Người Dùng</a></li>
-            <li><a href="<?php echo ADMIN_URL; ?>bookings.php"><i class="fa fa-calendar"></i> Đơn Đặt Phòng</a></li>
-            <li><a href="<?php echo ADMIN_URL; ?>payments.php"><i class="fa fa-credit-card"></i> Thanh Toán</a></li>
-            <li><a href="<?php echo ADMIN_URL; ?>admin_revenue.php"><i class="fa fa-money"></i> Doanh Thu Admin</a></li>
-            <li><a href="<?php echo ADMIN_URL; ?>reviews.php"><i class="fa fa-star"></i> Đánh Giá</a></li>
-            <li><a href="<?php echo ADMIN_URL; ?>categories.php"><i class="fa fa-list"></i> Danh Mục</a></li>
-            <li><a href="<?php echo ADMIN_URL; ?>districts.php" class="active"><i class="fa fa-map"></i> Quận</a></li>
-            <li><a href="<?php echo ADMIN_URL; ?>utilities.php"><i class="fa fa-wrench"></i> Tiện Nghi</a></li>
-        </ul>
-    </div>
-    
-    <div class="main-content">
-        <div class="topbar">
-            <h1>Quản Lý Quận</h1>
-            <div class="user-info">
-                <span><?php echo htmlspecialchars($_SESSION['user_name'] ?? ''); ?></span>
-                <a href="<?php echo ADMIN_URL; ?>logout.php">Đăng Xuất</a>
-            </div>
+        <div class="col-md-4 d-flex gap-2">
+            <button type="submit" class="btn btn-primary flex-fill"><i class="fa fa-save"></i> <?php echo $editDistrict ? 'Cập nhật' : 'Thêm mới'; ?></button>
+            <?php if ($editDistrict): ?>
+                <a href="<?php echo ADMIN_URL; ?>districts.php" class="btn btn-outline-secondary">Hủy</a>
+            <?php endif; ?>
         </div>
-        
-        <!-- Alert Messages -->
-        <?php if (isset($_SESSION['success'])): ?>
-            <div class="alert alert-success alert-dismissible fade show">
-                <?php echo htmlspecialchars($_SESSION['success']); ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            <?php unset($_SESSION['success']); ?>
-        <?php endif; ?>
-        
-        <!-- Add/Edit Form -->
-        <div class="card mb-3">
-            <div class="card-header">
-                <h5 class="mb-0"><?php echo $action === 'edit' ? 'Cập Nhật Quận' : 'Thêm Quận Mới'; ?></h5>
-            </div>
-            <div class="card-body">
-                <form method="POST" action="">
-                    <div class="row">
-                        <div class="col-md-8">
-                            <div class="mb-3">
-                                <label class="form-label">Tên Quận:</label>
-                                <input type="text" name="name" class="form-control" placeholder="Nhập tên quận" value="<?php echo htmlspecialchars($edit_district['name'] ?? ''); ?>" required>
-                            </div>
-                        </div>
-                        <div class="col-md-4" style="display: flex; align-items: flex-end;">
-                            <button type="submit" class="btn btn-primary" style="width: 100%;">
-                                <i class="fa fa-save"></i> <?php echo $action === 'edit' ? 'Cập Nhật' : 'Thêm'; ?>
-                            </button>
-                            <?php if ($action === 'edit'): ?>
-                            <a href="<?php echo ADMIN_URL; ?>districts.php" class="btn btn-secondary" style="width: 100%; margin-left: 10px;">Hủy</a>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-        
-        <!-- Districts List -->
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Danh Sách Quận (<?php echo count($data['districts']); ?> quận)</h5>
-            </div>
-            <div class="card-body">
-                <?php if (!empty($data['districts'])): ?>
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead class="table-light">
-                            <tr>
-                                <th>ID</th>
-                                <th>Tên Quận</th>
-                                <th>Hành Động</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($data['districts'] as $district): ?>
-                            <tr>
-                                <td><?php echo $district['id']; ?></td>
-                                <td><?php echo htmlspecialchars($district['name']); ?></td>
-                                <td>
-                                    <a href="<?php echo ADMIN_URL . 'districts.php?action=edit&id=' . $district['id']; ?>" class="btn btn-sm btn-warning">
-                                        <i class="fa fa-edit"></i> Sửa
-                                    </a>
-                                    <a href="<?php echo ADMIN_URL . 'districts.php?action=delete&id=' . $district['id']; ?>" class="btn btn-sm btn-danger" onclick="return confirm('Xóa quận này?');">
-                                        <i class="fa fa-trash"></i> Xóa
-                                    </a>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-                
-                <?php else: ?>
-                <div class="alert alert-info">Không có quận nào.</div>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+    </form>
+</div>
+
+<div class="wb-section-head">
+    <h2>Danh sách quận</h2>
+    <span class="wb-pill"><?php echo count($data['districts'] ?? []); ?> quận</span>
+</div>
+
+<div class="wb-table-card">
+    <?php if (!empty($data['districts'])): ?>
+        <table class="wb-table">
+            <thead><tr><th>ID</th><th>Tên quận</th><th></th></tr></thead>
+            <tbody>
+                <?php foreach ($data['districts'] as $district): ?>
+                    <tr>
+                        <td>#<?php echo (int)$district['id']; ?></td>
+                        <td class="wb-title"><?php echo admin_e($district['name'] ?? ''); ?></td>
+                        <td class="text-end">
+                            <a href="<?php echo ADMIN_URL . 'districts.php?action=edit&id=' . (int)$district['id']; ?>" class="btn btn-sm btn-warning"><i class="fa fa-edit"></i> Sửa</a>
+                            <a href="<?php echo ADMIN_URL . 'districts.php?action=delete&id=' . (int)$district['id']; ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Xóa quận này?');"><i class="fa fa-trash"></i></a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php else: ?>
+        <div class="wb-empty">Chưa có quận nào.</div>
+    <?php endif; ?>
+</div>
+
+<?php admin_layout_end(); ?>

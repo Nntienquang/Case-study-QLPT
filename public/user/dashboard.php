@@ -10,63 +10,69 @@ if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'user') {
     exit;
 }
 
-$db = new Database($conn);
-$user_id = (int)$_SESSION['user_id'];
-$user_name = $_SESSION['name'] ?? $_SESSION['user_name'] ?? 'Bạn';
+$userId = (int)$_SESSION['user_id'];
+$userName = $_SESSION['name'] ?? $_SESSION['user_name'] ?? 'Bạn';
 
-$stmt = $db->prepare('SELECT COUNT(*) as count FROM bookings WHERE user_id = ?');
-$stmt->bind_param('i', $user_id);
-$stmt->execute();
-$total_bookings = (int)($stmt->get_result()->fetch_assoc()['count'] ?? 0);
-$stmt->close();
+function user_dash_e(?string $value): string
+{
+    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+}
 
-$stmt = $db->prepare('SELECT COUNT(*) as count FROM favorites WHERE user_id = ?');
-$stmt->bind_param('i', $user_id);
-$stmt->execute();
-$total_favorites = (int)($stmt->get_result()->fetch_assoc()['count'] ?? 0);
-$stmt->close();
+function user_dash_money($value): string
+{
+    return number_format((int)$value) . ' VND';
+}
 
-$stmt = $db->prepare("SELECT COUNT(*) as count FROM bookings WHERE user_id = ? AND status = 'pending'");
-$stmt->bind_param('i', $user_id);
-$stmt->execute();
-$pending_bookings = (int)($stmt->get_result()->fetch_assoc()['count'] ?? 0);
-$stmt->close();
+function user_dash_table_exists(mysqli $conn, string $table): bool
+{
+    $safeTable = $conn->real_escape_string($table);
+    $result = $conn->query("SHOW TABLES LIKE '{$safeTable}'");
+    return $result && $result->num_rows > 0;
+}
 
-$stmt = $db->prepare("SELECT COUNT(*) as count FROM viewing_appointments WHERE user_id = ? AND status = 'pending'");
-$stmt->bind_param('i', $user_id);
-$stmt->execute();
-$pending_viewings = (int)($stmt->get_result()->fetch_assoc()['count'] ?? 0);
-$stmt->close();
+function user_dash_column_exists(mysqli $conn, string $table, string $column): bool
+{
+    $safeTable = $conn->real_escape_string($table);
+    $safeColumn = $conn->real_escape_string($column);
+    $result = $conn->query("SHOW COLUMNS FROM `{$safeTable}` LIKE '{$safeColumn}'");
+    return $result && $result->num_rows > 0;
+}
 
-$stmt = $db->prepare("
-    SELECT b.*, m.title, m.price, m.address
-    FROM bookings b
-    JOIN motels m ON b.motel_id = m.id
-    WHERE b.user_id = ?
-    ORDER BY b.created_at DESC
-    LIMIT 5
-");
-$stmt->bind_param('i', $user_id);
-$stmt->execute();
-$recent_bookings = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-$stmt->close();
+function user_dash_count(mysqli $conn, string $sql, string $types = '', array $params = []): int
+{
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        return 0;
+    }
+    if ($types !== '') {
+        $stmt->bind_param($types, ...$params);
+    }
+    $stmt->execute();
+    $count = (int)($stmt->get_result()->fetch_assoc()['count'] ?? 0);
+    $stmt->close();
+    return $count;
+}
 
-$stmt = $db->prepare("
-    SELECT m.id, m.title, m.price, m.address, m.area, m.health_score, d.name AS district_name
-    FROM motels m
-    LEFT JOIN districts d ON m.district_id = d.id
-    WHERE m.status = 'approved'
-    ORDER BY m.is_featured DESC, m.health_score DESC, m.count_view DESC
-    LIMIT 6
-");
-$stmt->execute();
-$featured_motels = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-$stmt->close();
+function user_dash_rows(mysqli $conn, string $sql, string $types = '', array $params = []): array
+{
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        return [];
+    }
+    if ($types !== '') {
+        $stmt->bind_param($types, ...$params);
+    }
+    $stmt->execute();
+    $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+    return $rows;
+}
 
-function status_label(string $status): string
+function user_dash_status(string $status): string
 {
     return [
         'pending' => 'Chờ xử lý',
+        'paid' => 'Đã cọc',
         'accepted' => 'Đã chấp nhận',
         'confirmed' => 'Đã xác nhận',
         'completed' => 'Hoàn thành',
@@ -74,134 +80,217 @@ function status_label(string $status): string
         'rejected' => 'Từ chối',
     ][strtolower($status)] ?? ucfirst($status);
 }
+
+$hasViewingAppointments = user_dash_table_exists($conn, 'viewing_appointments');
+$hasSavedSearches = user_dash_table_exists($conn, 'saved_searches');
+$hasHealthScore = user_dash_column_exists($conn, 'motels', 'health_score');
+$hasFeatured = user_dash_column_exists($conn, 'motels', 'is_featured');
+
+$stats = [
+    'total_bookings' => user_dash_count($conn, 'SELECT COUNT(*) AS count FROM bookings WHERE user_id = ?', 'i', [$userId]),
+    'pending_bookings' => user_dash_count($conn, "SELECT COUNT(*) AS count FROM bookings WHERE user_id = ? AND status = 'pending'", 'i', [$userId]),
+    'total_favorites' => user_dash_count($conn, 'SELECT COUNT(*) AS count FROM favorites WHERE user_id = ?', 'i', [$userId]),
+    'pending_viewings' => $hasViewingAppointments ? user_dash_count($conn, "SELECT COUNT(*) AS count FROM viewing_appointments WHERE user_id = ? AND status = 'pending'", 'i', [$userId]) : 0,
+    'saved_searches' => $hasSavedSearches ? user_dash_count($conn, 'SELECT COUNT(*) AS count FROM saved_searches WHERE user_id = ?', 'i', [$userId]) : 0,
+];
+
+$recentBookings = user_dash_rows(
+    $conn,
+    "SELECT b.*, m.title, m.price, m.address
+     FROM bookings b
+     JOIN motels m ON b.motel_id = m.id
+     WHERE b.user_id = ?
+     ORDER BY b.created_at DESC
+     LIMIT 5",
+    'i',
+    [$userId]
+);
+
+$recentViewings = $hasViewingAppointments
+    ? user_dash_rows(
+        $conn,
+        "SELECT va.*, m.title, m.address
+         FROM viewing_appointments va
+         JOIN motels m ON va.motel_id = m.id
+         WHERE va.user_id = ?
+         ORDER BY va.preferred_time ASC
+         LIMIT 4",
+        'i',
+        [$userId]
+    )
+    : [];
+
+$healthSelect = $hasHealthScore ? 'm.health_score' : '0 AS health_score';
+$orderParts = [];
+if ($hasFeatured) {
+    $orderParts[] = 'm.is_featured DESC';
+}
+if ($hasHealthScore) {
+    $orderParts[] = 'm.health_score DESC';
+}
+$orderParts[] = 'm.count_view DESC';
+$orderBy = implode(', ', $orderParts);
+
+$featuredMotels = user_dash_rows(
+    $conn,
+    "SELECT m.id, m.title, m.price, m.address, m.area, {$healthSelect}, d.name AS district_name
+     FROM motels m
+     LEFT JOIN districts d ON m.district_id = d.id
+     WHERE m.status = 'approved'
+     ORDER BY {$orderBy}
+     LIMIT 6"
+);
 ?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trang cá nhân - QuanLyPhongTro</title>
+    <title>Không gian người thuê - QuanLyPhongTro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <link href="../assets/css/modern.css" rel="stylesheet">
-    <style>
-        body { background: #f6f8fb !important; }
-        .app-shell { padding: 28px 0 44px; }
-        .app-nav { background: #fff !important; border-bottom: 1px solid #e5e7eb; box-shadow: 0 8px 30px rgba(15,23,42,.06) !important; }
-        .layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 22px; }
-        .side-panel, .hero-panel, .stat-card, .content-card, .room-card { background: #fff; border: 1px solid #e5eaf2; border-radius: 18px; box-shadow: 0 18px 50px rgba(15,23,42,.07); }
-        .side-panel { padding: 18px; height: fit-content; position: sticky; top: 88px; }
-        .side-title { font-weight: 950; color: #101828; margin-bottom: 12px; }
-        .side-link { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 12px; color: #475467; text-decoration: none; font-weight: 750; }
-        .side-link:hover, .side-link.active { background: #f2f4f7; color: #101828; }
-        .hero-panel { padding: 26px; display: flex; justify-content: space-between; gap: 18px; align-items: center; background: linear-gradient(135deg, #ffffff, #ecfeff); }
-        .hero-panel h1 { font-size: 30px; font-weight: 950; margin-bottom: 8px; }
-        .hero-panel p { color: #667085; margin: 0; }
-        .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: 18px 0; }
-        .stat-card { padding: 18px; }
-        .stat-card i { color: #0e7490; margin-bottom: 12px; font-size: 22px; }
-        .stat-value { font-size: 30px; line-height: 1; font-weight: 950; color: #101828; }
-        .stat-label { color: #667085; font-size: 13px; margin-top: 6px; }
-        .section-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 28px 0 14px; }
-        .section-head h2 { font-size: 22px; font-weight: 950; margin: 0; }
-        .content-card { padding: 18px; }
-        .booking-row { display: flex; justify-content: space-between; gap: 16px; padding: 15px 0; border-bottom: 1px solid #edf0f5; }
-        .booking-row:last-child { border-bottom: 0; }
-        .booking-title { font-weight: 900; color: #101828; margin-bottom: 4px; }
-        .muted { color: #667085; font-size: 14px; }
-        .status-pill { display: inline-flex; padding: 6px 10px; border-radius: 999px; background: #fff7ed; color: #9a3412; font-size: 12px; font-weight: 850; }
-        .room-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-        .room-card { overflow: hidden; }
-        .room-photo { height: 150px; background: linear-gradient(135deg, rgba(16,24,40,.06), rgba(14,116,144,.16)), url('https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=900&q=82') center/cover; }
-        .room-body { padding: 16px; }
-        .room-title { min-height: 44px; font-weight: 950; line-height: 1.32; }
-        .room-price { color: #0e7490; font-size: 19px; font-weight: 950; margin: 8px 0; }
-        .empty-state { padding: 28px; text-align: center; color: #667085; }
-        @media (max-width: 991px) { .layout, .stats, .room-grid { grid-template-columns: 1fr; } .side-panel { position: static; } .hero-panel { align-items: start; flex-direction: column; } }
-    </style>
+    <link href="../assets/css/workbench.css" rel="stylesheet">
 </head>
-<body>
-    <nav class="navbar app-nav navbar-expand-lg sticky-top">
-        <div class="container-lg">
-            <a class="navbar-brand" href="../index.php"><i class="fas fa-house-chimney"></i> QuanLyPhongTro</a>
-            <div class="ms-auto d-flex align-items-center gap-3">
-                <span class="text-muted d-none d-md-inline"><?php echo htmlspecialchars($user_name); ?></span>
+<body class="workbench">
+    <header class="wb-topbar">
+        <div class="container-lg wb-topbar-inner">
+            <a class="wb-brand" href="../index.php">
+                <span class="wb-brand-mark"><i class="fas fa-house-chimney"></i></span>
+                <span>QuanLyPhongTro</span>
+            </a>
+            <div class="wb-user">
+                <span><?php echo user_dash_e($userName); ?></span>
                 <a class="btn btn-outline-secondary btn-sm" href="../logout.php">Đăng xuất</a>
             </div>
         </div>
-    </nav>
+    </header>
 
-    <main class="app-shell">
-        <div class="container-lg layout">
-            <aside class="side-panel">
-                <div class="side-title">Tài khoản</div>
-                <a class="side-link active" href="dashboard.php"><i class="fas fa-home"></i> Tổng quan</a>
-                <a class="side-link" href="search.php"><i class="fas fa-search"></i> Tìm phòng</a>
-                <a class="side-link" href="my-bookings.php"><i class="fas fa-calendar-check"></i> Booking của tôi</a>
-                <a class="side-link" href="saved-motels.php"><i class="fas fa-heart"></i> Phòng đã lưu</a>
-                <a class="side-link" href="profile.php"><i class="fas fa-user"></i> Hồ sơ</a>
-                <a class="side-link" href="settings.php"><i class="fas fa-gear"></i> Cài đặt</a>
+    <main class="wb-shell">
+        <div class="container-lg wb-layout">
+            <aside class="wb-sidebar">
+                <div class="wb-side-title">Người thuê</div>
+                <a class="wb-side-link active" href="dashboard.php"><i class="fas fa-home"></i> Tổng quan</a>
+                <a class="wb-side-link" href="search.php"><i class="fas fa-search"></i> Tìm phòng</a>
+                <a class="wb-side-link" href="saved-searches.php"><i class="fas fa-bell"></i> Bộ lọc đã lưu</a>
+                <a class="wb-side-link" href="my-bookings.php"><i class="fas fa-calendar-check"></i> Booking của tôi</a>
+                <a class="wb-side-link" href="saved-motels.php"><i class="fas fa-heart"></i> Phòng đã lưu</a>
+                <a class="wb-side-link" href="../notifications.php"><i class="fas fa-bell"></i> Thông báo</a>
+                <a class="wb-side-link" href="profile.php"><i class="fas fa-user"></i> Hồ sơ</a>
+                <a class="wb-side-link" href="settings.php"><i class="fas fa-gear"></i> Cài đặt</a>
             </aside>
 
             <section>
-                <div class="hero-panel">
+                <div class="wb-hero mb-3">
                     <div>
-                        <h1>Chào <?php echo htmlspecialchars($user_name); ?></h1>
-                        <p>Theo dõi booking, lịch xem và những phòng phù hợp với nhu cầu của bạn.</p>
+                        <div class="wb-eyebrow">Không gian tìm phòng</div>
+                        <h1>Chào <?php echo user_dash_e($userName); ?></h1>
+                        <p>Theo dõi booking, lịch xem, phòng đã lưu và các gợi ý phù hợp để ra quyết định nhanh hơn.</p>
                     </div>
-                    <a href="search.php" class="btn btn-primary"><i class="fas fa-magnifying-glass"></i> Tìm phòng</a>
+                    <div class="wb-actions">
+                        <a href="search.php" class="btn btn-primary"><i class="fas fa-magnifying-glass"></i> Tìm phòng</a>
+                        <a href="saved-searches.php" class="btn btn-outline-primary"><i class="fas fa-bell"></i> Bộ lọc đã lưu</a>
+                    </div>
                 </div>
 
-                <div class="stats">
-                    <div class="stat-card"><i class="fas fa-calendar-check"></i><div class="stat-value"><?php echo $total_bookings; ?></div><div class="stat-label">Booking</div></div>
-                    <div class="stat-card"><i class="fas fa-clock"></i><div class="stat-value"><?php echo $pending_bookings; ?></div><div class="stat-label">Đang chờ</div></div>
-                    <div class="stat-card"><i class="fas fa-calendar-day"></i><div class="stat-value"><?php echo $pending_viewings; ?></div><div class="stat-label">Lịch xem</div></div>
-                    <div class="stat-card"><i class="fas fa-heart"></i><div class="stat-value"><?php echo $total_favorites; ?></div><div class="stat-label">Đã lưu</div></div>
+                <div class="wb-grid wb-queue mb-3">
+                    <a class="wb-card wb-queue-card" href="my-bookings.php">
+                        <div class="wb-queue-top"><div class="wb-queue-value"><?php echo $stats['pending_bookings']; ?></div><i class="fas fa-clock wb-card-icon"></i></div>
+                        <div class="wb-queue-label">Booking đang chờ</div>
+                    </a>
+                    <a class="wb-card wb-queue-card" href="my-bookings.php">
+                        <div class="wb-queue-top"><div class="wb-queue-value"><?php echo $stats['pending_viewings']; ?></div><i class="fas fa-calendar-day wb-card-icon"></i></div>
+                        <div class="wb-queue-label">Lịch xem sắp tới</div>
+                    </a>
+                    <a class="wb-card wb-queue-card" href="saved-motels.php">
+                        <div class="wb-queue-top"><div class="wb-queue-value"><?php echo $stats['total_favorites']; ?></div><i class="fas fa-heart wb-card-icon"></i></div>
+                        <div class="wb-queue-label">Phòng đã lưu</div>
+                    </a>
+                    <a class="wb-card wb-queue-card" href="saved-searches.php">
+                        <div class="wb-queue-top"><div class="wb-queue-value"><?php echo $stats['saved_searches']; ?></div><i class="fas fa-bell wb-card-icon"></i></div>
+                        <div class="wb-queue-label">Bộ lọc theo dõi</div>
+                    </a>
+                    <a class="wb-card wb-queue-card" href="search.php">
+                        <div class="wb-queue-top"><div class="wb-queue-value"><?php echo count($featuredMotels); ?></div><i class="fas fa-star wb-card-icon"></i></div>
+                        <div class="wb-queue-label">Gợi ý đang nổi bật</div>
+                    </a>
                 </div>
 
-                <div class="section-head">
+                <div class="wb-grid wb-stats-4">
+                    <div class="wb-card"><i class="fas fa-calendar-check wb-card-icon"></i><div class="wb-card-value"><?php echo $stats['total_bookings']; ?></div><div class="wb-card-label">Tổng booking</div></div>
+                    <div class="wb-card"><i class="fas fa-clock wb-card-icon"></i><div class="wb-card-value"><?php echo $stats['pending_bookings']; ?></div><div class="wb-card-label">Đang chờ xử lý</div></div>
+                    <div class="wb-card"><i class="fas fa-calendar-day wb-card-icon"></i><div class="wb-card-value"><?php echo $stats['pending_viewings']; ?></div><div class="wb-card-label">Lịch xem chờ</div></div>
+                    <div class="wb-card"><i class="fas fa-heart wb-card-icon"></i><div class="wb-card-value"><?php echo $stats['total_favorites']; ?></div><div class="wb-card-label">Phòng đã lưu</div></div>
+                </div>
+
+                <div class="wb-section-head">
+                    <h2>Lịch xem của bạn</h2>
+                    <a href="my-bookings.php" class="btn btn-outline-primary btn-sm">Xem booking</a>
+                </div>
+                <div class="wb-list-card">
+                    <?php if ($recentViewings): ?>
+                        <?php foreach ($recentViewings as $viewing): ?>
+                            <div class="wb-list-row">
+                                <div>
+                                    <div class="wb-title"><?php echo user_dash_e($viewing['title'] ?? 'N/A'); ?></div>
+                                    <div class="wb-muted"><?php echo user_dash_e($viewing['address'] ?? ''); ?> · <?php echo date('d/m/Y H:i', strtotime((string)$viewing['preferred_time'])); ?></div>
+                                </div>
+                                <span class="wb-pill warning"><?php echo user_dash_status((string)($viewing['status'] ?? 'pending')); ?></span>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="wb-empty">Bạn chưa có lịch xem nào. Hãy lưu phòng hoặc đặt lịch xem khi tìm được phòng phù hợp.</div>
+                    <?php endif; ?>
+                </div>
+
+                <div class="wb-section-head">
                     <h2>Booking gần đây</h2>
                     <a href="my-bookings.php" class="btn btn-outline-primary btn-sm">Xem tất cả</a>
                 </div>
-                <div class="content-card">
-                    <?php if ($recent_bookings): ?>
-                        <?php foreach ($recent_bookings as $booking): ?>
-                            <div class="booking-row">
+                <div class="wb-list-card">
+                    <?php if ($recentBookings): ?>
+                        <?php foreach ($recentBookings as $booking): ?>
+                            <div class="wb-list-row">
                                 <div>
-                                    <div class="booking-title"><?php echo htmlspecialchars($booking['title']); ?></div>
-                                    <div class="muted"><i class="fas fa-location-dot"></i> <?php echo htmlspecialchars($booking['address']); ?></div>
-                                    <?php if (!empty($booking['check_in_date'])): ?>
-                                        <div class="muted"><i class="fas fa-calendar"></i> <?php echo date('d/m/Y', strtotime($booking['check_in_date'])); ?></div>
-                                    <?php endif; ?>
+                                    <div class="wb-title"><?php echo user_dash_e($booking['title'] ?? 'N/A'); ?></div>
+                                    <div class="wb-muted"><?php echo user_dash_e($booking['address'] ?? ''); ?> · Check-in <?php echo user_dash_e($booking['checkin_date'] ?? ''); ?></div>
                                 </div>
                                 <div class="text-end">
-                                    <div class="fw-bold mb-2"><?php echo number_format((int)($booking['deposit_amount'] ?? 0)); ?> VND</div>
-                                    <span class="status-pill"><?php echo status_label($booking['status']); ?></span>
+                                    <div class="wb-price"><?php echo user_dash_money($booking['deposit_amount'] ?? 0); ?></div>
+                                    <span class="wb-pill warning mt-2"><?php echo user_dash_status((string)($booking['status'] ?? 'pending')); ?></span>
                                 </div>
                             </div>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <div class="empty-state">Bạn chưa có booking nào. Hãy bắt đầu bằng việc tìm phòng phù hợp.</div>
+                        <div class="wb-empty">Bạn chưa có booking nào. Hãy bắt đầu bằng việc tìm phòng phù hợp.</div>
                     <?php endif; ?>
                 </div>
 
-                <div class="section-head">
+                <div class="wb-section-head">
                     <h2>Gợi ý phòng tốt</h2>
                     <a href="search.php?sort=featured" class="btn btn-outline-primary btn-sm">Khám phá thêm</a>
                 </div>
-                <div class="room-grid">
-                    <?php foreach ($featured_motels as $motel): ?>
-                        <article class="room-card">
-                            <div class="room-photo"></div>
-                            <div class="room-body">
-                                <div class="room-title"><?php echo htmlspecialchars($motel['title']); ?></div>
-                                <div class="room-price"><?php echo number_format((int)$motel['price']); ?> VND/tháng</div>
-                                <div class="muted mb-3"><i class="fas fa-location-dot"></i> <?php echo htmlspecialchars($motel['district_name'] ?? $motel['address']); ?></div>
-                                <a href="motel-detail.php?id=<?php echo (int)$motel['id']; ?>" class="btn btn-primary w-100">Xem chi tiết</a>
-                            </div>
-                        </article>
-                    <?php endforeach; ?>
-                </div>
+                <?php if ($featuredMotels): ?>
+                    <div class="wb-room-grid">
+                        <?php foreach ($featuredMotels as $motel): ?>
+                            <article class="wb-card wb-room-card">
+                                <div class="wb-room-photo"></div>
+                                <div class="wb-room-body">
+                                    <div class="wb-title mb-2"><?php echo user_dash_e($motel['title'] ?? 'N/A'); ?></div>
+                                    <div class="wb-price"><?php echo user_dash_money($motel['price'] ?? 0); ?>/tháng</div>
+                                    <div class="wb-muted mb-3">
+                                        <i class="fas fa-location-dot"></i>
+                                        <?php echo user_dash_e($motel['district_name'] ?? $motel['address'] ?? ''); ?>
+                                        <?php if (!empty($motel['area'])): ?> · <?php echo (int)$motel['area']; ?> m²<?php endif; ?>
+                                    </div>
+                                    <a href="motel-detail.php?id=<?php echo (int)$motel['id']; ?>" class="btn btn-primary w-100">Xem chi tiết</a>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <div class="wb-list-card"><div class="wb-empty">Chưa có phòng được duyệt để gợi ý.</div></div>
+                <?php endif; ?>
             </section>
         </div>
     </main>
@@ -209,4 +298,3 @@ function status_label(string $status): string
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-

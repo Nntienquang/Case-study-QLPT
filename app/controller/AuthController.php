@@ -203,7 +203,9 @@ class AuthController {
         }
         
         // Login success - set session
-        session_start();
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            session_start();
+        }
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['user_email'] = $user['email'];
         $_SESSION['name'] = $user['name'];

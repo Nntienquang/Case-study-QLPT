@@ -1,328 +1,176 @@
 <?php
-/**
- * Nhật Ký Hoạt Động - Trang Quản Lý
- * 
- * Admin xem tất cả hoạt động của admin khác trong hệ thống
- */
-
 require_once __DIR__ . '/../admin_init.php';
+require_once __DIR__ . '/layout.php';
 
-// Kiểm tra đăng nhập
-if (!$is_logged_in || $_SESSION['user_role'] !== 'admin') {
+if (!$is_logged_in || ($_SESSION['user_role'] ?? '') !== 'admin') {
     header('Location: ' . ADMIN_URL . 'login.php');
     exit;
 }
 
-// Get data
-$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$admin_id = isset($_GET['admin_id']) ? (int)$_GET['admin_id'] : 0;
-$entity_type = isset($_GET['entity_type']) ? $_GET['entity_type'] : '';
-$action = isset($_GET['action']) ? $_GET['action'] : '';
-$date_from = isset($_GET['date_from']) ? $_GET['date_from'] : '';
-$date_to = isset($_GET['date_to']) ? $_GET['date_to'] : '';
-
+$page = max(1, (int)($_GET['page'] ?? 1));
+$adminId = (int)($_GET['admin_id'] ?? 0);
+$entityType = $_GET['entity_type'] ?? '';
+$actionFilter = $_GET['action'] ?? '';
+$dateFrom = $_GET['date_from'] ?? '';
+$dateTo = $_GET['date_to'] ?? '';
 $limit = ITEMS_PER_PAGE;
 $offset = ($page - 1) * $limit;
-
 $conn = $db->getConnection();
 
-// Build query
-$query = "SELECT l.*, u.name as admin_name, u.email as admin_email
-          FROM activity_logs l
-          LEFT JOIN users u ON l.admin_id = u.id
-          WHERE 1=1";
-
-if ($admin_id > 0) {
-    $query .= " AND l.admin_id = {$admin_id}";
+$where = '1=1';
+if ($adminId > 0) {
+    $where .= " AND l.admin_id = {$adminId}";
+}
+if ($entityType !== '') {
+    $entityEsc = $conn->real_escape_string($entityType);
+    $where .= " AND l.entity_type = '{$entityEsc}'";
+}
+if ($actionFilter !== '') {
+    $actionEsc = $conn->real_escape_string($actionFilter);
+    $where .= " AND l.action = '{$actionEsc}'";
+}
+if ($dateFrom !== '') {
+    $fromEsc = $conn->real_escape_string($dateFrom);
+    $where .= " AND DATE(l.created_at) >= '{$fromEsc}'";
+}
+if ($dateTo !== '') {
+    $toEsc = $conn->real_escape_string($dateTo);
+    $where .= " AND DATE(l.created_at) <= '{$toEsc}'";
 }
 
-if (!empty($entity_type)) {
-    $entity_type_esc = $conn->real_escape_string($entity_type);
-    $query .= " AND l.entity_type = '{$entity_type_esc}'";
-}
-
-if (!empty($action)) {
-    $action_esc = $conn->real_escape_string($action);
-    $query .= " AND l.action = '{$action_esc}'";
-}
-
-if (!empty($date_from)) {
-    $date_from_esc = $conn->real_escape_string($date_from);
-    $query .= " AND DATE(l.created_at) >= '{$date_from_esc}'";
-}
-
-if (!empty($date_to)) {
-    $date_to_esc = $conn->real_escape_string($date_to);
-    $query .= " AND DATE(l.created_at) <= '{$date_to_esc}'";
-}
-
-// Count total
-$count_query = str_replace('SELECT l.*,', 'SELECT COUNT(*) as total', $query);
-$count_query = str_replace('LEFT JOIN users u ON l.admin_id = u.id', '', $count_query);
-$count_result = $db->getRow("SELECT COUNT(*) as total FROM activity_logs WHERE 1=1" . 
-    (($admin_id > 0) ? " AND admin_id = {$admin_id}" : '') .
-    ((!empty($entity_type)) ? " AND entity_type = '{$entity_type_esc}'" : '') .
-    ((!empty($action)) ? " AND action = '{$action_esc}'" : '') .
-    ((!empty($date_from)) ? " AND DATE(created_at) >= '{$date_from_esc}'" : '') .
-    ((!empty($date_to)) ? " AND DATE(created_at) <= '{$date_to_esc}'" : '')
+$total = (int)($db->getRow("SELECT COUNT(*) AS total FROM activity_logs l WHERE {$where}")['total'] ?? 0);
+$totalPages = (int)ceil($total / $limit);
+$logs = $db->getRows(
+    "SELECT l.*, u.name AS admin_name, u.email AS admin_email
+     FROM activity_logs l
+     LEFT JOIN users u ON l.admin_id = u.id
+     WHERE {$where}
+     ORDER BY l.created_at DESC
+     LIMIT {$offset}, {$limit}"
 );
-$total = $count_result['total'] ?? 0;
-$total_pages = ceil($total / $limit);
 
-// Get logs
-$query .= " ORDER BY l.created_at DESC LIMIT {$offset}, {$limit}";
-$logs = $db->getRows($query);
+$stats = $db->getRow(
+    "SELECT COUNT(*) AS total,
+            COUNT(IF(DATE(created_at) = CURDATE(), 1, NULL)) AS today,
+            COUNT(IF(YEARWEEK(created_at) = YEARWEEK(NOW()), 1, NULL)) AS week,
+            COUNT(IF(MONTH(created_at) = MONTH(NOW()) AND YEAR(created_at) = YEAR(NOW()), 1, NULL)) AS month
+     FROM activity_logs"
+) ?: [];
 
-// Get stats
-$stats_query = "SELECT 
-    COUNT(*) as total,
-    COUNT(IF(DATE(created_at) = CURDATE(), 1, NULL)) as today,
-    COUNT(IF(YEARWEEK(created_at) = YEARWEEK(NOW()), 1, NULL)) as week,
-    COUNT(IF(MONTH(created_at) = MONTH(NOW()) AND YEAR(created_at) = YEAR(NOW()), 1, NULL)) as month
-    FROM activity_logs";
-$stats = $db->getRow($stats_query);
+$allAdmins = $db->getRows("SELECT DISTINCT u.id, u.name FROM activity_logs l LEFT JOIN users u ON l.admin_id = u.id WHERE u.id IS NOT NULL ORDER BY u.name");
+$allEntityTypes = $db->getRows("SELECT DISTINCT entity_type FROM activity_logs ORDER BY entity_type");
+$allActions = $db->getRows("SELECT DISTINCT action FROM activity_logs ORDER BY action");
 
-// Get unique admins
-$admins_query = "SELECT DISTINCT u.id, u.name FROM activity_logs l
-                 LEFT JOIN users u ON l.admin_id = u.id
-                 ORDER BY u.name";
-$all_admins = $db->getRows($admins_query);
+$querySuffix = ($adminId > 0 ? '&admin_id=' . $adminId : '')
+    . ($entityType !== '' ? '&entity_type=' . urlencode($entityType) : '')
+    . ($actionFilter !== '' ? '&action=' . urlencode($actionFilter) : '')
+    . ($dateFrom !== '' ? '&date_from=' . urlencode($dateFrom) : '')
+    . ($dateTo !== '' ? '&date_to=' . urlencode($dateTo) : '');
 
-// Get unique entity types
-$entity_types_query = "SELECT DISTINCT entity_type FROM activity_logs ORDER BY entity_type";
-$all_entity_types = $db->getRows($entity_types_query);
-
-// Get unique actions
-$actions_query = "SELECT DISTINCT action FROM activity_logs ORDER BY action";
-$all_actions = $db->getRows($actions_query);
+admin_layout_start('Nhật ký hoạt động', 'Theo dõi thao tác quản trị để truy vết thay đổi và kiểm soát rủi ro vận hành.', 'activity_logs');
+admin_flash_messages();
 ?>
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nhật Ký Hoạt Động</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="../css/admin.css">
-</head>
-<body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <?php require_once __DIR__ . '/sidebar.php'; ?>
-            
-            <!-- Main Content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 content-area">
-                <!-- Header -->
-                <div class="row align-items-center border-bottom py-3 mb-4">
-                    <div class="col">
-                        <h1 class="h3">
-                            <i class="fas fa-history"></i> Nhật Ký Hoạt Động
-                        </h1>
-                    </div>
-                </div>
 
-                <!-- Stats Cards -->
-                <div class="row mb-4">
-                    <div class="col-md-3 mb-3">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <small class="text-muted">Tổng Cộng</small>
-                                        <h3 class="mb-0"><?php echo $stats['total'] ?? 0; ?></h3>
-                                    </div>
-                                    <i class="fas fa-list text-info" style="font-size: 2rem; opacity: 0.2;"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <small class="text-muted">Hôm Nay</small>
-                                        <h3 class="mb-0"><?php echo $stats['today'] ?? 0; ?></h3>
-                                    </div>
-                                    <i class="fas fa-calendar-day text-primary" style="font-size: 2rem; opacity: 0.2;"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <small class="text-muted">Tuần Này</small>
-                                        <h3 class="mb-0"><?php echo $stats['week'] ?? 0; ?></h3>
-                                    </div>
-                                    <i class="fas fa-calendar-week text-success" style="font-size: 2rem; opacity: 0.2;"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <small class="text-muted">Tháng Này</small>
-                                        <h3 class="mb-0"><?php echo $stats['month'] ?? 0; ?></h3>
-                                    </div>
-                                    <i class="fas fa-calendar-alt text-warning" style="font-size: 2rem; opacity: 0.2;"></i>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+<div class="wb-grid wb-stats-4 mb-3">
+    <div class="wb-card"><i class="fa fa-list wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($stats['total'] ?? 0); ?></div><div class="wb-card-label">Tổng hoạt động</div></div>
+    <div class="wb-card"><i class="fa fa-calendar-o wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($stats['today'] ?? 0); ?></div><div class="wb-card-label">Hôm nay</div></div>
+    <div class="wb-card"><i class="fa fa-calendar-check-o wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($stats['week'] ?? 0); ?></div><div class="wb-card-label">Tuần này</div></div>
+    <div class="wb-card"><i class="fa fa-calendar wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($stats['month'] ?? 0); ?></div><div class="wb-card-label">Tháng này</div></div>
+</div>
 
-                <!-- Filters -->
-                <div class="card border-0 shadow-sm mb-4">
-                    <div class="card-body">
-                        <form method="GET" class="row g-3">
-                            <div class="col-md-2">
-                                <label for="admin_id" class="form-label">Admin</label>
-                                <select id="admin_id" name="admin_id" class="form-select form-select-sm">
-                                    <option value="">Tất Cả</option>
-                                    <?php if (!empty($all_admins)): ?>
-                                        <?php foreach ($all_admins as $a): ?>
-                                            <option value="<?php echo $a['id']; ?>" <?php echo $admin_id === $a['id'] ? 'selected' : ''; ?>>
-                                                <?php echo $a['name']; ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label for="entity_type" class="form-label">Loại Thực Thể</label>
-                                <select id="entity_type" name="entity_type" class="form-select form-select-sm">
-                                    <option value="">Tất Cả</option>
-                                    <?php if (!empty($all_entity_types)): ?>
-                                        <?php foreach ($all_entity_types as $et): ?>
-                                            <option value="<?php echo $et['entity_type']; ?>" <?php echo $entity_type === $et['entity_type'] ? 'selected' : ''; ?>>
-                                                <?php echo ucfirst($et['entity_type']); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label for="action" class="form-label">Hành Động</label>
-                                <select id="action" name="action" class="form-select form-select-sm">
-                                    <option value="">Tất Cả</option>
-                                    <?php if (!empty($all_actions)): ?>
-                                        <?php foreach ($all_actions as $act): ?>
-                                            <option value="<?php echo $act['action']; ?>" <?php echo $action === $act['action'] ? 'selected' : ''; ?>>
-                                                <?php echo str_replace('_', ' ', ucfirst($act['action'])); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    <?php endif; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label for="date_from" class="form-label">Từ Ngày</label>
-                                <input type="date" id="date_from" name="date_from" class="form-control form-control-sm" value="<?php echo $date_from; ?>">
-                            </div>
-                            <div class="col-md-2">
-                                <label for="date_to" class="form-label">Đến Ngày</label>
-                                <input type="date" id="date_to" name="date_to" class="form-control form-control-sm" value="<?php echo $date_to; ?>">
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">&nbsp;</label>
-                                <button type="submit" class="btn btn-primary w-100 btn-sm">
-                                    <i class="fas fa-search"></i> Tìm
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- Logs Table -->
-                <div class="card border-0 shadow-sm">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0 table-sm">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>#</th>
-                                    <th>Thời Gian</th>
-                                    <th>Admin</th>
-                                    <th>Hành Động</th>
-                                    <th>Thực Thể</th>
-                                    <th>Mô Tả</th>
-                                    <th>IP Address</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (empty($logs)): ?>
-                                    <tr>
-                                        <td colspan="8" class="text-center py-4">
-                                            <i class="fas fa-inbox text-muted" style="font-size: 3rem; opacity: 0.3;"></i>
-                                            <p class="text-muted mt-2">Không có dữ liệu</p>
-                                        </td>
-                                    </tr>
-                                <?php else: ?>
-                                    <?php foreach ($logs as $log): ?>
-                                        <tr>
-                                            <td><?php echo $log['id']; ?></td>
-                                            <td>
-                                                <small><?php echo date('d/m/Y H:i:s', strtotime($log['created_at'])); ?></small>
-                                            </td>
-                                            <td>
-                                                <small><?php echo $log['admin_name'] ?? 'Ẩn danh'; ?></small>
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-info"><?php echo str_replace('_', ' ', $log['action']); ?></span>
-                                            </td>
-                                            <td>
-                                                <small>
-                                                    <?php echo ucfirst($log['entity_type']); ?> #<?php echo $log['entity_id']; ?>
-                                                </small>
-                                            </td>
-                                            <td>
-                                                <small><?php echo substr($log['description'] ?? '', 0, 50); ?></small>
-                                            </td>
-                                            <td>
-                                                <small class="text-muted"><?php echo $log['ip_address'] ?? '-'; ?></small>
-                                            </td>
-                                            <td>
-                                                <a href="activity_log_detail.php?id=<?php echo $log['id']; ?>" class="btn btn-sm btn-outline-primary" title="Xem Chi Tiết">
-                                                    <i class="fas fa-eye"></i>
-                                                </a>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Pagination -->
-                <?php if ($total_pages > 1): ?>
-                    <nav aria-label="Page navigation" class="mt-4">
-                        <ul class="pagination justify-content-center">
-                            <li class="page-item <?php echo $page <= 1 ? 'disabled' : ''; ?>">
-                                <a class="page-link" href="?page=1<?php echo $admin_id > 0 ? '&admin_id=' . $admin_id : ''; ?><?php echo !empty($entity_type) ? '&entity_type=' . $entity_type : ''; ?><?php echo !empty($action) ? '&action=' . $action : ''; ?><?php echo !empty($date_from) ? '&date_from=' . $date_from : ''; ?><?php echo !empty($date_to) ? '&date_to=' . $date_to : ''; ?>">Đầu</a>
-                            </li>
-                            <?php for ($i = max(1, $page - 2); $i <= min($total_pages, $page + 2); $i++): ?>
-                                <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
-                                    <a class="page-link" href="?page=<?php echo $i; ?><?php echo $admin_id > 0 ? '&admin_id=' . $admin_id : ''; ?><?php echo !empty($entity_type) ? '&entity_type=' . $entity_type : ''; ?><?php echo !empty($action) ? '&action=' . $action : ''; ?><?php echo !empty($date_from) ? '&date_from=' . $date_from : ''; ?><?php echo !empty($date_to) ? '&date_to=' . $date_to : ''; ?>"><?php echo $i; ?></a>
-                                </li>
-                            <?php endfor; ?>
-                            <li class="page-item <?php echo $page >= $total_pages ? 'disabled' : ''; ?>">
-                                <a class="page-link" href="?page=<?php echo $total_pages; ?><?php echo $admin_id > 0 ? '&admin_id=' . $admin_id : ''; ?><?php echo !empty($entity_type) ? '&entity_type=' . $entity_type : ''; ?><?php echo !empty($action) ? '&action=' . $action : ''; ?><?php echo !empty($date_from) ? '&date_from=' . $date_from : ''; ?><?php echo !empty($date_to) ? '&date_to=' . $date_to : ''; ?>">Cuối</a>
-                            </li>
-                        </ul>
-                    </nav>
-                <?php endif; ?>
-            </main>
+<div class="wb-card mb-3">
+    <form method="GET" class="row g-3 align-items-end">
+        <div class="col-md-2">
+            <label class="form-label fw-semibold">Admin</label>
+            <select name="admin_id" class="form-select">
+                <option value="">Tất cả</option>
+                <?php foreach ($allAdmins as $admin): ?>
+                    <option value="<?php echo (int)$admin['id']; ?>" <?php echo $adminId === (int)$admin['id'] ? 'selected' : ''; ?>><?php echo admin_e($admin['name'] ?? 'Admin'); ?></option>
+                <?php endforeach; ?>
+            </select>
         </div>
-    </div>
+        <div class="col-md-2">
+            <label class="form-label fw-semibold">Thực thể</label>
+            <select name="entity_type" class="form-select">
+                <option value="">Tất cả</option>
+                <?php foreach ($allEntityTypes as $type): ?>
+                    <option value="<?php echo admin_e($type['entity_type']); ?>" <?php echo $entityType === $type['entity_type'] ? 'selected' : ''; ?>><?php echo admin_e(ucfirst($type['entity_type'])); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label fw-semibold">Hành động</label>
+            <select name="action" class="form-select">
+                <option value="">Tất cả</option>
+                <?php foreach ($allActions as $item): ?>
+                    <option value="<?php echo admin_e($item['action']); ?>" <?php echo $actionFilter === $item['action'] ? 'selected' : ''; ?>><?php echo admin_e(str_replace('_', ' ', $item['action'])); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label fw-semibold">Từ ngày</label>
+            <input type="date" name="date_from" class="form-control" value="<?php echo admin_e($dateFrom); ?>">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label fw-semibold">Đến ngày</label>
+            <input type="date" name="date_to" class="form-control" value="<?php echo admin_e($dateTo); ?>">
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100"><i class="fa fa-search"></i> Lọc</button>
+        </div>
+    </form>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<div class="wb-section-head">
+    <h2>Dòng hoạt động</h2>
+    <span class="wb-pill"><?php echo $total; ?> bản ghi</span>
+</div>
+
+<div class="wb-table-card">
+    <?php if ($logs): ?>
+        <table class="wb-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Thời gian</th>
+                    <th>Admin</th>
+                    <th>Hành động</th>
+                    <th>Thực thể</th>
+                    <th>Mô tả</th>
+                    <th>IP</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($logs as $log): ?>
+                    <tr>
+                        <td>#<?php echo (int)$log['id']; ?></td>
+                        <td><?php echo !empty($log['created_at']) ? date('d/m/Y H:i:s', strtotime((string)$log['created_at'])) : ''; ?></td>
+                        <td><?php echo admin_e($log['admin_name'] ?? 'Ẩn danh'); ?></td>
+                        <td><span class="wb-pill warning"><?php echo admin_e(str_replace('_', ' ', (string)$log['action'])); ?></span></td>
+                        <td><?php echo admin_e(ucfirst((string)$log['entity_type'])); ?> #<?php echo (int)$log['entity_id']; ?></td>
+                        <td><?php echo admin_e(substr((string)($log['description'] ?? ''), 0, 80)); ?></td>
+                        <td class="wb-muted"><?php echo admin_e($log['ip_address'] ?? '-'); ?></td>
+                        <td class="text-end"><a href="activity_log_detail.php?id=<?php echo (int)$log['id']; ?>" class="btn btn-sm btn-primary"><i class="fa fa-eye"></i></a></td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php else: ?>
+        <div class="wb-empty">Không có hoạt động phù hợp bộ lọc.</div>
+    <?php endif; ?>
+</div>
+
+<?php if ($totalPages > 1): ?>
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            <?php for ($i = max(1, $page - 2); $i <= min($totalPages, $page + 2); $i++): ?>
+                <li class="page-item <?php echo $i === $page ? 'active' : ''; ?>">
+                    <a class="page-link" href="?page=<?php echo $i . $querySuffix; ?>"><?php echo $i; ?></a>
+                </li>
+            <?php endfor; ?>
+        </ul>
+    </nav>
+<?php endif; ?>
+
+<?php admin_layout_end(); ?>

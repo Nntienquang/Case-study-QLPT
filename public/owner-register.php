@@ -3,6 +3,7 @@
 @require_once '../config/constants.php';
 @require_once '../core/Database.php';
 @require_once '../core/User.php';
+@require_once '../core/Captcha.php';
 @require_once '../app/controller/AuthController.php';
 
 session_start();
@@ -35,17 +36,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
     $confirm = $_POST['confirm'] ?? '';
     $phone = trim($_POST['phone'] ?? '');
+    $captcha = trim($_POST['captcha'] ?? '');
 
-    $result = $auth->register($name, $email, $password, $confirm, 'owner', $phone);
-    $message = $result['message'];
-    $type = $result['success'] ? 'success' : 'error';
+    if (!Captcha::validate('owner_register_captcha', $captcha)) {
+        $message = 'Mã xác thực không đúng. Vui lòng nhập lại mã trong ảnh.';
+        $type = 'error';
+    } else {
+        $result = $auth->register($name, $email, $password, $confirm, 'owner', $phone);
+        $message = $result['message'];
+        $type = $result['success'] ? 'success' : 'error';
 
-    if ($result['success']) {
-        $name = '';
-        $email = '';
-        $phone = '';
+        if ($result['success']) {
+            $name = '';
+            $email = '';
+            $phone = '';
+        }
     }
 }
+
+$captchaChallenge = Captcha::ensure('owner_register_captcha');
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -54,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đăng ký chủ phòng - QuanLyPhongTro</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-    <link href="assets/css/modern.css" rel="stylesheet">
+    <link href="assets/css/modern.css?v=auth-captcha-2" rel="stylesheet">
 </head>
 <body class="auth-dark">
     <div class="three-stage auth-scene" data-three-scene data-scene="housing" data-accent="#14b8a6" data-accent2="#2563eb"></div>
@@ -120,6 +129,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <input type="password" name="confirm" placeholder="Nhập lại mật khẩu" required>
                     </div>
 
+                    <label>Mã xác thực</label>
+                    <div class="captcha-widget">
+                        <img class="captcha-image" src="captcha.php?key=owner_register_captcha&v=<?php echo time(); ?>" alt="Mã xác thực">
+                        <button type="button" class="captcha-refresh" aria-label="Đổi mã xác thực" onclick="refreshCaptcha(this)">
+                            <i class="fa fa-rotate-right"></i>
+                        </button>
+                        <div class="input-group captcha-input">
+                            <i class="fa fa-shield-halved"></i>
+                            <input type="text" name="captcha" autocomplete="off" placeholder="Nhập mã" required>
+                        </div>
+                    </div>
+
                     <button type="submit"><i class="fas fa-paper-plane"></i> Gửi hồ sơ owner</button>
                 </form>
 
@@ -132,5 +153,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </main>
 
     <script type="module" src="assets/js/three-interface.js"></script>
+    <script>
+        function refreshCaptcha(button) {
+            const image = button.parentElement.querySelector('.captcha-image');
+            image.src = image.src.split('&v=')[0] + '&v=' + Date.now();
+            button.parentElement.querySelector('input[name="captcha"]').value = '';
+        }
+    </script>
 </body>
 </html>

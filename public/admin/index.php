@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/../admin_init.php';
 
-// Check login
 if (!$is_logged_in) {
     header('Location: ' . ADMIN_URL . 'login.php');
     exit;
@@ -10,520 +9,239 @@ if (!$is_logged_in) {
 $dashboard = new DashboardController($db);
 $data = $dashboard->index();
 
+function admin_dash_e(?string $value): string
+{
+    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+}
+
+function admin_dash_count(Database $db, string $sql): int
+{
+    $row = $db->getRow($sql);
+    return (int)($row['count'] ?? 0);
+}
+
+function admin_dash_table_exists(mysqli $conn, string $table): bool
+{
+    $safeTable = $conn->real_escape_string($table);
+    $result = $conn->query("SHOW TABLES LIKE '{$safeTable}'");
+    return $result && $result->num_rows > 0;
+}
+
+function admin_dash_money($value): string
+{
+    return number_format((int)$value) . ' VND';
+}
+
+function admin_dash_status(string $status): string
+{
+    return [
+        'pending' => 'Chờ xử lý',
+        'approved' => 'Đã duyệt',
+        'accepted' => 'Đã nhận',
+        'paid' => 'Đã cọc',
+        'completed' => 'Hoàn tất',
+        'hidden' => 'Đã ẩn',
+        'rejected' => 'Từ chối',
+        'cancelled' => 'Đã hủy',
+    ][strtolower($status)] ?? ucfirst($status);
+}
+
+$hasReports = admin_dash_table_exists($conn, 'reports');
+$hasViewingAppointments = admin_dash_table_exists($conn, 'viewing_appointments');
+
 $adminQueue = [
-    'pending_owners' => (int)($db->getRow("SELECT COUNT(*) as count FROM users WHERE role = 'owner' AND status = 'pending'")['count'] ?? 0),
-    'pending_motels' => (int)($db->getRow("SELECT COUNT(*) as count FROM motels WHERE status = 'pending'")['count'] ?? 0),
-    'pending_reports' => (int)($db->getRow("SELECT COUNT(*) as count FROM reports WHERE status = 'pending'")['count'] ?? 0),
-    'pending_viewings' => (int)($db->getRow("SELECT COUNT(*) as count FROM viewing_appointments WHERE status = 'pending'")['count'] ?? 0),
-    'low_quality' => (int)($db->getRow("SELECT COUNT(*) as count FROM motels WHERE health_score > 0 AND health_score < 70")['count'] ?? 0),
+    'pending_owners' => admin_dash_count($db, "SELECT COUNT(*) AS count FROM users WHERE role = 'owner' AND status = 'pending'"),
+    'pending_motels' => admin_dash_count($db, "SELECT COUNT(*) AS count FROM motels WHERE status = 'pending'"),
+    'pending_reports' => $hasReports ? admin_dash_count($db, "SELECT COUNT(*) AS count FROM reports WHERE status = 'pending'") : 0,
+    'pending_viewings' => $hasViewingAppointments ? admin_dash_count($db, "SELECT COUNT(*) AS count FROM viewing_appointments WHERE status = 'pending'") : 0,
+    'held_payments' => admin_dash_count($db, "SELECT COUNT(*) AS count FROM payments WHERE status IN ('pending', 'held')"),
 ];
 
+$motelStats = $data['motel_stats'] ?? [];
+$userStats = $data['user_stats'] ?? [];
+$bookingStats = $data['booking_stats'] ?? [];
+$revenueStats = $data['revenue_stats'] ?? [];
+$adminName = $_SESSION['user_name'] ?? $_SESSION['name'] ?? 'Admin';
 ?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Admin Quản Lý Phòng Trọ</title>
+    <title>Bảng điều hành admin - QuanLyPhongTro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            background-color: #f5f7fa;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        .sidebar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            min-height: 100vh;
-            padding: 20px;
-            position: fixed;
-            width: 250px;
-            left: 0;
-            top: 0;
-        }
-        
-        .sidebar .logo {
-            text-align: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .sidebar .logo h2 {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        
-        .sidebar .logo p {
-            font-size: 12px;
-            opacity: 0.8;
-        }
-        
-        .sidebar .nav-menu {
-            list-style: none;
-        }
-        
-        .sidebar .nav-menu li {
-            margin-bottom: 5px;
-        }
-        
-        .sidebar .nav-menu a {
-            color: white;
-            text-decoration: none;
-            display: block;
-            padding: 12px 15px;
-            border-radius: 5px;
-            transition: all 0.3s;
-            font-size: 14px;
-        }
-        
-        .sidebar .nav-menu a:hover,
-        .sidebar .nav-menu a.active {
-            background-color: rgba(255, 255, 255, 0.2);
-        }
-        
-        .sidebar .nav-menu a i {
-            margin-right: 10px;
-            width: 20px;
-        }
-        
-        .main-content {
-            margin-left: 250px;
-            padding: 20px;
-        }
-        
-        .topbar {
-            background: white;
-            padding: 15px 20px;
-            border-radius: 5px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        
-        .topbar .user-info {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        .topbar .user-info span {
-            color: #333;
-            font-weight: 500;
-        }
-        
-        .topbar .user-info a {
-            color: #dc3545;
-            text-decoration: none;
-            font-size: 14px;
-        }
-        
-        .stat-card {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-            text-align: center;
-            transition: transform 0.3s, box-shadow 0.3s;
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-        
-        .stat-card .stat-value {
-            font-size: 32px;
-            font-weight: bold;
-            color: #667eea;
-            margin-bottom: 10px;
-        }
-        
-        .stat-card .stat-label {
-            font-size: 14px;
-            color: #666;
-            text-transform: uppercase;
-        }
-        
-        .stat-card.primary { border-top: 4px solid #667eea; }
-        .stat-card.success { border-top: 4px solid #28a745; }
-        .stat-card.warning { border-top: 4px solid #ffc107; }
-        .stat-card.danger { border-top: 4px solid #dc3545; }
-        
-        .section-title {
-            font-size: 20px;
-            font-weight: bold;
-            margin: 30px 0 20px 0;
-            color: #333;
-        }
-        
-        .recent-list {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-        
-        .recent-list table {
-            width: 100%;
-            margin-bottom: 0;
-        }
-        
-        .recent-list thead {
-            background-color: #f8f9fa;
-        }
-        
-        .recent-list th,
-        .recent-list td {
-            padding: 15px;
-            border-bottom: 1px solid #dee2e6;
-        }
-        
-        .recent-list tr:hover {
-            background-color: #f5f5f5;
-        }
-        
-        .alert {
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-        
-        .success-badge {
-            background-color: #d4edda;
-            color: #155724;
-            padding: 5px 10px;
-            border-radius: 3px;
-            font-size: 12px;
-        }
-        
-        .pending-badge {
-            background-color: #fff3cd;
-            color: #856404;
-            padding: 5px 10px;
-            border-radius: 3px;
-            font-size: 12px;
-        }
-        
-        .danger-badge {
-            background-color: #f8d7da;
-            color: #721c24;
-            padding: 5px 10px;
-            border-radius: 3px;
-            font-size: 12px;
-        }
-        .queue-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-            gap: 16px;
-            margin-bottom: 22px;
-        }
-        .queue-card {
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 14px;
-            padding: 18px;
-            text-decoration: none;
-            color: #111827;
-            box-shadow: 0 12px 32px rgba(15, 23, 42, .06);
-            display: flex;
-            justify-content: space-between;
-            gap: 14px;
-            align-items: center;
-        }
-        .queue-card:hover {
-            color: #111827;
-            transform: translateY(-2px);
-        }
-        .queue-value {
-            font-size: 30px;
-            font-weight: 800;
-            color: #2563eb;
-        }
-        .queue-label {
-            font-size: 13px;
-            color: #64748b;
-            margin-top: 3px;
-        }
-        
-        @media (max-width: 768px) {
-            .sidebar {
-                width: 100%;
-                height: auto;
-                position: relative;
-                min-height: auto;
-            }
-            
-            .main-content {
-                margin-left: 0;
-            }
-        }
-    </style>
     <link href="../assets/css/modern.css" rel="stylesheet">
+    <link href="../assets/css/workbench.css" rel="stylesheet">
 </head>
-<body>
-    <div class="sidebar">
-        <div class="logo">
-            <h2>🏠 Admin</h2>
-            <p>Quản Lý Phòng Trọ</p>
-        </div>
-        
-        <ul class="nav-menu">
-            <li><a href="<?php echo ADMIN_URL; ?>index.php" class="active"><i class="fa fa-dashboard"></i> Dashboard</a></li>
-            <li><a href="<?php echo ADMIN_URL; ?>motels.php"><i class="fa fa-home"></i> Phòng Trọ</a></li>
-            <li><a href="<?php echo ADMIN_URL; ?>users.php"><i class="fa fa-users"></i> Người Dùng</a></li>
-            <li><a href="<?php echo ADMIN_URL; ?>bookings.php"><i class="fa fa-calendar"></i> Đơn Đặt Phòng</a></li>
-            <li><a href="<?php echo ADMIN_URL; ?>payments.php"><i class="fa fa-credit-card"></i> Thanh Toán</a></li>
-            <li><a href="<?php echo ADMIN_URL; ?>admin_revenue.php"><i class="fa fa-money"></i> Doanh Thu Admin</a></li>
-            <li><a href="<?php echo ADMIN_URL; ?>reviews.php"><i class="fa fa-star"></i> Đánh Giá</a></li>
-            <li><a href="<?php echo ADMIN_URL; ?>categories.php"><i class="fa fa-list"></i> Danh Mục</a></li>
-            <li><a href="<?php echo ADMIN_URL; ?>districts.php"><i class="fa fa-map"></i> Quận</a></li>
-            <li><a href="<?php echo ADMIN_URL; ?>utilities.php"><i class="fa fa-wrench"></i> Tiện Nghi</a></li>
-        </ul>
-    </div>
-    
-    <div class="main-content">
-        <div class="topbar">
-            <h1 style="margin: 0; font-size: 24px; color: #333;">Dashboard</h1>
-            <div class="user-info">
-                <span><?php echo htmlspecialchars($_SESSION['user_name'] ?? ''); ?></span>
-                <a href="<?php echo ADMIN_URL; ?>logout.php">Đăng Xuất</a>
+<body class="workbench">
+    <header class="wb-topbar">
+        <div class="container-fluid px-4 wb-topbar-inner">
+            <a class="wb-brand" href="<?php echo ADMIN_URL; ?>index.php">
+                <span class="wb-brand-mark"><i class="fa fa-shield"></i></span>
+                <span>QuanLyPhongTro Admin</span>
+            </a>
+            <div class="wb-user">
+                <span><?php echo admin_dash_e($adminName); ?></span>
+                <a class="btn btn-outline-secondary btn-sm" href="<?php echo ADMIN_URL; ?>logout.php">Đăng xuất</a>
             </div>
         </div>
-        
-        <!-- Alert Messages -->
-        <?php if (isset($_SESSION['success'])): ?>
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <?php echo htmlspecialchars($_SESSION['success']); ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            <?php unset($_SESSION['success']); ?>
-        <?php endif; ?>
-        
-        <?php if (isset($_SESSION['error'])): ?>
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <?php echo htmlspecialchars($_SESSION['error']); ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            <?php unset($_SESSION['error']); ?>
-        <?php endif; ?>
+    </header>
 
-        <div class="section-title" style="margin-top: 0;">Hang doi can xu ly</div>
-        <div class="queue-grid">
-            <a class="queue-card" href="<?php echo ADMIN_URL; ?>users.php">
-                <div>
-                    <div class="queue-value"><?php echo $adminQueue['pending_owners']; ?></div>
-                    <div class="queue-label">Owner cho duyet</div>
-                </div>
-                <i class="fa fa-user-plus fa-2x" style="color:#2563eb;"></i>
-            </a>
-            <a class="queue-card" href="<?php echo ADMIN_URL; ?>motels.php">
-                <div>
-                    <div class="queue-value"><?php echo $adminQueue['pending_motels']; ?></div>
-                    <div class="queue-label">Phong cho duyet</div>
-                </div>
-                <i class="fa fa-home fa-2x" style="color:#16a34a;"></i>
-            </a>
-            <a class="queue-card" href="<?php echo ADMIN_URL; ?>reports.php">
-                <div>
-                    <div class="queue-value"><?php echo $adminQueue['pending_reports']; ?></div>
-                    <div class="queue-label">Report pending</div>
-                </div>
-                <i class="fa fa-flag fa-2x" style="color:#dc2626;"></i>
-            </a>
-            <a class="queue-card" href="<?php echo ADMIN_URL; ?>bookings.php">
-                <div>
-                    <div class="queue-value"><?php echo $adminQueue['pending_viewings']; ?></div>
-                    <div class="queue-label">Lich xem moi</div>
-                </div>
-                <i class="fa fa-calendar fa-2x" style="color:#f59e0b;"></i>
-            </a>
-            <a class="queue-card" href="<?php echo ADMIN_URL; ?>motels.php">
-                <div>
-                    <div class="queue-value"><?php echo $adminQueue['low_quality']; ?></div>
-                    <div class="queue-label">Tin chat luong thap</div>
-                </div>
-                <i class="fa fa-warning fa-2x" style="color:#9333ea;"></i>
-            </a>
-        </div>
-        
-        <!-- Statistics -->
-        <div class="row">
-            <div class="col-md-3">
-                <div class="stat-card primary">
-                    <div class="stat-value"><?php echo $data['motel_stats']['total']; ?></div>
-                    <div class="stat-label">Tổng Phòng Trọ</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card warning">
-                    <div class="stat-value"><?php echo $data['motel_stats']['pending']; ?></div>
-                    <div class="stat-label">Chờ Duyệt</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card success">
-                    <div class="stat-value"><?php echo $data['motel_stats']['approved']; ?></div>
-                    <div class="stat-label">Đã Duyệt</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card danger">
-                    <div class="stat-value"><?php echo $data['motel_stats']['hidden']; ?></div>
-                    <div class="stat-label">Ẩn</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="row" style="margin-top: 20px;">
-            <div class="col-md-3">
-                <div class="stat-card primary">
-                    <div class="stat-value"><?php echo $data['user_stats']['total']; ?></div>
-                    <div class="stat-label">Tổng Người Dùng</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card success">
-                    <div class="stat-value"><?php echo $data['booking_stats']['accepted']; ?></div>
-                    <div class="stat-label">Đơn Chấp Nhận</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card warning">
-                    <div class="stat-value"><?php echo $data['booking_stats']['pending']; ?></div>
-                    <div class="stat-label">Đơn Chờ Duyệt</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card primary">
-                    <div class="stat-value"><?php echo $data['total_reviews']; ?></div>
-                    <div class="stat-label">Tổng Đánh Giá</div>
-                </div>
-            </div>
-        </div>
+    <main class="wb-shell">
+        <div class="container-fluid px-4 wb-layout">
+            <aside class="wb-sidebar">
+                <div class="wb-side-title">Vận hành hệ thống</div>
+                <a class="wb-side-link active" href="<?php echo ADMIN_URL; ?>index.php"><i class="fa fa-dashboard"></i> Tổng quan</a>
+                <a class="wb-side-link" href="<?php echo ADMIN_URL; ?>user_approvals.php"><i class="fa fa-user-plus"></i> Duyệt owner</a>
+                <a class="wb-side-link" href="<?php echo ADMIN_URL; ?>motels.php"><i class="fa fa-home"></i> Phòng trọ</a>
+                <a class="wb-side-link" href="<?php echo ADMIN_URL; ?>bookings.php"><i class="fa fa-calendar"></i> Booking</a>
+                <a class="wb-side-link" href="<?php echo ADMIN_URL; ?>payments.php"><i class="fa fa-credit-card"></i> Thanh toán</a>
+                <a class="wb-side-link" href="<?php echo ADMIN_URL; ?>reports.php"><i class="fa fa-flag"></i> Báo cáo</a>
+                <a class="wb-side-link" href="<?php echo ADMIN_URL; ?>admin_revenue.php"><i class="fa fa-money"></i> Doanh thu</a>
+                <a class="wb-side-link" href="<?php echo ADMIN_URL; ?>users.php"><i class="fa fa-users"></i> Người dùng</a>
+                <a class="wb-side-link" href="<?php echo ADMIN_URL; ?>activity_logs.php"><i class="fa fa-history"></i> Nhật ký</a>
+            </aside>
 
-        <!-- Admin Revenue Stats -->
-        <div class="row" style="margin-top: 20px;">
-            <div class="col-md-3">
-                <div class="stat-card" style="border-top: 4px solid #28a745;">
-                    <div class="stat-value" style="color: #28a745; font-size: 24px;">
-                        <?php echo number_format($data['revenue_stats']['total'] ?? 0); ?> ₫
+            <section>
+                <?php if (isset($_SESSION['success'])): ?>
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <?php echo admin_dash_e($_SESSION['success']); unset($_SESSION['success']); ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
-                    <div class="stat-label">Tổng Doanh Thu (1%)</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card" style="border-top: 4px solid #17a2b8;">
-                    <div class="stat-value" style="color: #17a2b8; font-size: 24px;">
-                        <?php echo number_format($data['revenue_stats']['month'] ?? 0); ?> ₫
-                    </div>
-                    <div class="stat-label">Doanh Thu Tháng Này</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card" style="border-top: 4px solid #fd7e14;">
-                    <div class="stat-value" style="color: #fd7e14;">
-                        <?php echo $data['revenue_stats']['count'] ?? 0; ?>
-                    </div>
-                    <div class="stat-label">Commission Đã Nhận</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card" style="border-top: 4px solid #6f42c1;">
-                    <div class="stat-value" style="color: #6f42c1; font-size: 24px;">
-                        <?php echo number_format($data['revenue_stats']['average'] ?? 0); ?> ₫
-                    </div>
-                    <div class="stat-label">Trung Bình/Commission</div>
-                </div>
-            </div>
-        </div>
+                <?php endif; ?>
 
-        <div style="margin-top: 15px;">
-            <a href="<?php echo ADMIN_URL; ?>admin_revenue.php" class="btn btn-success btn-sm">
-                <i class="fa fa-money"></i> Xem Chi Tiết Doanh Thu
-            </a>
+                <?php if (isset($_SESSION['error'])): ?>
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <?php echo admin_dash_e($_SESSION['error']); unset($_SESSION['error']); ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <?php endif; ?>
+
+                <div class="wb-hero admin mb-3">
+                    <div>
+                        <div class="wb-eyebrow">Trung tâm điều phối</div>
+                        <h1>Bảng điều hành admin</h1>
+                        <p>Theo dõi tin đăng, duyệt tài khoản chủ phòng, kiểm soát booking, thanh toán và phản ánh trong một màn hình làm việc.</p>
+                    </div>
+                    <div class="wb-actions">
+                        <a class="btn btn-primary" href="<?php echo ADMIN_URL; ?>motels.php"><i class="fa fa-check"></i> Duyệt phòng</a>
+                        <a class="btn btn-outline-primary" href="<?php echo ADMIN_URL; ?>admin_revenue.php"><i class="fa fa-line-chart"></i> Doanh thu</a>
+                    </div>
+                </div>
+
+                <div class="wb-grid wb-queue mb-3">
+                    <a class="wb-card wb-queue-card" href="<?php echo ADMIN_URL; ?>user_approvals.php">
+                        <div class="wb-queue-top"><div class="wb-queue-value"><?php echo $adminQueue['pending_owners']; ?></div><i class="fa fa-user-plus wb-card-icon"></i></div>
+                        <div class="wb-queue-label">Owner chờ duyệt</div>
+                    </a>
+                    <a class="wb-card wb-queue-card" href="<?php echo ADMIN_URL; ?>motels.php">
+                        <div class="wb-queue-top"><div class="wb-queue-value"><?php echo $adminQueue['pending_motels']; ?></div><i class="fa fa-home wb-card-icon"></i></div>
+                        <div class="wb-queue-label">Phòng cần kiểm duyệt</div>
+                    </a>
+                    <a class="wb-card wb-queue-card" href="<?php echo ADMIN_URL; ?>reports.php">
+                        <div class="wb-queue-top"><div class="wb-queue-value"><?php echo $adminQueue['pending_reports']; ?></div><i class="fa fa-flag wb-card-icon"></i></div>
+                        <div class="wb-queue-label">Báo cáo chưa xử lý</div>
+                    </a>
+                    <a class="wb-card wb-queue-card" href="<?php echo ADMIN_URL; ?>bookings.php">
+                        <div class="wb-queue-top"><div class="wb-queue-value"><?php echo $adminQueue['pending_viewings']; ?></div><i class="fa fa-calendar wb-card-icon"></i></div>
+                        <div class="wb-queue-label">Lịch xem đang chờ</div>
+                    </a>
+                    <a class="wb-card wb-queue-card" href="<?php echo ADMIN_URL; ?>payments.php">
+                        <div class="wb-queue-top"><div class="wb-queue-value"><?php echo $adminQueue['held_payments']; ?></div><i class="fa fa-credit-card wb-card-icon"></i></div>
+                        <div class="wb-queue-label">Thanh toán cần theo dõi</div>
+                    </a>
+                </div>
+
+                <div class="wb-grid wb-stats-4 mb-3">
+                    <div class="wb-card"><i class="fa fa-building wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($motelStats['total'] ?? 0); ?></div><div class="wb-card-label">Tổng phòng trọ</div></div>
+                    <div class="wb-card"><i class="fa fa-clock-o wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($motelStats['pending'] ?? 0); ?></div><div class="wb-card-label">Tin đang chờ duyệt</div></div>
+                    <div class="wb-card"><i class="fa fa-users wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($userStats['total'] ?? 0); ?></div><div class="wb-card-label">Tổng người dùng</div></div>
+                    <div class="wb-card"><i class="fa fa-star wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($data['total_reviews'] ?? 0); ?></div><div class="wb-card-label">Đánh giá đã ghi nhận</div></div>
+                </div>
+
+                <div class="wb-grid wb-stats-4">
+                    <div class="wb-card"><i class="fa fa-calendar-check-o wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($bookingStats['accepted'] ?? 0); ?></div><div class="wb-card-label">Booking đã nhận</div></div>
+                    <div class="wb-card"><i class="fa fa-hourglass-half wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($bookingStats['pending'] ?? 0); ?></div><div class="wb-card-label">Booking chờ xử lý</div></div>
+                    <div class="wb-card"><i class="fa fa-money wb-card-icon"></i><div class="wb-card-value fs-4"><?php echo admin_dash_money($revenueStats['month'] ?? 0); ?></div><div class="wb-card-label">Doanh thu tháng này</div></div>
+                    <div class="wb-card"><i class="fa fa-line-chart wb-card-icon"></i><div class="wb-card-value fs-4"><?php echo admin_dash_money($revenueStats['total'] ?? 0); ?></div><div class="wb-card-label">Tổng commission</div></div>
+                </div>
+
+                <div class="wb-section-head">
+                    <h2>Phòng chờ duyệt</h2>
+                    <a class="btn btn-outline-primary btn-sm" href="<?php echo ADMIN_URL; ?>motels.php">Xem tất cả</a>
+                </div>
+                <div class="wb-table-card">
+                    <?php if (!empty($data['recent_motels'])): ?>
+                        <table class="wb-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Tiêu đề</th>
+                                    <th>Chủ phòng</th>
+                                    <th>Giá</th>
+                                    <th>Trạng thái</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($data['recent_motels'] as $motel): ?>
+                                    <tr>
+                                        <td>#<?php echo (int)$motel['id']; ?></td>
+                                        <td class="wb-title"><?php echo admin_dash_e($motel['title'] ?? 'N/A'); ?></td>
+                                        <td><?php echo admin_dash_e($motel['owner_name'] ?? 'N/A'); ?></td>
+                                        <td class="wb-price"><?php echo admin_dash_money($motel['price'] ?? 0); ?></td>
+                                        <td><span class="wb-pill warning"><?php echo admin_dash_status((string)($motel['status'] ?? 'pending')); ?></span></td>
+                                        <td class="text-end"><a class="btn btn-sm btn-primary" href="<?php echo ADMIN_URL . 'motel_detail.php?id=' . (int)$motel['id']; ?>">Xem</a></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    <?php else: ?>
+                        <div class="wb-empty">Không có phòng đang chờ duyệt.</div>
+                    <?php endif; ?>
+                </div>
+
+                <div class="wb-section-head">
+                    <h2>Booking gần đây</h2>
+                    <a class="btn btn-outline-primary btn-sm" href="<?php echo ADMIN_URL; ?>bookings.php">Quản lý booking</a>
+                </div>
+                <div class="wb-table-card">
+                    <?php if (!empty($data['recent_bookings'])): ?>
+                        <table class="wb-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Người thuê</th>
+                                    <th>Phòng</th>
+                                    <th>Tiền cọc</th>
+                                    <th>Check-in</th>
+                                    <th>Trạng thái</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($data['recent_bookings'] as $booking): ?>
+                                    <tr>
+                                        <td>#<?php echo (int)$booking['id']; ?></td>
+                                        <td><?php echo admin_dash_e($booking['user_name'] ?? 'N/A'); ?></td>
+                                        <td class="wb-title"><?php echo admin_dash_e($booking['motel_title'] ?? 'N/A'); ?></td>
+                                        <td class="wb-price"><?php echo admin_dash_money($booking['deposit_amount'] ?? 0); ?></td>
+                                        <td><?php echo admin_dash_e($booking['checkin_date'] ?? ''); ?></td>
+                                        <td><span class="wb-pill warning"><?php echo admin_dash_status((string)($booking['status'] ?? 'pending')); ?></span></td>
+                                        <td class="text-end"><a class="btn btn-sm btn-primary" href="<?php echo ADMIN_URL . 'booking_detail.php?id=' . (int)$booking['id']; ?>">Xem</a></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    <?php else: ?>
+                        <div class="wb-empty">Chưa có booking mới.</div>
+                    <?php endif; ?>
+                </div>
+            </section>
         </div>
-        
-        <!-- Recent Motels Pending -->
-        <?php if (!empty($data['recent_motels'])): ?>
-        <div class="section-title">Phòng Trọ Chờ Duyệt</div>
-        <div class="recent-list">
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Tiêu Đề</th>
-                        <th>Chủ Phòng</th>
-                        <th>Giá (VNĐ)</th>
-                        <th>Trạng Thái</th>
-                        <th>Hành Động</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($data['recent_motels'] as $motel): ?>
-                    <tr>
-                        <td><?php echo $motel['id']; ?></td>
-                        <td><?php echo htmlspecialchars($motel['title']); ?></td>
-                        <td><?php echo htmlspecialchars($motel['owner_name'] ?? 'N/A'); ?></td>
-                        <td><?php echo number_format($motel['price']); ?></td>
-                        <td><span class="pending-badge"><?php echo $motel['status']; ?></span></td>
-                        <td>
-                            <a href="<?php echo ADMIN_URL . 'motel_detail.php?id=' . $motel['id']; ?>" class="btn btn-sm btn-info">Xem</a>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-        <?php endif; ?>
-        
-        <!-- Recent Bookings -->
-        <?php if (!empty($data['recent_bookings'])): ?>
-        <div class="section-title">Đơn Đặt Phòng Gần Đây</div>
-        <div class="recent-list">
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Người Dùng</th>
-                        <th>Phòng Trọ</th>
-                        <th>Tiền Cọc (VNĐ)</th>
-                        <th>Ngày Nhập Trọ</th>
-                        <th>Trạng Thái</th>
-                        <th>Hành Động</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($data['recent_bookings'] as $booking): ?>
-                    <tr>
-                        <td><?php echo $booking['id']; ?></td>
-                        <td><?php echo htmlspecialchars($booking['user_name'] ?? 'N/A'); ?></td>
-                        <td><?php echo htmlspecialchars($booking['motel_title'] ?? 'N/A'); ?></td>
-                        <td><?php echo number_format($booking['deposit_amount'] ?? 0); ?></td>
-                        <td><?php echo $booking['checkin_date']; ?></td>
-                        <td><span class="pending-badge"><?php echo $booking['status']; ?></span></td>
-                        <td>
-                            <a href="<?php echo ADMIN_URL . 'booking_detail.php?id=' . $booking['id']; ?>" class="btn btn-sm btn-info">Xem</a>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-        <?php endif; ?>
-    </div>
-    
+    </main>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
