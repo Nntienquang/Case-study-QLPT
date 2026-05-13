@@ -26,8 +26,8 @@ if (!$log) {
     exit;
 }
 
-$oldValue = !empty($log['old_value']) ? (json_decode($log['old_value'], true) ?: []) : [];
-$newValue = !empty($log['new_value']) ? (json_decode($log['new_value'], true) ?: []) : [];
+$oldValue = !empty($log['old_values']) ? (json_decode($log['old_values'], true) ?: []) : [];
+$newValue = !empty($log['new_values']) ? (json_decode($log['new_values'], true) ?: []) : [];
 
 admin_layout_start('Chi tiết nhật ký', 'Xem thông tin truy vết của một thao tác quản trị.', 'activity_logs');
 admin_flash_messages();

@@ -134,7 +134,7 @@ class ReportController
                     'report',
                     $id,
                     [],
-                    "Xóa báo cáo: {$report['title']}"
+                    "Xóa báo cáo: {$report['reason']}"
                 );
             }
             
@@ -163,12 +163,12 @@ class ReportController
             'motel_id' => $_POST['motel_id'] ?? null,
             'report_type' => $_POST['report_type'] ?? 'other',
             'title' => $_POST['title'] ?? '',
-            'description' => $_POST['description'] ?? '',
+            'reason' => $_POST['reason'] ?? $_POST['description'] ?? '',
             'evidence_image' => $_POST['evidence_image'] ?? null
         ];
         
         // Validate
-        if (empty($data['title']) || empty($data['description'])) {
+        if (empty($data['title']) || empty($data['reason'])) {
             $_SESSION['error'] = 'Vui lòng điền tiêu đề và mô tả';
             return false;
         }

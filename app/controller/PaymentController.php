@@ -114,7 +114,7 @@ class PaymentController {
                         $trans_query = "INSERT INTO transactions 
                                        (to_user, booking_id, amount, type, created_at) 
                                        VALUES 
-                                       ({$admin_id_esc}, {$booking_id_esc}, {$commission_esc}, 'commission', NOW())";
+                                       ({$admin_id_esc}, {$booking_id_esc}, {$commission_esc}, 'fee', NOW())";
                         
                         $this->db->query($trans_query);
                     }

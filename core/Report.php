@@ -28,14 +28,12 @@ class Report
         $reported_user_id = isset($data['reported_user_id']) ? $conn->real_escape_string($data['reported_user_id']) : 'NULL';
         $motel_id = isset($data['motel_id']) ? $conn->real_escape_string($data['motel_id']) : 'NULL';
         $report_type = $conn->real_escape_string($data['report_type'] ?? 'other');
-        $title = $conn->real_escape_string($data['title'] ?? '');
-        $description = $conn->real_escape_string($data['description'] ?? '');
-        $evidence_image = isset($data['evidence_image']) ? "'" . $conn->real_escape_string($data['evidence_image']) . "'" : 'NULL';
+        $reason = $conn->real_escape_string($data['reason'] ?? $data['description'] ?? $data['title'] ?? '');
         
         $query = "INSERT INTO {$this->table} 
-                  (reporter_id, reported_user_id, motel_id, report_type, title, description, evidence_image, status)
+                  (reporter_id, reported_user_id, motel_id, report_type, reason, status)
                   VALUES 
-                  ({$reporter_id}, {$reported_user_id}, {$motel_id}, '{$report_type}', '{$title}', '{$description}', {$evidence_image}, 'pending')";
+                  ({$reporter_id}, {$reported_user_id}, {$motel_id}, '{$report_type}', '{$reason}', 'pending')";
         
         return $this->db->query($query);
     }

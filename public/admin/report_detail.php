@@ -80,8 +80,8 @@ admin_flash_messages();
 <div class="wb-list-card mb-3">
     <div class="wb-list-row">
         <div>
-            <div class="wb-title"><?php echo admin_e($report['title'] ?? 'N/A'); ?></div>
-            <div><?php echo nl2br(admin_e($report['description'] ?? '')); ?></div>
+            <div class="wb-title"><?php echo admin_e($report['reason'] ?? 'N/A'); ?></div>
+            <div><?php echo nl2br(admin_e($report['reason'] ?? '')); ?></div>
         </div>
     </div>
     <div class="wb-list-row">
