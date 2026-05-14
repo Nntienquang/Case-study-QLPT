@@ -48,16 +48,13 @@ $stmt->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Doanh Thu - Owner</title>
+    <title>Doanh thu - Owner</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
         body { background: #f8f9fa; }
         .navbar { background: linear-gradient(135deg, #667eea, #764ba2); }
         .navbar-brand { font-size: 22px; font-weight: 700; color: white !important; }
-        .sidebar { background: white; padding: 30px; border-radius: 12px; }
-        .sidebar a { display: block; padding: 12px 15px; margin-bottom: 8px; border-radius: 6px; color: #666; text-decoration: none; transition: 0.3s; }
-        .sidebar a:hover, .sidebar a.active { background: #f0f0f0; color: #667eea; }
         .main-content { padding: 30px; }
         .stat-card { background: white; padding: 30px; border-radius: 12px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
         .stat-icon { font-size: 40px; color: #667eea; margin-bottom: 15px; }
@@ -81,21 +78,16 @@ $stmt->close();
     <div class="container-lg" style="padding: 30px 0;">
         <div class="row">
             <div class="col-lg-3">
-                <div class="sidebar">
-                    <h5>Menu</h5>
-                    <a href="dashboard.php"><i class="fas fa-chart-line"></i> Dashboard</a>
-                    <a href="listings.php"><i class="fas fa-list"></i> PhÃ²ng cá»§a TÃ´i</a>
-                    <a href="bookings.php"><i class="fas fa-calendar"></i> ÄÆ¡n Äáº·t PhÃ²ng</a>
-                    <a href="revenue.php" class="active"><i class="fas fa-chart-bar"></i> Doanh Thu</a>
-                    <a href="profile.php"><i class="fas fa-user"></i> Há»“ SÆ¡</a>
-                    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> ÄÄƒng Xuáº¥t</a>
-                </div>
+                <?php
+                $ownerNavActive = 'revenue';
+                require __DIR__ . '/_nav_sidebar.php';
+                ?>
             </div>
 
             <div class="col-lg-9">
                 <div class="main-content">
                     <h1 style="font-size: 28px; font-weight: 700; margin-bottom: 30px;">
-                        <i class="fas fa-chart-bar"></i> Doanh Thu cá»§a TÃ´i
+                        <i class="fas fa-chart-column"></i> Doanh thu của tôi
                     </h1>
 
                     <div class="row mb-4">
@@ -103,34 +95,34 @@ $stmt->close();
                             <div class="stat-card">
                                 <div class="stat-icon"><i class="fas fa-home"></i></div>
                                 <div class="stat-number"><?php echo $stats['total_listings']; ?></div>
-                                <div class="stat-label">PhÃ²ng Äang Cho ThuÃª</div>
+                                <div class="stat-label">Phòng đang cho thuê</div>
                             </div>
                         </div>
                         <div class="col-md-6 col-lg-3">
                             <div class="stat-card">
                                 <div class="stat-icon"><i class="fas fa-calendar"></i></div>
                                 <div class="stat-number"><?php echo $stats['total_bookings']; ?></div>
-                                <div class="stat-label">Tá»•ng ÄÆ¡n Äáº·t</div>
+                                <div class="stat-label">Tổng đơn đặt</div>
                             </div>
                         </div>
                         <div class="col-md-6 col-lg-3">
                             <div class="stat-card">
                                 <div class="stat-icon"><i class="fas fa-hourglass"></i></div>
                                 <div class="stat-number"><?php echo $stats['pending_bookings']; ?></div>
-                                <div class="stat-label">ÄÆ¡n ChÆ°a HoÃ n ThÃ nh</div>
+                                <div class="stat-label">Đơn chưa hoàn thành</div>
                             </div>
                         </div>
                         <div class="col-md-6 col-lg-3">
                             <div class="stat-card">
                                 <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
                                 <div class="stat-number"><?php echo number_format($stats['total_revenue'] ?? 0); ?></div>
-                                <div class="stat-label">Tá»•ng Doanh Thu (VNÄ)</div>
+                                <div class="stat-label">Tổng doanh thu (VNĐ)</div>
                             </div>
                         </div>
                     </div>
 
                     <h3 style="font-weight: 700; margin-top: 40px; margin-bottom: 20px;">
-                        <i class="fas fa-list"></i> Lá»‹ch Sá»­ Giao Dá»‹ch
+                        <i class="fas fa-list"></i> Lịch sử giao dịch
                     </h3>
 
                     <?php if (count($transactions) > 0): ?>
@@ -141,13 +133,13 @@ $stmt->close();
                                     <small style="color: #666;">Check-in: <?php echo date('d/m/Y', strtotime($trans['check_in_date'])); ?></small>
                                 </div>
                                 <div class="transaction-amount">
-                                    +<?php echo number_format($trans['deposit_amount']); ?> VNÄ
+                                    +<?php echo number_format($trans['deposit_amount']); ?> VNĐ
                                 </div>
                             </div>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <div style="text-align: center; padding: 40px; background: white; border-radius: 12px; color: #999;">
-                            KhÃ´ng cÃ³ giao dá»‹ch hoÃ n thÃ nh
+                            Không có giao dịch hoàn thành
                         </div>
                     <?php endif; ?>
                 </div>

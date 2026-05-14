@@ -24,7 +24,7 @@ if (isset($_POST['delete_motel'])) {
     $stmt = $db->prepare("DELETE FROM motels WHERE id = ? AND user_id = ?");
     $stmt->bind_param("ii", $motel_id, $owner_id);
     if ($stmt->execute()) {
-        $_SESSION['message'] = "PhÃ²ng Ä‘Ã£ bá»‹ xÃ³a thÃ nh cÃ´ng!";
+        $_SESSION['message'] = "Phòng đã bị xóa thành công!";
         $_SESSION['message_type'] = "success";
     }
     $stmt->close();
@@ -66,7 +66,7 @@ foreach ($listings as $index => $listing) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PhÃ²ng cá»§a TÃ´i - Owner Dashboard</title>
+    <title>Phòng của tôi - Owner Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -75,10 +75,6 @@ foreach ($listings as $index => $listing) {
         .navbar-brand { font-size: 22px; font-weight: 700; color: white !important; }
         .navbar-nav .nav-link { color: rgba(255,255,255,0.9) !important; margin-left: 20px; transition: 0.3s; }
         .navbar-nav .nav-link:hover { color: white !important; }
-        .sidebar { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); height: fit-content; position: sticky; top: 80px; }
-        .sidebar h5 { font-weight: 700; margin-bottom: 20px; color: #333; }
-        .sidebar a { display: block; padding: 12px 15px; margin-bottom: 8px; border-radius: 6px; color: #666; text-decoration: none; transition: 0.3s; }
-        .sidebar a:hover, .sidebar a.active { background: #f0f0f0; color: #667eea; }
         .main-content { padding: 30px; }
         .page-header { margin-bottom: 30px; }
         .page-title { font-size: 28px; font-weight: 700; color: #333; margin-bottom: 10px; }
@@ -125,13 +121,18 @@ foreach ($listings as $index => $listing) {
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user"></i> Account
+                            <i class="fas fa-user"></i> Tài khoản
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="dashboard.php">Dashboard</a></li>
-                            <li><a class="dropdown-item" href="profile.php">Há»“ SÆ¡</a></li>
+                            <li><a class="dropdown-item" href="dashboard.php">Tổng quan</a></li>
+                            <li><a class="dropdown-item" href="listings.php">Phòng của tôi</a></li>
+                            <li><a class="dropdown-item" href="add-listing.php">Đăng phòng</a></li>
+                            <li><a class="dropdown-item" href="viewing-appointments.php">Lịch xem</a></li>
+                            <li><a class="dropdown-item" href="bookings.php">Đơn đặt phòng</a></li>
+                            <li><a class="dropdown-item" href="revenue.php">Doanh thu</a></li>
+                            <li><a class="dropdown-item" href="settings.php">Cài đặt</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="../logout.php">ÄÄƒng Xuáº¥t</a></li>
+                            <li><a class="dropdown-item" href="../logout.php">Đăng xuất</a></li>
                         </ul>
                     </li>
                 </ul>
@@ -143,17 +144,10 @@ foreach ($listings as $index => $listing) {
         <div class="row">
             <!-- Sidebar -->
             <div class="col-lg-3">
-                <div class="sidebar">
-                    <h5>Menu</h5>
-                    <a href="dashboard.php"><i class="fas fa-chart-line"></i> Dashboard</a>
-                    <a href="listings.php" class="active"><i class="fas fa-list"></i> PhÃ²ng cá»§a TÃ´i</a>
-                    <a href="add-listing.php"><i class="fas fa-plus"></i> ThÃªm PhÃ²ng Má»›i</a>
-                    <a href="bookings.php"><i class="fas fa-calendar"></i> ÄÆ¡n Äáº·t PhÃ²ng</a>
-                    <a href="revenue.php"><i class="fas fa-chart-bar"></i> Doanh Thu</a>
-                    <a href="profile.php"><i class="fas fa-user"></i> Há»“ SÆ¡</a>
-                    <a href="settings.php"><i class="fas fa-cog"></i> CÃ i Äáº·t</a>
-                    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> ÄÄƒng Xuáº¥t</a>
-                </div>
+                <?php
+                $ownerNavActive = 'listings';
+                require __DIR__ . '/_nav_sidebar.php';
+                ?>
             </div>
 
             <!-- Main Content -->
@@ -168,8 +162,8 @@ foreach ($listings as $index => $listing) {
                     <?php endif; ?>
 
                     <div class="page-header">
-                        <h1 class="page-title"><i class="fas fa-list"></i> PhÃ²ng cá»§a TÃ´i</h1>
-                        <p class="page-subtitle">Quáº£n lÃ½ táº¥t cáº£ phÃ²ng trá» cá»§a báº¡n</p>
+                        <h1 class="page-title"><i class="fas fa-list"></i> Phòng của tôi</h1>
+                        <p class="page-subtitle">Quản lý tất cả phòng trọ của bạn</p>
                     </div>
 
                     <?php if (count($listings) > 0): ?>
@@ -177,13 +171,13 @@ foreach ($listings as $index => $listing) {
                             <table class="table">
                                 <thead>
                                     <tr>
-                                        <th>TÃªn PhÃ²ng</th>
-                                        <th>Danh Má»¥c</th>
-                                        <th>GiÃ¡ (VNÄ)</th>
-                                        <th>LÆ°á»£t Xem</th>
+                                        <th>Tên phòng</th>
+                                        <th>Danh mục</th>
+                                        <th>Giá (VNĐ)</th>
+                                        <th>Lượt xem</th>
                                         <th>Chat luong tin</th>
-                                        <th>Tráº¡ng ThÃ¡i</th>
-                                        <th>Thao TÃ¡c</th>
+                                        <th>Trạng thái</th>
+                                        <th>Thao tác</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -220,10 +214,10 @@ foreach ($listings as $index => $listing) {
                                             </td>
                                             <td>
                                                 <div class="action-buttons">
-                                                    <a href="edit-listing.php?id=<?php echo $listing['id']; ?>" class="btn btn-warning btn-sm">Sá»­a</a>
-                                                    <form method="POST" style="display: inline;" onsubmit="return confirm('Báº¡n cháº¯c cháº¯n muá»‘n xÃ³a?');">
+                                                    <a href="edit-listing.php?id=<?php echo $listing['id']; ?>" class="btn btn-warning btn-sm">Sửa</a>
+                                                    <form method="POST" style="display: inline;" onsubmit="return confirm('Bạn chắc chắn muốn xóa?');">
                                                         <input type="hidden" name="motel_id" value="<?php echo $listing['id']; ?>">
-                                                        <button type="submit" name="delete_motel" class="btn btn-danger btn-sm">XÃ³a</button>
+                                                        <button type="submit" name="delete_motel" class="btn btn-danger btn-sm">Xóa</button>
                                                     </form>
                                                 </div>
                                             </td>
@@ -247,9 +241,9 @@ foreach ($listings as $index => $listing) {
                     <?php else: ?>
                         <div class="empty-state">
                             <div class="empty-state-icon"><i class="fas fa-inbox"></i></div>
-                            <p>Báº¡n chÆ°a cÃ³ phÃ²ng nÃ o</p>
+                            <p>Bạn chưa có phòng nào</p>
                             <a href="add-listing.php" class="btn btn-primary">
-                                <i class="fas fa-plus"></i> ThÃªm PhÃ²ng Má»›i
+                                <i class="fas fa-plus"></i> Thêm phòng mới
                             </a>
                         </div>
                     <?php endif; ?>

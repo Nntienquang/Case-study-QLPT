@@ -20,7 +20,7 @@ function user_dash_e(?string $value): string
 
 function user_dash_money($value): string
 {
-    return number_format((int)$value) . ' VND';
+    return number_format((int)$value) . ' VNĐ';
 }
 
 function user_dash_table_exists(mysqli $conn, string $table): bool
@@ -169,15 +169,11 @@ $featuredMotels = user_dash_rows(
     <main class="wb-shell">
         <div class="container-lg wb-layout">
             <aside class="wb-sidebar">
-                <div class="wb-side-title">Người thuê</div>
-                <a class="wb-side-link active" href="dashboard.php"><i class="fas fa-home"></i> Tổng quan</a>
-                <a class="wb-side-link" href="search.php"><i class="fas fa-search"></i> Tìm phòng</a>
-                <a class="wb-side-link" href="saved-searches.php"><i class="fas fa-bell"></i> Bộ lọc đã lưu</a>
-                <a class="wb-side-link" href="my-bookings.php"><i class="fas fa-calendar-check"></i> Booking của tôi</a>
-                <a class="wb-side-link" href="saved-motels.php"><i class="fas fa-heart"></i> Phòng đã lưu</a>
-                <a class="wb-side-link" href="../notifications.php"><i class="fas fa-bell"></i> Thông báo</a>
-                <a class="wb-side-link" href="profile.php"><i class="fas fa-user"></i> Hồ sơ</a>
-                <a class="wb-side-link" href="settings.php"><i class="fas fa-gear"></i> Cài đặt</a>
+                <?php
+                $userNavActive = 'dashboard';
+                $userNavVariant = 'workbench';
+                require __DIR__ . '/_nav_sidebar.php';
+                ?>
             </aside>
 
             <section>
@@ -185,7 +181,7 @@ $featuredMotels = user_dash_rows(
                     <div>
                         <div class="wb-eyebrow">Không gian tìm phòng</div>
                         <h1>Chào <?php echo user_dash_e($userName); ?></h1>
-                        <p>Theo dõi booking, lịch xem, phòng đã lưu và các gợi ý phù hợp để ra quyết định nhanh hơn.</p>
+                        <p>Theo dõi đơn đặt phòng, lịch xem, phòng đã lưu và các gợi ý phù hợp để ra quyết định nhanh hơn.</p>
                     </div>
                     <div class="wb-actions">
                         <a href="search.php" class="btn btn-primary"><i class="fas fa-magnifying-glass"></i> Tìm phòng</a>
@@ -217,7 +213,7 @@ $featuredMotels = user_dash_rows(
                 </div>
 
                 <div class="wb-grid wb-stats-4">
-                    <div class="wb-card"><i class="fas fa-calendar-check wb-card-icon"></i><div class="wb-card-value"><?php echo $stats['total_bookings']; ?></div><div class="wb-card-label">Tổng booking</div></div>
+                    <div class="wb-card"><i class="fas fa-calendar-check wb-card-icon"></i><div class="wb-card-value"><?php echo $stats['total_bookings']; ?></div><div class="wb-card-label">Tổng đơn đặt</div></div>
                     <div class="wb-card"><i class="fas fa-clock wb-card-icon"></i><div class="wb-card-value"><?php echo $stats['pending_bookings']; ?></div><div class="wb-card-label">Đang chờ xử lý</div></div>
                     <div class="wb-card"><i class="fas fa-calendar-day wb-card-icon"></i><div class="wb-card-value"><?php echo $stats['pending_viewings']; ?></div><div class="wb-card-label">Lịch xem chờ</div></div>
                     <div class="wb-card"><i class="fas fa-heart wb-card-icon"></i><div class="wb-card-value"><?php echo $stats['total_favorites']; ?></div><div class="wb-card-label">Phòng đã lưu</div></div>
@@ -225,7 +221,7 @@ $featuredMotels = user_dash_rows(
 
                 <div class="wb-section-head">
                     <h2>Lịch xem của bạn</h2>
-                    <a href="my-bookings.php" class="btn btn-outline-primary btn-sm">Xem booking</a>
+                    <a href="my-bookings.php" class="btn btn-outline-primary btn-sm">Xem đơn đặt</a>
                 </div>
                 <div class="wb-list-card">
                     <?php if ($recentViewings): ?>
@@ -262,7 +258,7 @@ $featuredMotels = user_dash_rows(
                             </div>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <div class="wb-empty">Bạn chưa có booking nào. Hãy bắt đầu bằng việc tìm phòng phù hợp.</div>
+                        <div class="wb-empty">Bạn chưa có đơn đặt phòng nào. Hãy bắt đầu bằng việc tìm phòng phù hợp.</div>
                     <?php endif; ?>
                 </div>
 

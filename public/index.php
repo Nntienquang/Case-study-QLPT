@@ -11,7 +11,7 @@ if (isset($_SESSION['user_id'])) {
     if ($role === 'admin') {
         header('Location: ./admin/index.php');
     } elseif ($role === 'owner') {
-        header('Location: ./owner/dashboard.php');
+        header('Location: ./owner/index.php');
     } else {
         header('Location: ./user/dashboard.php');
     }
@@ -105,20 +105,28 @@ try {
             align-items: center;
             gap: 6px;
         }
-        .nav-links a {
+        .nav-links a,
+        .nav-links a:visited {
             color: #475467;
             text-decoration: none;
             font-weight: 750;
             padding: 10px 12px;
             border-radius: 12px;
         }
-        .nav-links a:hover {
+        .nav-links a:hover,
+        .nav-links a:hover:visited {
             color: #101828;
             background: rgba(16,24,40,.06);
         }
-        .nav-cta {
+        .nav-cta,
+        .nav-cta:visited {
             color: #fff !important;
             background: #101828 !important;
+        }
+        .nav-cta:hover,
+        .nav-cta:hover:visited {
+            color: #fff !important;
+            filter: brightness(1.08);
         }
         .hero {
             position: relative;
@@ -430,11 +438,16 @@ try {
             border-top: 1px solid #e5eaf2;
             color: #667085;
         }
-        .footer a {
+        .footer a,
+        .footer a:visited {
             color: #475467;
             text-decoration: none;
             margin-left: 18px;
             font-weight: 750;
+        }
+        .footer a:hover,
+        .footer a:hover:visited {
+            color: #101828;
         }
         @media (max-width: 991px) {
             .home-nav {
@@ -476,7 +489,8 @@ try {
                     <a href="#areas">Khu vực</a>
                     <a href="#system">Chức năng</a>
                     <a href="login.php">Đăng nhập</a>
-                    <a href="owner-register.php" class="nav-cta">Đăng phòng</a>
+                    <a href="register.php">Đăng ký thuê</a>
+                    <a href="owner-register.php" class="nav-cta">Đăng ký chủ phòng</a>
                 </div>
             </div>
         </div>
@@ -505,7 +519,7 @@ try {
                     <div class="metrics">
                         <div class="metric"><strong><?php echo number_format($stats['rooms']); ?></strong><span>phòng đã duyệt</span></div>
                         <div class="metric"><strong><?php echo number_format($stats['owners']); ?></strong><span>chủ phòng</span></div>
-                        <div class="metric"><strong><?php echo number_format($stats['bookings']); ?></strong><span>booking</span></div>
+                        <div class="metric"><strong><?php echo number_format($stats['bookings']); ?></strong><span>đơn đặt phòng</span></div>
                         <div class="metric"><strong><?php echo number_format($stats['districts']); ?></strong><span>khu vực</span></div>
                     </div>
                 </section>
@@ -569,12 +583,12 @@ try {
                     <article class="feature-card">
                         <div class="feature-icon"><i class="fas fa-user"></i></div>
                         <h3>Người thuê</h3>
-                        <p>Tìm phòng theo khu vực, ngân sách và diện tích; lưu phòng yêu thích, xem chi phí vào ở và đặt lịch xem.</p>
+                        <p>Tìm phòng theo khu vực, ngân sách và diện tích; lưu phòng để xem lại, xem chi phí vào ở và đặt lịch xem.</p>
                     </article>
                     <article class="feature-card">
                         <div class="feature-icon"><i class="fas fa-building-user"></i></div>
                         <h3>Chủ phòng</h3>
-                        <p>Đăng phòng, nhận lịch xem, theo dõi booking, chỉnh sửa tin và quản lý doanh thu trong một nơi.</p>
+                        <p>Đăng phòng, nhận lịch xem, theo dõi đơn đặt phòng, chỉnh sửa tin và quản lý doanh thu trong một nơi.</p>
                     </article>
                     <article class="feature-card">
                         <div class="feature-icon"><i class="fas fa-shield-halved"></i></div>
@@ -628,15 +642,15 @@ try {
                                 <div class="room-photo"></div>
                                 <div class="room-body">
                                     <h3><?php echo htmlspecialchars($room['title']); ?></h3>
-                                    <div class="room-price"><?php echo number_format((int)$room['price']); ?> VND/tháng</div>
+                                    <div class="room-price"><?php echo number_format((int)$room['price']); ?> VNĐ/tháng</div>
                                     <div class="room-meta"><i class="fas fa-location-dot"></i> <?php echo htmlspecialchars($room['address'] ?: 'Chưa cập nhật địa chỉ'); ?></div>
                                     <div class="room-tags">
                                         <?php if (!empty($room['district_name'])): ?><span class="room-tag"><?php echo htmlspecialchars($room['district_name']); ?></span><?php endif; ?>
                                         <?php if (!empty($room['category_name'])): ?><span class="room-tag"><?php echo htmlspecialchars($room['category_name']); ?></span><?php endif; ?>
-                                        <?php if (!empty($room['area'])): ?><span class="room-tag"><?php echo (float)$room['area']; ?> m2</span><?php endif; ?>
+                                        <?php if (!empty($room['area'])): ?><span class="room-tag"><?php echo (float)$room['area']; ?> m²</span><?php endif; ?>
                                         <span class="room-tag"><?php echo (int)$room['health_score']; ?>/100</span>
                                     </div>
-                                    <div class="room-meta mb-3"><i class="fas fa-wallet"></i> Vào ở dự kiến: <?php echo number_format($moveInCost); ?> VND</div>
+                                    <div class="room-meta mb-3"><i class="fas fa-wallet"></i> Vào ở dự kiến: <?php echo number_format($moveInCost); ?> VNĐ</div>
                                     <a href="user/motel-detail.php?id=<?php echo (int)$room['id']; ?>" class="btn-home primary w-100">Xem chi tiết</a>
                                 </div>
                             </article>
@@ -658,8 +672,8 @@ try {
             <div><strong>QuanLyPhongTro</strong> · Tìm phòng sạch đẹp, quản lý thuê trọ dễ dàng.</div>
             <div>
                 <a href="login.php">Đăng nhập</a>
-                <a href="register.php">Người thuê</a>
-                <a href="owner-register.php">Chủ phòng</a>
+                <a href="register.php">Đăng ký thuê</a>
+                <a href="owner-register.php">Đăng ký chủ phòng</a>
                 <a href="admin/login.php">Admin</a>
             </div>
         </div>

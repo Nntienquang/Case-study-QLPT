@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $health_score = $quality['score'];
 
     if (empty($title) || empty($price) || empty($address)) {
-        $message = 'Vui lÃ²ng Ä‘iá»n Ä‘áº§y Ä‘á»§ thÃ´ng tin báº¯t buá»™c!';
+        $message = 'Vui lòng điền đầy đủ thông tin bắt buộc!';
         $message_type = 'danger';
     } else {
         $stmt = $db->prepare("
@@ -74,10 +74,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param("issidiisiissidi", $owner_id, $title, $description, $price, $area, $bedrooms, $bathrooms, $address, $category_id, $district_id, $utilities, $available_from, $service_fee, $deposit_months, $health_score);
         
         if ($stmt->execute()) {
-            $message = 'PhÃ²ng Ä‘Ã£ Ä‘Æ°á»£c thÃªm thÃ nh cÃ´ng! Chá» admin duyá»‡t.';
+            $message = 'Phòng đã được thêm thành công! Chờ admin duyệt.';
             $message_type = 'success';
         } else {
-            $message = 'Lá»—i: ' . $stmt->error;
+            $message = 'Lỗi: ' . $stmt->error;
             $message_type = 'danger';
         }
         $stmt->close();
@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ThÃªm PhÃ²ng Má»›i - Owner</title>
+    <title>Thêm phòng mới - Owner</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -98,9 +98,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .navbar-brand { font-size: 22px; font-weight: 700; color: white !important; }
         .navbar-nav .nav-link { color: rgba(255,255,255,0.9) !important; margin-left: 20px; }
         .navbar-nav .nav-link:hover { color: white !important; }
-        .sidebar { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .sidebar a { display: block; padding: 12px 15px; margin-bottom: 8px; border-radius: 6px; color: #666; text-decoration: none; transition: 0.3s; }
-        .sidebar a:hover, .sidebar a.active { background: #f0f0f0; color: #667eea; }
         .main-content { padding: 30px; }
         .form-card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .form-section { margin-bottom: 30px; }
@@ -132,23 +129,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="row">
             <!-- Sidebar -->
             <div class="col-lg-3">
-                <div class="sidebar">
-                    <h5>Menu</h5>
-                    <a href="dashboard.php"><i class="fas fa-chart-line"></i> Dashboard</a>
-                    <a href="listings.php"><i class="fas fa-list"></i> PhÃ²ng cá»§a TÃ´i</a>
-                    <a href="add-listing.php" class="active"><i class="fas fa-plus"></i> ThÃªm PhÃ²ng Má»›i</a>
-                    <a href="bookings.php"><i class="fas fa-calendar"></i> ÄÆ¡n Äáº·t PhÃ²ng</a>
-                    <a href="revenue.php"><i class="fas fa-chart-bar"></i> Doanh Thu</a>
-                    <a href="profile.php"><i class="fas fa-user"></i> Há»“ SÆ¡</a>
-                    <a href="../logout.php"><i class="fas fa-sign-out-alt"></i> ÄÄƒng Xuáº¥t</a>
-                </div>
+                <?php
+                $ownerNavActive = 'add_listing';
+                require __DIR__ . '/_nav_sidebar.php';
+                ?>
             </div>
 
             <!-- Main Content -->
             <div class="col-lg-9">
                 <div class="main-content">
                     <h1 style="font-size: 28px; font-weight: 700; margin-bottom: 30px;">
-                        <i class="fas fa-plus"></i> ThÃªm PhÃ²ng Má»›i
+                        <i class="fas fa-plus"></i> Thêm phòng mới
                     </h1>
 
                     <?php if ($message): ?>
@@ -159,42 +150,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <?php endif; ?>
 
                     <form method="POST" class="form-card">
-                        <!-- ThÃ´ng tin cÆ¡ báº£n -->
+                        <!-- Thông tin cơ bản -->
                         <div class="form-section">
-                            <h5><i class="fas fa-info-circle"></i> ThÃ´ng Tin CÆ¡ Báº£n</h5>
+                            <h5><i class="fas fa-info-circle"></i> Thông tin cơ bản</h5>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">TÃªn PhÃ²ng *</label>
-                                    <input type="text" name="title" class="form-control" required placeholder="VD: PhÃ²ng Ä‘áº¹p gáº§n trÆ°á»ng">
+                                    <label class="form-label">Tên phòng *</label>
+                                    <input type="text" name="title" class="form-control" required placeholder="VD: Phòng đẹp gần trường">
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">GiÃ¡ ThuÃª (VNÄ/thÃ¡ng) *</label>
+                                    <label class="form-label">Giá thuê (VNĐ/tháng) *</label>
                                     <input type="number" name="price" class="form-control" required placeholder="5000000">
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">MÃ´ Táº£ Chi Tiáº¿t</label>
-                                <textarea name="description" class="form-control" rows="5" placeholder="MiÃªu táº£ chi tiáº¿t vá» phÃ²ng..."></textarea>
+                                <label class="form-label">Mô tả chi tiết</label>
+                                <textarea name="description" class="form-control" rows="5" placeholder="Miêu tả chi tiết về phòng..."></textarea>
                             </div>
                         </div>
 
-                        <!-- ThÃ´ng tin Ä‘á»‹a Ä‘iá»ƒm -->
+                        <!-- Thông tin địa điểm -->
                         <div class="form-section">
-                            <h5><i class="fas fa-map-marker-alt"></i> Äá»‹a Äiá»ƒm</h5>
+                            <h5><i class="fas fa-map-marker-alt"></i> Địa điểm</h5>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Quáº­n *</label>
+                                    <label class="form-label">Quận *</label>
                                     <select name="district_id" class="form-select" required>
-                                        <option value="">-- Chá»n Quáº­n --</option>
+                                        <option value="">-- Chọn quận --</option>
                                         <?php foreach ($districts as $district): ?>
                                             <option value="<?php echo $district['id']; ?>"><?php echo htmlspecialchars($district['name']); ?></option>
                                         <?php endforeach; ?>
                                     </select>
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Danh Má»¥c *</label>
+                                    <label class="form-label">Danh mục *</label>
                                     <select name="category_id" class="form-select" required>
-                                        <option value="">-- Chá»n Danh Má»¥c --</option>
+                                        <option value="">-- Chọn danh mục --</option>
                                         <?php foreach ($categories as $cat): ?>
                                             <option value="<?php echo $cat['id']; ?>"><?php echo htmlspecialchars($cat['name']); ?></option>
                                         <?php endforeach; ?>
@@ -202,25 +193,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Äá»‹a Chá»‰ Chi Tiáº¿t *</label>
-                                <input type="text" name="address" class="form-control" required placeholder="VD: 123 ÄÆ°á»ng ABC, Quáº­n 1">
+                                <label class="form-label">Địa chỉ chi tiết *</label>
+                                <input type="text" name="address" class="form-control" required placeholder="VD: 123 Đường ABC, Quận 1">
                             </div>
                         </div>
 
-                        <!-- ThÃ´ng tin phÃ²ng -->
+                        <!-- Thông tin phòng -->
                         <div class="form-section">
-                            <h5><i class="fas fa-ruler-combined"></i> ThÃ´ng Tin PhÃ²ng</h5>
+                            <h5><i class="fas fa-ruler-combined"></i> Thông tin phòng</h5>
                             <div class="row">
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label">Diá»‡n TÃ­ch (mÂ²)</label>
+                                    <label class="form-label">Diện tích (m²)</label>
                                     <input type="number" step="0.01" name="area" class="form-control" placeholder="30">
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label">PhÃ²ng Ngá»§</label>
+                                    <label class="form-label">Phòng ngủ</label>
                                     <input type="number" name="bedrooms" class="form-control" placeholder="2">
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label">PhÃ²ng Táº¯m</label>
+                                    <label class="form-label">Phòng tắm</label>
                                     <input type="number" name="bathrooms" class="form-control" placeholder="1">
                                 </div>
                             </div>
@@ -234,7 +225,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <input type="date" name="available_from" class="form-control">
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label">Phi Dich Vu / Thang (VND)</label>
+                                    <label class="form-label">Phí dịch vụ / tháng (VNĐ)</label>
                                     <input type="number" name="service_fee" class="form-control" min="0" value="0" placeholder="0">
                                 </div>
                                 <div class="col-md-4 mb-3">
@@ -244,9 +235,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                         </div>
 
-                        <!-- Tiá»‡n nghi -->
+                        <!-- Tiện nghi -->
                         <div class="form-section">
-                            <h5><i class="fas fa-star"></i> Tiá»‡n Nghi</h5>
+                            <h5><i class="fas fa-star"></i> Tiện nghi</h5>
                             <div class="utilities-grid">
                                 <div class="utility-check">
                                     <input type="checkbox" name="utilities[]" value="wifi" id="util_wifi">
@@ -254,33 +245,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </div>
                                 <div class="utility-check">
                                     <input type="checkbox" name="utilities[]" value="air_conditioner" id="util_ac">
-                                    <label for="util_ac">Äiá»u HÃ²a</label>
+                                    <label for="util_ac">Điều hòa</label>
                                 </div>
                                 <div class="utility-check">
                                     <input type="checkbox" name="utilities[]" value="water_heater" id="util_water">
-                                    <label for="util_water">NÆ°á»›c NÃ³ng</label>
+                                    <label for="util_water">Nước nóng</label>
                                 </div>
                                 <div class="utility-check">
                                     <input type="checkbox" name="utilities[]" value="kitchen" id="util_kitchen">
-                                    <label for="util_kitchen">Báº¿p</label>
+                                    <label for="util_kitchen">Bếp</label>
                                 </div>
                                 <div class="utility-check">
                                     <input type="checkbox" name="utilities[]" value="washing_machine" id="util_wash">
-                                    <label for="util_wash">MÃ¡y Giáº·t</label>
+                                    <label for="util_wash">Máy giặt</label>
                                 </div>
                                 <div class="utility-check">
                                     <input type="checkbox" name="utilities[]" value="parking" id="util_parking">
-                                    <label for="util_parking">Chá»— Äá»— Xe</label>
+                                    <label for="util_parking">Chỗ đỗ xe</label>
                                 </div>
                             </div>
                         </div>
 
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> ThÃªm PhÃ²ng
+                                <i class="fas fa-save"></i> Thêm phòng
                             </button>
                             <a href="listings.php" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left"></i> Quay Láº¡i
+                                <i class="fas fa-arrow-left"></i> Quay lại
                             </a>
                         </div>
                     </form>
