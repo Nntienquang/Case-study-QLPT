@@ -40,7 +40,7 @@ $stmt->close();
 if (isset($_GET['save_search'])) {
     $hasFilter = $keyword !== '' || $district_id !== '' || $category_id !== '' || $min_price !== '' || $max_price !== '' || $area_min !== '';
     if ($hasFilter) {
-        $searchName = $keyword !== '' ? $keyword : 'Bo loc phong tro';
+        $searchName = $keyword !== '' ? $keyword : 'Bộ lọc phòng trọ';
         $stmt = $db->prepare('
             INSERT INTO saved_searches (user_id, name, keyword, district_id, category_id, price_min, price_max, area_min, alert_enabled)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
@@ -52,7 +52,7 @@ if (isset($_GET['save_search'])) {
         $areaValue = $area_min !== '' ? (int)$area_min : null;
         $stmt->bind_param('issiiiii', $user_id, $searchName, $keyword, $districtValue, $categoryValue, $minValue, $maxValue, $areaValue);
         if ($stmt->execute()) {
-            $flash = 'Da luu bo loc tim kiem. Sau nay he thong co the dung bo loc nay de tao thong bao phong moi.';
+            $flash = 'Đã lưu bộ lọc tìm kiếm. Sau này hệ thống có thể dùng bộ lọc này để tạo thông báo phòng mới.';
         }
         $stmt->close();
     }
@@ -195,7 +195,7 @@ unset($baseQuery['page'], $baseQuery['save_search']);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tim phong - QuanLyPhongTro</title>
+    <title>Tìm phòng - QuanLyPhongTro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <link href="../assets/css/modern.css" rel="stylesheet">
@@ -232,9 +232,13 @@ unset($baseQuery['page'], $baseQuery['save_search']);
                     <i class="fas fa-user"></i> <?php echo htmlspecialchars($user_name); ?>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item" href="dashboard.php">Dashboard</a></li>
-                    <li><a class="dropdown-item" href="favorites.php">Phong yeu thich</a></li>
-                    <li><a class="dropdown-item" href="../logout.php">Dang xuat</a></li>
+                    <li><a class="dropdown-item" href="dashboard.php">Tổng quan</a></li>
+                    <li><a class="dropdown-item" href="my-bookings.php">Đơn đặt của tôi</a></li>
+                    <li><a class="dropdown-item" href="saved-motels.php">Phòng đã lưu</a></li>
+                    <li><a class="dropdown-item" href="saved-searches.php">Bộ lọc đã lưu</a></li>
+                    <li><a class="dropdown-item" href="settings.php">Cài đặt</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="../logout.php">Đăng xuất</a></li>
                 </ul>
             </div>
         </div>
@@ -243,8 +247,8 @@ unset($baseQuery['page'], $baseQuery['save_search']);
     <main class="search-shell">
         <div class="container-lg">
             <div class="mb-4">
-                <h1 class="fw-black mb-2">Tim phong phu hop</h1>
-                <p class="text-muted mb-0">Loc theo nhu cau thuc te, luu bo loc va xem diem phu hop cua tung phong.</p>
+                <h1 class="fw-black mb-2">Tìm phòng phù hợp</h1>
+                <p class="text-muted mb-0">Lọc theo nhu cầu thực tế, lưu bộ lọc và xem điểm phù hợp của từng phòng.</p>
             </div>
 
             <?php if ($flash): ?>
@@ -254,16 +258,16 @@ unset($baseQuery['page'], $baseQuery['save_search']);
             <div class="row g-4">
                 <div class="col-lg-3">
                     <aside class="filter-card">
-                        <h5 class="fw-bold mb-3">Bo loc</h5>
+                        <h5 class="fw-bold mb-3">Bộ lọc</h5>
                         <form method="GET">
                             <div class="mb-3">
-                                <label class="form-label">Tu khoa</label>
-                                <input type="text" name="keyword" class="form-control" value="<?php echo htmlspecialchars($keyword); ?>" placeholder="Gan truong, ten duong...">
+                                <label class="form-label">Từ khóa</label>
+                                <input type="text" name="keyword" class="form-control" value="<?php echo htmlspecialchars($keyword); ?>" placeholder="Gần trường, tên đường...">
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Quan/Huyen</label>
+                                <label class="form-label">Quận/Huyện</label>
                                 <select name="district_id" class="form-select">
-                                    <option value="">Tat ca</option>
+                                    <option value="">Tất cả</option>
                                     <?php foreach ($districts_list as $dist): ?>
                                         <option value="<?php echo $dist['id']; ?>" <?php echo (string)$district_id === (string)$dist['id'] ? 'selected' : ''; ?>>
                                             <?php echo htmlspecialchars($dist['name']); ?>
@@ -272,9 +276,9 @@ unset($baseQuery['page'], $baseQuery['save_search']);
                                 </select>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Danh muc</label>
+                                <label class="form-label">Danh mục</label>
                                 <select name="category_id" class="form-select">
-                                    <option value="">Tat ca</option>
+                                    <option value="">Tất cả</option>
                                     <?php foreach ($categories_list as $cat): ?>
                                         <option value="<?php echo $cat['id']; ?>" <?php echo (string)$category_id === (string)$cat['id'] ? 'selected' : ''; ?>>
                                             <?php echo htmlspecialchars($cat['name']); ?>
@@ -284,37 +288,37 @@ unset($baseQuery['page'], $baseQuery['save_search']);
                             </div>
                             <div class="row">
                                 <div class="col-6 mb-3">
-                                    <label class="form-label">Gia tu</label>
+                                    <label class="form-label">Giá từ</label>
                                     <input type="number" name="min_price" class="form-control" value="<?php echo htmlspecialchars($min_price); ?>">
                                 </div>
                                 <div class="col-6 mb-3">
-                                    <label class="form-label">Den</label>
+                                    <label class="form-label">Đến</label>
                                     <input type="number" name="max_price" class="form-control" value="<?php echo htmlspecialchars($max_price); ?>">
                                 </div>
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Dien tich toi thieu</label>
+                                <label class="form-label">Diện tích tối thiểu</label>
                                 <input type="number" step="0.5" name="area_min" class="form-control" value="<?php echo htmlspecialchars($area_min); ?>">
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Can vao o truoc ngay</label>
+                                <label class="form-label">Cần vào ở trước ngày</label>
                                 <input type="date" name="available_from" class="form-control" value="<?php echo htmlspecialchars($available_from); ?>">
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Sap xep</label>
+                                <label class="form-label">Sắp xếp</label>
                                 <select name="sort" class="form-select">
-                                    <option value="featured" <?php echo $sort === 'featured' ? 'selected' : ''; ?>>Noi bat</option>
-                                    <option value="match" <?php echo $sort === 'match' ? 'selected' : ''; ?>>Phu hop nhat</option>
-                                    <option value="newest" <?php echo $sort === 'newest' ? 'selected' : ''; ?>>Moi nhat</option>
-                                    <option value="price_asc" <?php echo $sort === 'price_asc' ? 'selected' : ''; ?>>Gia thap den cao</option>
-                                    <option value="price_desc" <?php echo $sort === 'price_desc' ? 'selected' : ''; ?>>Gia cao den thap</option>
+                                    <option value="featured" <?php echo $sort === 'featured' ? 'selected' : ''; ?>>Nổi bật</option>
+                                    <option value="match" <?php echo $sort === 'match' ? 'selected' : ''; ?>>Phù hợp nhất</option>
+                                    <option value="newest" <?php echo $sort === 'newest' ? 'selected' : ''; ?>>Mới nhất</option>
+                                    <option value="price_asc" <?php echo $sort === 'price_asc' ? 'selected' : ''; ?>>Giá thấp đến cao</option>
+                                    <option value="price_desc" <?php echo $sort === 'price_desc' ? 'selected' : ''; ?>>Giá cao đến thấp</option>
                                 </select>
                             </div>
                             <button type="submit" class="btn btn-primary w-100 mb-2">
-                                <i class="fas fa-search"></i> Tim kiem
+                                <i class="fas fa-search"></i> Tìm kiếm
                             </button>
                             <button type="submit" name="save_search" value="1" class="btn btn-outline-primary w-100">
-                                <i class="fas fa-bell"></i> Luu bo loc
+                                <i class="fas fa-bell"></i> Lưu bộ lọc
                             </button>
                         </form>
                     </aside>
@@ -323,12 +327,12 @@ unset($baseQuery['page'], $baseQuery['save_search']);
                 <div class="col-lg-9">
                     <div class="result-toolbar">
                         <div>
-                            <strong><?php echo number_format($total); ?></strong> phong dang duoc duyet
+                            <strong><?php echo number_format($total); ?></strong> phòng đang được duyệt
                             <?php if ($keyword !== ''): ?>
-                                <span class="text-muted">cho "<?php echo htmlspecialchars($keyword); ?>"</span>
+                                <span class="text-muted">với từ khóa "<?php echo htmlspecialchars($keyword); ?>"</span>
                             <?php endif; ?>
                         </div>
-                        <a href="search.php" class="btn btn-sm btn-outline-secondary">Xoa bo loc</a>
+                        <a href="search.php" class="btn btn-sm btn-outline-secondary">Xóa bộ lọc</a>
                     </div>
 
                     <?php if ($motels): ?>
@@ -341,24 +345,24 @@ unset($baseQuery['page'], $baseQuery['save_search']);
                                     <article class="motel-card">
                                         <div class="motel-image">
                                             <i class="fas fa-building"></i>
-                                            <button class="favorite-btn <?php echo in_array((int)$motel['id'], $favorite_ids, true) ? 'active' : ''; ?>" onclick="toggleFavorite(<?php echo (int)$motel['id']; ?>, this)" type="button" aria-label="Yeu thich">
+                                            <button class="favorite-btn <?php echo in_array((int)$motel['id'], $favorite_ids, true) ? 'active' : ''; ?>" onclick="toggleFavorite(<?php echo (int)$motel['id']; ?>, this)" type="button" aria-label="Yêu thích">
                                                 <i class="fas fa-heart"></i>
                                             </button>
                                         </div>
                                         <div class="motel-body">
                                             <div class="score-row">
-                                                <span class="score-pill"><?php echo (int)$motel['match_score']; ?>% phu hop</span>
+                                                <span class="score-pill"><?php echo (int)$motel['match_score']; ?>% phù hợp</span>
                                                 <?php if (!empty($motel['verified_at'])): ?>
                                                     <span class="score-pill verified-pill"><i class="fas fa-shield-alt"></i> Owner verified</span>
                                                 <?php endif; ?>
                                             </div>
                                             <div class="motel-title"><?php echo htmlspecialchars($motel['title']); ?></div>
-                                            <div class="motel-price"><?php echo number_format((int)$motel['price']); ?> VND/thang</div>
+                                            <div class="motel-price"><?php echo number_format((int)$motel['price']); ?> VNĐ/tháng</div>
                                             <div class="meta-line"><i class="fas fa-map-marker-alt"></i><span><?php echo htmlspecialchars($motel['address']); ?></span></div>
-                                            <div class="meta-line"><i class="fas fa-location-dot"></i><span><?php echo htmlspecialchars($motel['district_name'] ?? 'Chua ro quan'); ?> · <?php echo htmlspecialchars($motel['category_name'] ?? 'Phong tro'); ?></span></div>
-                                            <div class="meta-line"><i class="fas fa-ruler-combined"></i><span><?php echo (float)$motel['area']; ?> m2 · <?php echo (int)$motel['count_view']; ?> luot xem</span></div>
-                                            <div class="meta-line"><i class="fas fa-wallet"></i><span>Uoc tinh vao o: <?php echo number_format($moveInCost); ?> VND</span></div>
-                                            <a href="motel-detail.php?id=<?php echo (int)$motel['id']; ?>" class="btn-view">Xem chi tiet</a>
+                                            <div class="meta-line"><i class="fas fa-location-dot"></i><span><?php echo htmlspecialchars($motel['district_name'] ?? 'Chưa rõ quận'); ?> · <?php echo htmlspecialchars($motel['category_name'] ?? 'Phòng trọ'); ?></span></div>
+                                            <div class="meta-line"><i class="fas fa-ruler-combined"></i><span><?php echo (float)$motel['area']; ?> m² · <?php echo (int)$motel['count_view']; ?> lượt xem</span></div>
+                                            <div class="meta-line"><i class="fas fa-wallet"></i><span>Ước tính vào ở: <?php echo number_format($moveInCost); ?> VNĐ</span></div>
+                                            <a href="motel-detail.php?id=<?php echo (int)$motel['id']; ?>" class="btn-view">Xem chi tiết</a>
                                         </div>
                                     </article>
                                 </div>
@@ -379,9 +383,9 @@ unset($baseQuery['page'], $baseQuery['save_search']);
                     <?php else: ?>
                         <div class="empty-state">
                             <div class="display-6 mb-3"><i class="fas fa-magnifying-glass"></i></div>
-                            <h4>Chua co phong phu hop</h4>
-                            <p class="text-muted">Hay giam bot bo loc gia, khu vuc hoac dien tich de mo rong ket qua.</p>
-                            <a href="search.php" class="btn btn-primary">Dat lai bo loc</a>
+                            <h4>Chưa có phòng phù hợp</h4>
+                            <p class="text-muted">Hãy giảm bớt bộ lọc giá, khu vực hoặc diện tích để mở rộng kết quả.</p>
+                            <a href="search.php" class="btn btn-primary">Đặt lại bộ lọc</a>
                         </div>
                     <?php endif; ?>
                 </div>

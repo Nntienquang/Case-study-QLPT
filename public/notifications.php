@@ -13,7 +13,18 @@ if (!isset($_SESSION['user_id'])) {
 $db = new Database($conn);
 $user_id = (int)$_SESSION['user_id'];
 $role = $_SESSION['role'] ?? 'user';
-$home = $role === 'owner' ? 'owner/dashboard.php' : ($role === 'admin' ? 'admin/index.php' : 'user/dashboard.php');
+
+if ($role === 'owner') {
+    header('Location: owner/notifications.php');
+    exit;
+}
+
+if ($role === 'user') {
+    header('Location: user/notifications.php');
+    exit;
+}
+
+$home = 'admin/index.php';
 $message = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -21,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $db->prepare('UPDATE notifications SET read_at = NOW() WHERE user_id = ? AND read_at IS NULL');
         $stmt->bind_param('i', $user_id);
         if ($stmt->execute()) {
-            $message = 'Da danh dau tat ca la da doc.';
+            $message = 'Đã đánh dấu tất cả là đã đọc.';
         }
         $stmt->close();
     }
@@ -31,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $db->prepare('UPDATE notifications SET read_at = NOW() WHERE id = ? AND user_id = ?');
         $stmt->bind_param('ii', $notification_id, $user_id);
         if ($stmt->execute()) {
-            $message = 'Da cap nhat thong bao.';
+            $message = 'Đã cập nhật thông báo.';
         }
         $stmt->close();
     }
@@ -60,7 +71,7 @@ $stmt->close();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thong bao - QuanLyPhongTro</title>
+    <title>Thông báo - QuanLyPhongTro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <link href="assets/css/modern.css" rel="stylesheet">
@@ -85,7 +96,7 @@ $stmt->close();
             <a class="navbar-brand fw-bold" href="index.php"><i class="fas fa-house-chimney"></i> QuanLyPhongTro</a>
             <div class="ms-auto d-flex gap-2">
                 <a class="btn btn-outline-primary btn-sm" href="<?php echo htmlspecialchars($home); ?>">Dashboard</a>
-                <a class="btn btn-outline-secondary btn-sm" href="logout.php">Dang xuat</a>
+                <a class="btn btn-outline-secondary btn-sm" href="logout.php">Đăng xuất</a>
             </div>
         </div>
     </nav>
@@ -93,11 +104,11 @@ $stmt->close();
     <main class="shell">
         <div class="panel">
             <div>
-                <h1 class="fw-bold mb-2">Thong bao</h1>
-                <p class="text-muted mb-0"><?php echo $unread_count; ?> thong bao chua doc.</p>
+                <h1 class="fw-bold mb-2">Thông báo</h1>
+                <p class="text-muted mb-0"><?php echo $unread_count; ?> thông báo chưa đọc.</p>
             </div>
             <form method="POST">
-                <button class="btn btn-primary" name="mark_all_read" type="submit">Danh dau da doc</button>
+                <button class="btn btn-primary" name="mark_all_read" type="submit">Đánh dấu đã đọc</button>
             </form>
         </div>
 
@@ -112,7 +123,7 @@ $stmt->close();
                     <div>
                         <div class="d-flex flex-wrap gap-2 align-items-center">
                             <div class="notification-title"><?php echo htmlspecialchars($notification['title']); ?></div>
-                            <?php if ($isUnread): ?><span class="badge text-bg-primary">Moi</span><?php endif; ?>
+                            <?php if ($isUnread): ?><span class="badge text-bg-primary">Mới</span><?php endif; ?>
                         </div>
                         <?php if (!empty($notification['body'])): ?>
                             <div class="notification-body"><?php echo nl2br(htmlspecialchars($notification['body'])); ?></div>
@@ -124,12 +135,12 @@ $stmt->close();
                     </div>
                     <div class="d-flex flex-wrap gap-2 justify-content-end align-content-start">
                         <?php if (!empty($notification['link'])): ?>
-                            <a class="btn btn-outline-primary btn-sm" href="<?php echo htmlspecialchars($notification['link']); ?>">Mo</a>
+                            <a class="btn btn-outline-primary btn-sm" href="<?php echo htmlspecialchars($notification['link']); ?>">Mở</a>
                         <?php endif; ?>
                         <?php if ($isUnread): ?>
                             <form method="POST">
                                 <input type="hidden" name="notification_id" value="<?php echo (int)$notification['id']; ?>">
-                                <button class="btn btn-primary btn-sm" name="mark_read" type="submit">Da doc</button>
+                                <button class="btn btn-primary btn-sm" name="mark_read" type="submit">Đã đọc</button>
                             </form>
                         <?php endif; ?>
                     </div>
@@ -138,8 +149,8 @@ $stmt->close();
         <?php else: ?>
             <div class="panel empty-state">
                 <div>
-                    <h4 class="fw-bold">Chua co thong bao</h4>
-                    <p>Nhung thay doi quan trong ve booking, lich xem va tin dang se xuat hien tai day.</p>
+                    <h4 class="fw-bold">Chưa có thông báo</h4>
+                    <p>Những thay đổi quan trọng về đặt phòng, lịch xem và tin đăng sẽ xuất hiện tại đây.</p>
                 </div>
             </div>
         <?php endif; ?>

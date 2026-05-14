@@ -24,7 +24,7 @@ if ($show_form) {
         $stmt->store_result();
         
         if ($stmt->num_rows == 0) {
-            $message = "LiÃªn káº¿t khÃ´ng há»£p lá»‡ hoáº·c Ä‘Ã£ háº¿t háº¡n";
+            $message = "Liên kết không hợp lệ hoặc đã hết hạn";
             $type = "error";
             $show_form = false;
         }
@@ -53,7 +53,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && !empty($token)) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Äáº·t Láº¡i Máº­t Kháº©u - QuanLyPhongTro</title>
+<title>Đặt lại mật khẩu - QuanLyPhongTro</title>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 <style>
 * { box-sizing: border-box; }
@@ -203,8 +203,8 @@ button:hover {
 <body>
 
 <div class="container">
-    <h2>ðŸ”„ Äáº·t Láº¡i Máº­t Kháº©u</h2>
-    <p class="subtitle">Táº¡o máº­t kháº©u má»›i cho tÃ i khoáº£n cá»§a báº¡n</p>
+    <h2>Đặt lại mật khẩu</h2>
+    <p class="subtitle">Tạo mật khẩu mới cho tài khoản của bạn</p>
 
     <?php if($message != ""): ?>
         <div class="msg <?php echo $type; ?>">
@@ -215,18 +215,18 @@ button:hover {
     <?php if(!empty($show_form)): ?>
     <form method="POST">
         <div class="input-group">
-            <label for="password">Máº­t Kháº©u Má»›i</label>
+            <label for="password">Mật khẩu mới</label>
             <i class="fa fa-lock"></i>
-            <input type="password" id="password" name="password" placeholder="Nháº­p máº­t kháº©u má»›i (Ã­t nháº¥t 6 kÃ½ tá»±)" required>
+            <input type="password" id="password" name="password" placeholder="Nhập mật khẩu mới (ít nhất 6 ký tự)" required>
         </div>
 
         <div class="input-group">
-            <label for="confirm">XÃ¡c Nháº­n Máº­t Kháº©u</label>
+            <label for="confirm">Xác nhận mật khẩu</label>
             <i class="fa fa-lock"></i>
-            <input type="password" id="confirm" name="confirm" placeholder="XÃ¡c nháº­n máº­t kháº©u" required>
+            <input type="password" id="confirm" name="confirm" placeholder="Xác nhận mật khẩu" required>
         </div>
 
-        <button type="submit">âœ… Cáº­p Nháº­t Máº­t Kháº©u</button>
+        <button type="submit">Cập nhật mật khẩu</button>
     </form>
     <?php else: ?>
         <div class="success-message">
@@ -234,16 +234,16 @@ button:hover {
                 <div class="success-icon">
                     <i class="fas fa-check-circle"></i>
                 </div>
-                <h3 style="color: #333; margin: 10px 0;">âœ… ThÃ nh CÃ´ng!</h3>
-                <p style="color: #666; margin-bottom: 20px;">Máº­t kháº©u cá»§a báº¡n Ä‘Ã£ Ä‘Æ°á»£c cáº­p nháº­t</p>
+                <h3 style="color: #333; margin: 10px 0;">Thành công!</h3>
+                <p style="color: #666; margin-bottom: 20px;">Mật khẩu của bạn đã được cập nhật</p>
                 <div class="links">
-                    <a href="login.php">â†’ ÄÄƒng nháº­p ngay</a>
+                    <a href="login.php">Đăng nhập ngay</a>
                 </div>
             <?php else: ?>
-                <h3 style="color: #c00; margin: 10px 0;">âŒ LiÃªn Káº¿t KhÃ´ng Há»£p Lá»‡</h3>
-                <p style="color: #666; margin-bottom: 20px;">LiÃªn káº¿t Ä‘áº·t láº¡i máº­t kháº©u khÃ´ng há»£p lá»‡ hoáº·c Ä‘Ã£ háº¿t háº¡n</p>
+                <h3 style="color: #c00; margin: 10px 0;">Liên kết không hợp lệ</h3>
+                <p style="color: #666; margin-bottom: 20px;">Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn</p>
                 <div class="links">
-                    <a href="forgot.php">â† YÃªu cáº§u liÃªn káº¿t má»›i</a>
+                    <a href="forgot.php">Yêu cầu liên kết mới</a>
                 </div>
             <?php endif; ?>
         </div>
