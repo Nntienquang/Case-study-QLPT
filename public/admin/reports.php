@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if ($id > 0) {
             $report = $db->getRow("SELECT * FROM reports WHERE id = {$id}");
             if ($report && $db->query("DELETE FROM reports WHERE id = {$id}")) {
-                $activityLog->log((int)$_SESSION['user_id'], 'delete_report', 'report', $id, [], "Xóa báo cáo: {$report['title']}");
+                $activityLog->log((int)$_SESSION['user_id'], 'delete_report', 'report', $id, [], "Xóa báo cáo: {$report['reason']}");
                 $_SESSION['success'] = 'Xóa báo cáo thành công';
             }
         }
@@ -159,7 +159,7 @@ admin_flash_messages();
                     <tr>
                         <td>#<?php echo (int)$report['id']; ?></td>
                         <td>
-                            <div class="wb-title"><?php echo admin_e(substr((string)($report['title'] ?? 'N/A'), 0, 55)); ?></div>
+                            <div class="wb-title"><?php echo admin_e(substr((string)($report['reason'] ?? 'N/A'), 0, 55)); ?></div>
                             <?php if (!empty($report['motel_title'])): ?>
                                 <div class="wb-muted">Phòng: <?php echo admin_e($report['motel_title']); ?></div>
                             <?php endif; ?>

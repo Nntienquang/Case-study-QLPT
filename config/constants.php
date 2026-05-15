@@ -3,7 +3,25 @@
  * Constants Configuration
  */
 
-define('BASE_URL', 'http://localhost/QuanLyPhongTro/public/');
+if (!defined('BASE_URL')) {
+    $defaultBase = 'http://localhost/Case-study-QLPT/public/';
+    $baseUrl = $defaultBase;
+    if (PHP_SAPI !== 'cli' && !empty($_SERVER['HTTP_HOST']) && !empty($_SERVER['DOCUMENT_ROOT'])) {
+        $docRoot = realpath($_SERVER['DOCUMENT_ROOT']);
+        $publicRoot = realpath(__DIR__ . '/../public');
+        if ($docRoot !== false && $publicRoot !== false) {
+            $docRoot = str_replace('\\', '/', $docRoot);
+            $publicRoot = str_replace('\\', '/', $publicRoot);
+            if (str_starts_with($publicRoot, rtrim($docRoot, '/'))) {
+                $rel = substr($publicRoot, strlen(rtrim($docRoot, '/')));
+                $rel = '/' . ltrim(str_replace('\\', '/', $rel), '/');
+                $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                $baseUrl = $scheme . '://' . $_SERVER['HTTP_HOST'] . rtrim($rel, '/') . '/';
+            }
+        }
+    }
+    define('BASE_URL', $baseUrl);
+}
 define('ADMIN_URL', BASE_URL . 'admin/');
 
 // Upload directories

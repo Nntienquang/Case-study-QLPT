@@ -40,7 +40,7 @@ class ActivityLog
         $user_agent = $conn->real_escape_string($_SERVER['HTTP_USER_AGENT'] ?? '');
         
         $query = "INSERT INTO {$this->table} 
-                  (admin_id, action, entity_type, entity_id, old_value, new_value, description, ip_address, user_agent)
+                  (admin_id, action, entity_type, entity_id, old_values, new_values, description, ip_address, user_agent)
                   VALUES 
                   ({$admin_id}, '{$action}', '{$entity_type}', {$entity_id}, {$old_value}, {$new_value}, '{$description}', '{$ip_address}', '{$user_agent}')";
         

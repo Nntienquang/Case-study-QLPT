@@ -20,7 +20,7 @@ if ($_SESSION['role'] === 'admin') {
 
 // Redirect owners to owner dashboard
 if ($_SESSION['role'] === 'owner') {
-    header('Location: ./owner/dashboard.php');
+    header('Location: ./owner/index.php');
     exit;
 }
 
@@ -310,7 +310,7 @@ $stmt->close();
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="listings.php">Duyá»‡t PhÃ²ng</a>
+                        <a class="nav-link" href="listings.php">Duyệt phòng</a>
                     </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="userMenu" role="button" data-bs-toggle="dropdown">
@@ -318,10 +318,10 @@ $stmt->close();
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="userMenu">
                             <li><a class="dropdown-item" href="dashboard.php">Dashboard</a></li>
-                            <li><a class="dropdown-item" href="profile.php">Há»“ SÆ¡</a></li>
-                            <li><a class="dropdown-item" href="settings.php">CÃ i Äáº·t</a></li>
+                            <li><a class="dropdown-item" href="profile.php">Hồ sơ</a></li>
+                            <li><a class="dropdown-item" href="settings.php">Cài đặt</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="logout.php">ÄÄƒng Xuáº¥t</a></li>
+                            <li><a class="dropdown-item" href="logout.php">Đăng xuất</a></li>
                         </ul>
                     </li>
                 </ul>
@@ -337,12 +337,12 @@ $stmt->close();
                 <div class="sidebar">
                     <h5>Menu</h5>
                     <a href="dashboard.php" class="active"><i class="fas fa-chart-line"></i> Dashboard</a>
-                    <a href="listings.php"><i class="fas fa-list"></i> Duyá»‡t PhÃ²ng</a>
-                    <a href="favorites.php"><i class="fas fa-heart"></i> YÃªu ThÃ­ch</a>
-                    <a href="bookings.php"><i class="fas fa-calendar"></i> ÄÆ¡n Äáº·t PhÃ²ng</a>
-                    <a href="profile.php"><i class="fas fa-user"></i> Há»“ SÆ¡</a>
-                    <a href="settings.php"><i class="fas fa-cog"></i> CÃ i Äáº·t</a>
-                    <a href="logout.php"><i class="fas fa-sign-out-alt"></i> ÄÄƒng Xuáº¥t</a>
+                    <a href="listings.php"><i class="fas fa-list"></i> Duyệt phòng</a>
+                    <a href="favorites.php"><i class="fas fa-heart"></i> Yêu thích</a>
+                    <a href="bookings.php"><i class="fas fa-calendar"></i> Đơn đặt phòng</a>
+                    <a href="profile.php"><i class="fas fa-user"></i> Hồ sơ</a>
+                    <a href="settings.php"><i class="fas fa-cog"></i> Cài đặt</a>
+                    <a href="logout.php"><i class="fas fa-sign-out-alt"></i> Đăng xuất</a>
                 </div>
             </div>
             
@@ -351,8 +351,8 @@ $stmt->close();
                 <div class="main-content">
                     <!-- Welcome Card -->
                     <div class="welcome-card">
-                        <h1>ðŸ‘‹ Xin ChÃ o, <?php echo htmlspecialchars($user_name); ?>!</h1>
-                        <p>ChÃ o má»«ng báº¡n quay láº¡i. Tiáº¿p tá»¥c tÃ¬m kiáº¿m phÃ²ng trá» hoÃ n háº£o cá»§a báº¡n.</p>
+                        <h1>Xin chào, <?php echo htmlspecialchars($user_name); ?>!</h1>
+                        <p>Chào mừng bạn quay lại. Tiếp tục tìm kiếm phòng trọ hoàn hảo của bạn.</p>
                     </div>
                     
                     <!-- Stats -->
@@ -360,23 +360,23 @@ $stmt->close();
                         <div class="stat-card">
                             <div class="stat-icon"><i class="fas fa-heart"></i></div>
                             <div class="stat-number"><?php echo $stats['favorites']; ?></div>
-                            <div class="stat-label">PhÃ²ng YÃªu ThÃ­ch</div>
+                            <div class="stat-label">Phòng yêu thích</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
                             <div class="stat-number"><?php echo $stats['bookings']; ?></div>
-                            <div class="stat-label">ÄÆ¡n Äáº·t PhÃ²ng</div>
+                            <div class="stat-label">Đơn đặt phòng</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-icon"><i class="fas fa-bell"></i></div>
                             <div class="stat-number">0</div>
-                            <div class="stat-label">ThÃ´ng BÃ¡o Má»›i</div>
+                            <div class="stat-label">Thông báo mới</div>
                         </div>
                     </div>
                     
                     <!-- Favorites Section -->
                     <h2 class="section-title">
-                        <i class="fas fa-heart"></i> PhÃ²ng YÃªu ThÃ­ch Gáº§n ÄÃ¢y
+                        <i class="fas fa-heart"></i> Phòng yêu thích gần đây
                     </h2>
                     
                     <?php if (count($favorites) > 0): ?>
@@ -385,25 +385,25 @@ $stmt->close();
                                 <div class="listing-info">
                                     <h3><?php echo htmlspecialchars($fav['title']); ?></h3>
                                     <p><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($fav['address']); ?></p>
-                                    <p><i class="fas fa-eye"></i> LÆ°á»£t xem: <?php echo $fav['count_view']; ?></p>
+                                    <p><i class="fas fa-eye"></i> Lượt xem: <?php echo $fav['count_view']; ?></p>
                                 </div>
                                 <div style="text-align: right;">
-                                    <div class="listing-price"><?php echo number_format($fav['price']); ?> VNÄ</div>
-                                    <button class="btn-primary" style="margin-top: 10px;">Xem Chi Tiáº¿t</button>
+                                    <div class="listing-price"><?php echo number_format($fav['price']); ?> VNĐ</div>
+                                    <button class="btn-primary" style="margin-top: 10px;">Xem chi tiết</button>
                                 </div>
                             </div>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <div class="empty-state">
                             <div class="empty-state-icon"><i class="fas fa-heart"></i></div>
-                            <p>Báº¡n chÆ°a lÆ°u phÃ²ng nÃ o</p>
-                            <a href="listings.php" class="btn-primary">Duyá»‡t PhÃ²ng Ngay</a>
+                            <p>Bạn chưa lưu phòng nào</p>
+                            <a href="listings.php" class="btn-primary">Duyệt phòng ngay</a>
                         </div>
                     <?php endif; ?>
                     
                     <!-- Bookings Section -->
                     <h2 class="section-title" style="margin-top: 40px;">
-                        <i class="fas fa-calendar-check"></i> ÄÆ¡n Äáº·t PhÃ²ng Cá»§a TÃ´i
+                        <i class="fas fa-calendar-check"></i> Đơn đặt phòng của tôi
                     </h2>
                     
                     <?php if (count($bookings) > 0): ?>
@@ -411,7 +411,7 @@ $stmt->close();
                             <div class="listing-card">
                                 <div class="listing-info">
                                     <h3><?php echo htmlspecialchars($booking['title']); ?></h3>
-                                    <p><i class="fas fa-calendar"></i> Nháº­n phÃ²ng: <?php echo date('d/m/Y', strtotime($booking['checkin_date'])); ?></p>
+                                    <p><i class="fas fa-calendar"></i> Nhận phòng: <?php echo date('d/m/Y', strtotime($booking['checkin_date'])); ?></p>
                                     <p>
                                         <span class="badge-status badge-<?php echo strtolower($booking['status']); ?>">
                                             <?php echo ucfirst($booking['status']); ?>
@@ -419,16 +419,16 @@ $stmt->close();
                                     </p>
                                 </div>
                                 <div style="text-align: right;">
-                                    <div class="listing-price"><?php echo number_format($booking['price']); ?> VNÄ</div>
-                                    <button class="btn-primary" style="margin-top: 10px;">Chi Tiáº¿t</button>
+                                    <div class="listing-price"><?php echo number_format($booking['price']); ?> VNĐ</div>
+                                    <button class="btn-primary" style="margin-top: 10px;">Chi tiết</button>
                                 </div>
                             </div>
                         <?php endforeach; ?>
                     <?php else: ?>
                         <div class="empty-state">
                             <div class="empty-state-icon"><i class="fas fa-calendar"></i></div>
-                            <p>Báº¡n chÆ°a cÃ³ Ä‘Æ¡n Ä‘áº·t phÃ²ng nÃ o</p>
-                            <a href="listings.php" class="btn-primary">TÃ¬m PhÃ²ng Ngay</a>
+                            <p>Bạn chưa có đơn đặt phòng nào</p>
+                            <a href="listings.php" class="btn-primary">Tìm phòng ngay</a>
                         </div>
                     <?php endif; ?>
                 </div>

@@ -175,9 +175,28 @@ function get_trans_type_label($type)
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<<<<<<< HEAD
     <title>Quản Lý Doanh Thu - QuanLyPhongTro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+=======
+    <title>Doanh thu - Owner</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: #f8f9fa; }
+        .navbar { background: linear-gradient(135deg, #667eea, #764ba2); }
+        .navbar-brand { font-size: 22px; font-weight: 700; color: white !important; }
+        .main-content { padding: 30px; }
+        .stat-card { background: white; padding: 30px; border-radius: 12px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .stat-icon { font-size: 40px; color: #667eea; margin-bottom: 15px; }
+        .stat-number { font-size: 32px; font-weight: 700; color: #333; }
+        .stat-label { color: #666; font-size: 14px; margin-top: 5px; }
+        .transaction-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .transaction-info { flex: 1; }
+        .transaction-amount { font-size: 18px; font-weight: 700; color: #667eea; }
+    </style>
+>>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
     <link href="../assets/css/modern.css" rel="stylesheet">
     <link href="../assets/css/workbench.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -247,13 +266,27 @@ function get_trans_type_label($type)
                 <span class="wb-brand-mark"><i class="fas fa-house-chimney"></i></span>
                 <span>QuanLyPhongTro</span>
             </a>
+<<<<<<< HEAD
             <div class="wb-user">
                 <span><?php echo htmlspecialchars($ownerName); ?></span>
                 <a class="btn btn-outline-secondary btn-sm" href="../logout.php">Đăng xuất</a>
+=======
+        </div>
+    </nav>
+
+    <div class="container-lg" style="padding: 30px 0;">
+        <div class="row">
+            <div class="col-lg-3">
+                <?php
+                $ownerNavActive = 'revenue';
+                require __DIR__ . '/_nav_sidebar.php';
+                ?>
+>>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
             </div>
         </div>
     </header>
 
+<<<<<<< HEAD
     <main class="wb-shell">
         <div class="container-lg wb-layout">
             <aside class="wb-sidebar">
@@ -328,6 +361,58 @@ function get_trans_type_label($type)
                                     <div class="text-muted small mb-1">Tổng doanh thu lịch sử</div>
                                     <h4 class="fw-bold mb-0 text-primary">
                                         <?php echo number_format($lifetime_revenue); ?> đ</h4>
+=======
+            <div class="col-lg-9">
+                <div class="main-content">
+                    <h1 style="font-size: 28px; font-weight: 700; margin-bottom: 30px;">
+                        <i class="fas fa-chart-column"></i> Doanh thu của tôi
+                    </h1>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6 col-lg-3">
+                            <div class="stat-card">
+                                <div class="stat-icon"><i class="fas fa-home"></i></div>
+                                <div class="stat-number"><?php echo $stats['total_listings']; ?></div>
+                                <div class="stat-label">Phòng đang cho thuê</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-3">
+                            <div class="stat-card">
+                                <div class="stat-icon"><i class="fas fa-calendar"></i></div>
+                                <div class="stat-number"><?php echo $stats['total_bookings']; ?></div>
+                                <div class="stat-label">Tổng đơn đặt</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-3">
+                            <div class="stat-card">
+                                <div class="stat-icon"><i class="fas fa-hourglass"></i></div>
+                                <div class="stat-number"><?php echo $stats['pending_bookings']; ?></div>
+                                <div class="stat-label">Đơn chưa hoàn thành</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-3">
+                            <div class="stat-card">
+                                <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
+                                <div class="stat-number"><?php echo number_format($stats['total_revenue'] ?? 0); ?></div>
+                                <div class="stat-label">Tổng doanh thu (VNĐ)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 style="font-weight: 700; margin-top: 40px; margin-bottom: 20px;">
+                        <i class="fas fa-list"></i> Lịch sử giao dịch
+                    </h3>
+
+                    <?php if (count($transactions) > 0): ?>
+                        <?php foreach ($transactions as $trans): ?>
+                            <div class="transaction-card">
+                                <div class="transaction-info">
+                                    <div style="font-weight: 600; color: #333;"><?php echo htmlspecialchars($trans['title']); ?></div>
+                                    <small style="color: #666;">Check-in: <?php echo date('d/m/Y', strtotime($trans['check_in_date'])); ?></small>
+                                </div>
+                                <div class="transaction-amount">
+                                    +<?php echo number_format($trans['deposit_amount']); ?> VNĐ
+>>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
                                 </div>
                             </div>
                             <div class="col-sm-6">
@@ -428,9 +513,14 @@ function get_trans_type_label($type)
                             </table>
                         </div>
                     <?php else: ?>
+<<<<<<< HEAD
                         <div class="text-center py-5">
                             <i class="fas fa-receipt fa-4x text-muted mb-3 opacity-25"></i>
                             <p class="text-muted">Bạn chưa có bất kỳ giao dịch tài chính nào phát sinh.</p>
+=======
+                        <div style="text-align: center; padding: 40px; background: white; border-radius: 12px; color: #999;">
+                            Không có giao dịch hoàn thành
+>>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
                         </div>
                     <?php endif; ?>
                 </div>

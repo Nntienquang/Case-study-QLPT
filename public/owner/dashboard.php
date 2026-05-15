@@ -35,7 +35,7 @@ function owner_dash_e(?string $value): string
 
 function owner_dash_money($value): string
 {
-    return number_format((int)$value) . ' VND';
+    return number_format((int)$value) . ' VNĐ';
 }
 
 function owner_dash_table_exists(mysqli $conn, string $table): bool
@@ -172,6 +172,7 @@ $upcomingViewings = $hasViewingAppointments
     <main class="wb-shell">
         <div class="container-lg wb-layout">
             <aside class="wb-sidebar">
+<<<<<<< HEAD
                 <div class="wb-side-title">Chủ phòng</div>
                 <a class="wb-side-link active" href="dashboard.php"><i class="fas fa-chart-line"></i> Tổng quan</a>
                 <a class="wb-side-link" href="listings.php"><i class="fas fa-list"></i> Phòng của tôi</a>
@@ -192,6 +193,13 @@ $upcomingViewings = $hasViewingAppointments
                 <a class="wb-side-link" href="../notifications.php"><i class="fas fa-bell"></i> Thông báo</a>
                 <a class="wb-side-link" href="profile.php"><i class="fas fa-user"></i> Hồ sơ</a>
                 <a class="wb-side-link" href="settings.php"><i class="fas fa-gear"></i> Cài đặt</a>
+=======
+                <?php
+                $ownerNavActive = 'dashboard';
+                $ownerNavVariant = 'workbench';
+                require __DIR__ . '/_nav_sidebar.php';
+                ?>
+>>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
             </aside>
 
 

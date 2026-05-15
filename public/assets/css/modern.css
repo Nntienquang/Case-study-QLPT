@@ -98,6 +98,45 @@ button,
     color: var(--app-primary) !important;
 }
 
+.sidebar a:visited,
+.sidebar a:visited i {
+    color: var(--app-muted) !important;
+}
+
+.sidebar a:hover:visited,
+.sidebar a.active:visited,
+.sidebar a.active:visited i {
+    color: var(--app-primary) !important;
+}
+
+.sidebar a i {
+    color: inherit !important;
+    width: 1.25em;
+    text-align: center;
+}
+
+.sidebar.user-sidebar-nav,
+.sidebar.owner-sidebar-nav {
+    padding: 18px 16px;
+}
+
+.sidebar.user-sidebar-nav h5,
+.sidebar.owner-sidebar-nav h5 {
+    font-weight: 800;
+    color: var(--app-text);
+    margin-bottom: 12px;
+    font-size: 1rem;
+}
+
+.sidebar.user-sidebar-nav a,
+.sidebar.owner-sidebar-nav a {
+    display: flex !important;
+    align-items: center;
+    gap: 10px;
+    min-height: 42px;
+    margin-bottom: 4px;
+}
+
 .main-content {
     padding-top: 8px !important;
 }

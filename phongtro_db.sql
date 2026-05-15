@@ -2,10 +2,10 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Host: 127.0.0.1
--- Generation Time: May 13, 2026 at 11:02 AM
--- Server version: 10.4.32-MariaDB
--- PHP Version: 8.2.12
+-- Máy chủ: localhost
+-- Thời gian đã tạo: Th5 14, 2026 lúc 09:08 AM
+-- Phiên bản máy phục vụ: 10.4.32-MariaDB
+-- Phiên bản PHP: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -18,13 +18,13 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `quanlyphongtro`
+-- Cơ sở dữ liệu: `quanlyphongtro`
 --
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `activity_logs`
+-- Cấu trúc bảng cho bảng `activity_logs`
 --
 
 CREATE TABLE `activity_logs` (
@@ -41,10 +41,18 @@ CREATE TABLE `activity_logs` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Đang đổ dữ liệu cho bảng `activity_logs`
+--
+
+INSERT INTO `activity_logs` (`id`, `admin_id`, `action`, `entity_type`, `entity_id`, `old_values`, `new_values`, `description`, `ip_address`, `user_agent`, `created_at`) VALUES
+(1, 5, 'approve_user', 'user', 6, NULL, NULL, 'Duyệt tài khoản owner: Chủ trọ 1 (owner@gmail.com)', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-05-14 06:05:10'),
+(2, 5, 'approve_user', 'user', 8, NULL, NULL, 'Duyệt tài khoản owner: Bảo Phan (admin1234@gmail.com)', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-05-14 06:07:58');
+
 -- --------------------------------------------------------
 
 --
--- Table structure for table `admin_notes`
+-- Cấu trúc bảng cho bảng `admin_notes`
 --
 
 CREATE TABLE `admin_notes` (
@@ -59,7 +67,7 @@ CREATE TABLE `admin_notes` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `bookings`
+-- Cấu trúc bảng cho bảng `bookings`
 --
 
 CREATE TABLE `bookings` (
@@ -78,7 +86,7 @@ CREATE TABLE `bookings` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `categories`
+-- Cấu trúc bảng cho bảng `categories`
 --
 
 CREATE TABLE `categories` (
@@ -87,7 +95,7 @@ CREATE TABLE `categories` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `categories`
+-- Đang đổ dữ liệu cho bảng `categories`
 --
 
 INSERT INTO `categories` (`id`, `name`) VALUES
@@ -98,7 +106,7 @@ INSERT INTO `categories` (`id`, `name`) VALUES
 -- --------------------------------------------------------
 
 --
--- Table structure for table `conversations`
+-- Cấu trúc bảng cho bảng `conversations`
 --
 
 CREATE TABLE `conversations` (
@@ -113,7 +121,7 @@ CREATE TABLE `conversations` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `districts`
+-- Cấu trúc bảng cho bảng `districts`
 --
 
 CREATE TABLE `districts` (
@@ -122,7 +130,7 @@ CREATE TABLE `districts` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `districts`
+-- Đang đổ dữ liệu cho bảng `districts`
 --
 
 INSERT INTO `districts` (`id`, `name`) VALUES
@@ -133,7 +141,7 @@ INSERT INTO `districts` (`id`, `name`) VALUES
 -- --------------------------------------------------------
 
 --
--- Table structure for table `email_logs`
+-- Cấu trúc bảng cho bảng `email_logs`
 --
 
 CREATE TABLE `email_logs` (
@@ -150,7 +158,7 @@ CREATE TABLE `email_logs` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `favorites`
+-- Cấu trúc bảng cho bảng `favorites`
 --
 
 CREATE TABLE `favorites` (
@@ -162,7 +170,7 @@ CREATE TABLE `favorites` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `listing_quality_checks`
+-- Cấu trúc bảng cho bảng `listing_quality_checks`
 --
 
 CREATE TABLE `listing_quality_checks` (
@@ -177,7 +185,7 @@ CREATE TABLE `listing_quality_checks` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `maintenance_requests`
+-- Cấu trúc bảng cho bảng `maintenance_requests`
 --
 
 CREATE TABLE `maintenance_requests` (
@@ -198,7 +206,7 @@ CREATE TABLE `maintenance_requests` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `messages`
+-- Cấu trúc bảng cho bảng `messages`
 --
 
 CREATE TABLE `messages` (
@@ -213,7 +221,27 @@ CREATE TABLE `messages` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `motels`
+-- Cấu trúc bảng cho bảng `monthly_invoices`
+--
+
+CREATE TABLE `monthly_invoices` (
+  `id` int(11) NOT NULL,
+  `owner_id` int(11) NOT NULL,
+  `tenant_user_id` int(11) NOT NULL,
+  `motel_id` int(11) NOT NULL,
+  `period_month` tinyint(4) NOT NULL,
+  `period_year` smallint(6) NOT NULL,
+  `electricity_fee` int(11) NOT NULL DEFAULT 0,
+  `water_fee` int(11) NOT NULL DEFAULT 0,
+  `other_fee` int(11) NOT NULL DEFAULT 0,
+  `note` varchar(500) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Cấu trúc bảng cho bảng `motels`
 --
 
 CREATE TABLE `motels` (
@@ -247,7 +275,7 @@ CREATE TABLE `motels` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `motel_images`
+-- Cấu trúc bảng cho bảng `motel_images`
 --
 
 CREATE TABLE `motel_images` (
@@ -259,7 +287,7 @@ CREATE TABLE `motel_images` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `motel_utilities`
+-- Cấu trúc bảng cho bảng `motel_utilities`
 --
 
 CREATE TABLE `motel_utilities` (
@@ -270,7 +298,7 @@ CREATE TABLE `motel_utilities` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `notifications`
+-- Cấu trúc bảng cho bảng `notifications`
 --
 
 CREATE TABLE `notifications` (
@@ -287,7 +315,7 @@ CREATE TABLE `notifications` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `payments`
+-- Cấu trúc bảng cho bảng `payments`
 --
 
 CREATE TABLE `payments` (
@@ -304,7 +332,7 @@ CREATE TABLE `payments` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `reports`
+-- Cấu trúc bảng cho bảng `reports`
 --
 
 CREATE TABLE `reports` (
@@ -324,7 +352,7 @@ CREATE TABLE `reports` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `reviews`
+-- Cấu trúc bảng cho bảng `reviews`
 --
 
 CREATE TABLE `reviews` (
@@ -339,7 +367,7 @@ CREATE TABLE `reviews` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `saved_searches`
+-- Cấu trúc bảng cho bảng `saved_searches`
 --
 
 CREATE TABLE `saved_searches` (
@@ -360,7 +388,7 @@ CREATE TABLE `saved_searches` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `transactions`
+-- Cấu trúc bảng cho bảng `transactions`
 --
 
 CREATE TABLE `transactions` (
@@ -375,7 +403,7 @@ CREATE TABLE `transactions` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `transactions`
+-- Đang đổ dữ liệu cho bảng `transactions`
 --
 
 INSERT INTO `transactions` (`id`, `from_user`, `to_user`, `amount`, `fee`, `type`, `booking_id`, `created_at`) VALUES
@@ -386,7 +414,7 @@ INSERT INTO `transactions` (`id`, `from_user`, `to_user`, `amount`, `fee`, `type
 -- --------------------------------------------------------
 
 --
--- Table structure for table `users`
+-- Cấu trúc bảng cho bảng `users`
 --
 
 CREATE TABLE `users` (
@@ -412,19 +440,21 @@ CREATE TABLE `users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `users`
+-- Đang đổ dữ liệu cho bảng `users`
 --
 
 INSERT INTO `users` (`id`, `name`, `email`, `password`, `reset_token`, `reset_expires`, `phone`, `avatar`, `role`, `created_at`, `status`, `approved_by`, `approved_at`, `rejection_reason`, `address`, `idcard_number`, `trust_score`, `admin_note`, `verified_at`) VALUES
 (2, 'User 2', 'user2@gmail.com', '123', NULL, NULL, NULL, NULL, 'user', '2026-04-23 08:39:47', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL),
 (4, 'Admin', 'admin@gmail.com', '123', NULL, NULL, NULL, NULL, 'admin', '2026-04-23 08:39:47', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL),
 (5, 'Admin', 'admin123@gmail.com', '$2y$10$o5dhV8yry9Mmv7Cgdq6ZjuWCGYRSNLrReh5G4DTh4eN/xFYhvTNCy', NULL, NULL, '', NULL, 'admin', '2026-04-25 10:29:43', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL),
-(6, 'Chủ trọ 1', 'owner@gmail.com', '$2y$10$gU1LggXMYCfg4nEh8NZIv.hcB1L1kTxSJMsiMuwvy2mCzRdact4i2', NULL, NULL, NULL, NULL, 'owner', '2026-04-29 09:27:23', 'pending', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL);
+(6, 'Chủ trọ 1', 'owner@gmail.com', '$2y$10$gU1LggXMYCfg4nEh8NZIv.hcB1L1kTxSJMsiMuwvy2mCzRdact4i2', NULL, NULL, NULL, NULL, 'owner', '2026-04-29 09:27:23', 'approved', 5, '2026-05-14 13:05:10', NULL, NULL, NULL, 0, NULL, NULL),
+(7, 'Bảo Phan', 'baopdq1@qlpt.com', '$2y$10$KN3kCa1p67bAncjLp3AZkuvKk6P6idJdAMcMCufdZxayyFKaSkcxu', NULL, NULL, '0123456789', NULL, 'user', '2026-05-14 05:06:30', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL),
+(8, 'Bảo Phan', 'admin1234@gmail.com', '$2y$10$I6QhngehzijRnpltd0cdXeRE0Zq5Ne2hsCYWRXpyEqFwDT.PewGTW', NULL, NULL, '0123456789', NULL, 'owner', '2026-05-14 06:06:46', 'approved', 5, '2026-05-14 13:07:58', NULL, NULL, NULL, 0, NULL, NULL);
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `utilities`
+-- Cấu trúc bảng cho bảng `utilities`
 --
 
 CREATE TABLE `utilities` (
@@ -433,7 +463,7 @@ CREATE TABLE `utilities` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `utilities`
+-- Đang đổ dữ liệu cho bảng `utilities`
 --
 
 INSERT INTO `utilities` (`id`, `name`) VALUES
@@ -444,7 +474,7 @@ INSERT INTO `utilities` (`id`, `name`) VALUES
 -- --------------------------------------------------------
 
 --
--- Table structure for table `viewing_appointments`
+-- Cấu trúc bảng cho bảng `viewing_appointments`
 --
 
 CREATE TABLE `viewing_appointments` (
@@ -462,7 +492,7 @@ CREATE TABLE `viewing_appointments` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `wallets`
+-- Cấu trúc bảng cho bảng `wallets`
 --
 
 CREATE TABLE `wallets` (
@@ -472,7 +502,7 @@ CREATE TABLE `wallets` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `wallets`
+-- Đang đổ dữ liệu cho bảng `wallets`
 --
 
 INSERT INTO `wallets` (`id`, `user_id`, `balance`) VALUES
@@ -482,7 +512,7 @@ INSERT INTO `wallets` (`id`, `user_id`, `balance`) VALUES
 -- --------------------------------------------------------
 
 --
--- Table structure for table `withdraw_requests`
+-- Cấu trúc bảng cho bảng `withdraw_requests`
 --
 
 CREATE TABLE `withdraw_requests` (
@@ -494,11 +524,11 @@ CREATE TABLE `withdraw_requests` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Indexes for dumped tables
+-- Chỉ mục cho các bảng đã đổ
 --
 
 --
--- Indexes for table `activity_logs`
+-- Chỉ mục cho bảng `activity_logs`
 --
 ALTER TABLE `activity_logs`
   ADD PRIMARY KEY (`id`),
@@ -508,7 +538,7 @@ ALTER TABLE `activity_logs`
   ADD KEY `idx_created_at` (`created_at`);
 
 --
--- Indexes for table `admin_notes`
+-- Chỉ mục cho bảng `admin_notes`
 --
 ALTER TABLE `admin_notes`
   ADD PRIMARY KEY (`id`),
@@ -516,7 +546,7 @@ ALTER TABLE `admin_notes`
   ADD KEY `idx_entity` (`entity_type`,`entity_id`);
 
 --
--- Indexes for table `bookings`
+-- Chỉ mục cho bảng `bookings`
 --
 ALTER TABLE `bookings`
   ADD PRIMARY KEY (`id`),
@@ -524,13 +554,13 @@ ALTER TABLE `bookings`
   ADD KEY `motel_id` (`motel_id`);
 
 --
--- Indexes for table `categories`
+-- Chỉ mục cho bảng `categories`
 --
 ALTER TABLE `categories`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `conversations`
+-- Chỉ mục cho bảng `conversations`
 --
 ALTER TABLE `conversations`
   ADD PRIMARY KEY (`id`),
@@ -539,13 +569,13 @@ ALTER TABLE `conversations`
   ADD KEY `idx_last_message_at` (`last_message_at`);
 
 --
--- Indexes for table `districts`
+-- Chỉ mục cho bảng `districts`
 --
 ALTER TABLE `districts`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `email_logs`
+-- Chỉ mục cho bảng `email_logs`
 --
 ALTER TABLE `email_logs`
   ADD PRIMARY KEY (`id`),
@@ -554,7 +584,7 @@ ALTER TABLE `email_logs`
   ADD KEY `idx_created_at` (`created_at`);
 
 --
--- Indexes for table `favorites`
+-- Chỉ mục cho bảng `favorites`
 --
 ALTER TABLE `favorites`
   ADD PRIMARY KEY (`id`),
@@ -562,7 +592,7 @@ ALTER TABLE `favorites`
   ADD KEY `motel_id` (`motel_id`);
 
 --
--- Indexes for table `listing_quality_checks`
+-- Chỉ mục cho bảng `listing_quality_checks`
 --
 ALTER TABLE `listing_quality_checks`
   ADD PRIMARY KEY (`id`),
@@ -570,7 +600,7 @@ ALTER TABLE `listing_quality_checks`
   ADD KEY `idx_score` (`score`);
 
 --
--- Indexes for table `maintenance_requests`
+-- Chỉ mục cho bảng `maintenance_requests`
 --
 ALTER TABLE `maintenance_requests`
   ADD PRIMARY KEY (`id`),
@@ -582,7 +612,7 @@ ALTER TABLE `maintenance_requests`
   ADD KEY `idx_priority` (`priority`);
 
 --
--- Indexes for table `messages`
+-- Chỉ mục cho bảng `messages`
 --
 ALTER TABLE `messages`
   ADD PRIMARY KEY (`id`),
@@ -592,7 +622,17 @@ ALTER TABLE `messages`
   ADD KEY `idx_created_at` (`created_at`);
 
 --
--- Indexes for table `motels`
+-- Chỉ mục cho bảng `monthly_invoices`
+--
+ALTER TABLE `monthly_invoices`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_period` (`owner_id`,`tenant_user_id`,`motel_id`,`period_year`,`period_month`),
+  ADD KEY `idx_tenant` (`tenant_user_id`),
+  ADD KEY `idx_owner` (`owner_id`),
+  ADD KEY `idx_motel` (`motel_id`);
+
+--
+-- Chỉ mục cho bảng `motels`
 --
 ALTER TABLE `motels`
   ADD PRIMARY KEY (`id`),
@@ -601,21 +641,21 @@ ALTER TABLE `motels`
   ADD KEY `district_id` (`district_id`);
 
 --
--- Indexes for table `motel_images`
+-- Chỉ mục cho bảng `motel_images`
 --
 ALTER TABLE `motel_images`
   ADD PRIMARY KEY (`id`),
   ADD KEY `motel_id` (`motel_id`);
 
 --
--- Indexes for table `motel_utilities`
+-- Chỉ mục cho bảng `motel_utilities`
 --
 ALTER TABLE `motel_utilities`
   ADD PRIMARY KEY (`motel_id`,`utility_id`),
   ADD KEY `utility_id` (`utility_id`);
 
 --
--- Indexes for table `notifications`
+-- Chỉ mục cho bảng `notifications`
 --
 ALTER TABLE `notifications`
   ADD PRIMARY KEY (`id`),
@@ -625,14 +665,14 @@ ALTER TABLE `notifications`
   ADD KEY `idx_created_at` (`created_at`);
 
 --
--- Indexes for table `payments`
+-- Chỉ mục cho bảng `payments`
 --
 ALTER TABLE `payments`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `booking_id` (`booking_id`);
 
 --
--- Indexes for table `reports`
+-- Chỉ mục cho bảng `reports`
 --
 ALTER TABLE `reports`
   ADD PRIMARY KEY (`id`),
@@ -643,7 +683,7 @@ ALTER TABLE `reports`
   ADD KEY `idx_created_at` (`created_at`);
 
 --
--- Indexes for table `reviews`
+-- Chỉ mục cho bảng `reviews`
 --
 ALTER TABLE `reviews`
   ADD PRIMARY KEY (`id`),
@@ -651,7 +691,7 @@ ALTER TABLE `reviews`
   ADD KEY `motel_id` (`motel_id`);
 
 --
--- Indexes for table `saved_searches`
+-- Chỉ mục cho bảng `saved_searches`
 --
 ALTER TABLE `saved_searches`
   ADD PRIMARY KEY (`id`),
@@ -659,7 +699,7 @@ ALTER TABLE `saved_searches`
   ADD KEY `idx_alert_enabled` (`alert_enabled`);
 
 --
--- Indexes for table `transactions`
+-- Chỉ mục cho bảng `transactions`
 --
 ALTER TABLE `transactions`
   ADD PRIMARY KEY (`id`),
@@ -668,7 +708,7 @@ ALTER TABLE `transactions`
   ADD KEY `booking_id` (`booking_id`);
 
 --
--- Indexes for table `users`
+-- Chỉ mục cho bảng `users`
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
@@ -680,13 +720,13 @@ ALTER TABLE `users`
   ADD KEY `idx_role` (`role`);
 
 --
--- Indexes for table `utilities`
+-- Chỉ mục cho bảng `utilities`
 --
 ALTER TABLE `utilities`
   ADD PRIMARY KEY (`id`);
 
 --
--- Indexes for table `viewing_appointments`
+-- Chỉ mục cho bảng `viewing_appointments`
 --
 ALTER TABLE `viewing_appointments`
   ADD PRIMARY KEY (`id`),
@@ -697,187 +737,193 @@ ALTER TABLE `viewing_appointments`
   ADD KEY `idx_preferred_time` (`preferred_time`);
 
 --
--- Indexes for table `wallets`
+-- Chỉ mục cho bảng `wallets`
 --
 ALTER TABLE `wallets`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `user_id` (`user_id`);
 
 --
--- Indexes for table `withdraw_requests`
+-- Chỉ mục cho bảng `withdraw_requests`
 --
 ALTER TABLE `withdraw_requests`
   ADD PRIMARY KEY (`id`),
   ADD KEY `user_id` (`user_id`);
 
 --
--- AUTO_INCREMENT for dumped tables
+-- AUTO_INCREMENT cho các bảng đã đổ
 --
 
 --
--- AUTO_INCREMENT for table `activity_logs`
+-- AUTO_INCREMENT cho bảng `activity_logs`
 --
 ALTER TABLE `activity_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
--- AUTO_INCREMENT for table `admin_notes`
+-- AUTO_INCREMENT cho bảng `admin_notes`
 --
 ALTER TABLE `admin_notes`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `bookings`
+-- AUTO_INCREMENT cho bảng `bookings`
 --
 ALTER TABLE `bookings`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
--- AUTO_INCREMENT for table `categories`
+-- AUTO_INCREMENT cho bảng `categories`
 --
 ALTER TABLE `categories`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
--- AUTO_INCREMENT for table `conversations`
+-- AUTO_INCREMENT cho bảng `conversations`
 --
 ALTER TABLE `conversations`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `districts`
+-- AUTO_INCREMENT cho bảng `districts`
 --
 ALTER TABLE `districts`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
--- AUTO_INCREMENT for table `email_logs`
+-- AUTO_INCREMENT cho bảng `email_logs`
 --
 ALTER TABLE `email_logs`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `favorites`
+-- AUTO_INCREMENT cho bảng `favorites`
 --
 ALTER TABLE `favorites`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
--- AUTO_INCREMENT for table `listing_quality_checks`
+-- AUTO_INCREMENT cho bảng `listing_quality_checks`
 --
 ALTER TABLE `listing_quality_checks`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `maintenance_requests`
+-- AUTO_INCREMENT cho bảng `maintenance_requests`
 --
 ALTER TABLE `maintenance_requests`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `messages`
+-- AUTO_INCREMENT cho bảng `messages`
 --
 ALTER TABLE `messages`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `motels`
+-- AUTO_INCREMENT cho bảng `monthly_invoices`
+--
+ALTER TABLE `monthly_invoices`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT cho bảng `motels`
 --
 ALTER TABLE `motels`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
--- AUTO_INCREMENT for table `motel_images`
+-- AUTO_INCREMENT cho bảng `motel_images`
 --
 ALTER TABLE `motel_images`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
--- AUTO_INCREMENT for table `notifications`
+-- AUTO_INCREMENT cho bảng `notifications`
 --
 ALTER TABLE `notifications`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `payments`
+-- AUTO_INCREMENT cho bảng `payments`
 --
 ALTER TABLE `payments`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
--- AUTO_INCREMENT for table `reports`
+-- AUTO_INCREMENT cho bảng `reports`
 --
 ALTER TABLE `reports`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `reviews`
+-- AUTO_INCREMENT cho bảng `reviews`
 --
 ALTER TABLE `reviews`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
--- AUTO_INCREMENT for table `saved_searches`
+-- AUTO_INCREMENT cho bảng `saved_searches`
 --
 ALTER TABLE `saved_searches`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `transactions`
+-- AUTO_INCREMENT cho bảng `transactions`
 --
 ALTER TABLE `transactions`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
--- AUTO_INCREMENT for table `users`
+-- AUTO_INCREMENT cho bảng `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
--- AUTO_INCREMENT for table `utilities`
+-- AUTO_INCREMENT cho bảng `utilities`
 --
 ALTER TABLE `utilities`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
--- AUTO_INCREMENT for table `viewing_appointments`
+-- AUTO_INCREMENT cho bảng `viewing_appointments`
 --
 ALTER TABLE `viewing_appointments`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `wallets`
+-- AUTO_INCREMENT cho bảng `wallets`
 --
 ALTER TABLE `wallets`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
--- AUTO_INCREMENT for table `withdraw_requests`
+-- AUTO_INCREMENT cho bảng `withdraw_requests`
 --
 ALTER TABLE `withdraw_requests`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
--- Constraints for dumped tables
+-- Các ràng buộc cho các bảng đã đổ
 --
 
 --
--- Constraints for table `bookings`
+-- Các ràng buộc cho bảng `bookings`
 --
 ALTER TABLE `bookings`
   ADD CONSTRAINT `bookings_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `bookings_ibfk_2` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `favorites`
+-- Các ràng buộc cho bảng `favorites`
 --
 ALTER TABLE `favorites`
   ADD CONSTRAINT `favorites_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `favorites_ibfk_2` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `motels`
+-- Các ràng buộc cho bảng `motels`
 --
 ALTER TABLE `motels`
   ADD CONSTRAINT `motels_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
@@ -885,33 +931,33 @@ ALTER TABLE `motels`
   ADD CONSTRAINT `motels_ibfk_3` FOREIGN KEY (`district_id`) REFERENCES `districts` (`id`) ON DELETE SET NULL;
 
 --
--- Constraints for table `motel_images`
+-- Các ràng buộc cho bảng `motel_images`
 --
 ALTER TABLE `motel_images`
   ADD CONSTRAINT `motel_images_ibfk_1` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `motel_utilities`
+-- Các ràng buộc cho bảng `motel_utilities`
 --
 ALTER TABLE `motel_utilities`
   ADD CONSTRAINT `motel_utilities_ibfk_1` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `motel_utilities_ibfk_2` FOREIGN KEY (`utility_id`) REFERENCES `utilities` (`id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `payments`
+-- Các ràng buộc cho bảng `payments`
 --
 ALTER TABLE `payments`
   ADD CONSTRAINT `payments_ibfk_1` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `reviews`
+-- Các ràng buộc cho bảng `reviews`
 --
 ALTER TABLE `reviews`
   ADD CONSTRAINT `reviews_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `reviews_ibfk_2` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `transactions`
+-- Các ràng buộc cho bảng `transactions`
 --
 ALTER TABLE `transactions`
   ADD CONSTRAINT `transactions_ibfk_1` FOREIGN KEY (`from_user`) REFERENCES `users` (`id`) ON DELETE SET NULL,
@@ -919,13 +965,13 @@ ALTER TABLE `transactions`
   ADD CONSTRAINT `transactions_ibfk_3` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`) ON DELETE SET NULL;
 
 --
--- Constraints for table `wallets`
+-- Các ràng buộc cho bảng `wallets`
 --
 ALTER TABLE `wallets`
   ADD CONSTRAINT `wallets_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
--- Constraints for table `withdraw_requests`
+-- Các ràng buộc cho bảng `withdraw_requests`
 --
 ALTER TABLE `withdraw_requests`
   ADD CONSTRAINT `withdraw_requests_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;

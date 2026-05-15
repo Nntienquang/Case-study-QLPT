@@ -13,7 +13,23 @@ if (!isset($_SESSION['user_id'])) {
 $db = new Database($conn);
 $user_id = (int)$_SESSION['user_id'];
 $role = $_SESSION['role'] ?? 'user';
+<<<<<<< HEAD
 $userName = $_SESSION['name'] ?? 'Người dùng';
+=======
+
+if ($role === 'owner') {
+    header('Location: owner/notifications.php');
+    exit;
+}
+
+if ($role === 'user') {
+    header('Location: user/notifications.php');
+    exit;
+}
+
+$home = 'admin/index.php';
+$message = '';
+>>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
 
 // Xác định link quay về trang chủ dashboard dựa theo vai trò
 $home = $role === 'owner' ? 'owner/dashboard.php' : ($role === 'admin' ? 'admin/index.php' : 'user/dashboard.php');
@@ -23,7 +39,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['mark_all_read'])) {
         $stmt = $db->prepare('UPDATE notifications SET read_at = NOW() WHERE user_id = ? AND read_at IS NULL');
         $stmt->bind_param('i', $user_id);
+<<<<<<< HEAD
         $stmt->execute();
+=======
+        if ($stmt->execute()) {
+            $message = 'Đã đánh dấu tất cả là đã đọc.';
+        }
+>>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
         $stmt->close();
         
         $_SESSION['message'] = 'Đã đánh dấu tất cả thông báo là đã đọc.';
@@ -35,7 +57,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $notification_id = (int)$_POST['notification_id'];
         $stmt = $db->prepare('UPDATE notifications SET read_at = NOW() WHERE id = ? AND user_id = ?');
         $stmt->bind_param('ii', $notification_id, $user_id);
+<<<<<<< HEAD
         $stmt->execute();
+=======
+        if ($stmt->execute()) {
+            $message = 'Đã cập nhật thông báo.';
+        }
+>>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
         $stmt->close();
         
         // Nếu có link đính kèm trong thông báo, nhấn "Đã đọc" xong thì chuyển hướng luôn
@@ -166,6 +194,7 @@ function get_notify_icon($type) {
     }
     </style>
 </head>
+<<<<<<< HEAD
 
 <body class="workbench">
     <header class="wb-topbar">
@@ -178,6 +207,15 @@ function get_notify_icon($type) {
                 <span class="me-3 d-none d-sm-inline">Chào,
                     <strong><?php echo htmlspecialchars($userName); ?></strong></span>
                 <a class="btn btn-primary btn-sm px-3" href="<?php echo htmlspecialchars($home); ?>">Dashboard</a>
+=======
+<body>
+    <nav class="navbar app-nav navbar-expand-lg sticky-top">
+        <div class="container-lg">
+            <a class="navbar-brand fw-bold" href="index.php"><i class="fas fa-house-chimney"></i> QuanLyPhongTro</a>
+            <div class="ms-auto d-flex gap-2">
+                <a class="btn btn-outline-primary btn-sm" href="<?php echo htmlspecialchars($home); ?>">Dashboard</a>
+                <a class="btn btn-outline-secondary btn-sm" href="logout.php">Đăng xuất</a>
+>>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
             </div>
         </div>
     </header>
@@ -185,14 +223,23 @@ function get_notify_icon($type) {
     <main class="notify-container">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
+<<<<<<< HEAD
                 <h2 class="fw-bold mb-0">Thông báo</h2>
                 <p class="text-muted mb-0">Bạn có <?php echo $unread_count; ?> thông báo mới chưa đọc.</p>
+=======
+                <h1 class="fw-bold mb-2">Thông báo</h1>
+                <p class="text-muted mb-0"><?php echo $unread_count; ?> thông báo chưa đọc.</p>
+>>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
             </div>
             <?php if ($unread_count > 0): ?>
             <form method="POST">
+<<<<<<< HEAD
                 <button class="btn btn-outline-primary btn-sm rounded-pill px-3" name="mark_all_read" type="submit">
                     <i class="fas fa-check-double me-1"></i> Đọc tất cả
                 </button>
+=======
+                <button class="btn btn-primary" name="mark_all_read" type="submit">Đánh dấu đã đọc</button>
+>>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
             </form>
             <?php endif; ?>
         </div>
@@ -206,6 +253,7 @@ function get_notify_icon($type) {
         <?php endif; ?>
 
         <?php if ($notifications): ?>
+<<<<<<< HEAD
         <?php foreach ($notifications as $notification): ?>
         <?php $isUnread = empty($notification['read_at']); ?>
         <div class="notify-card <?php echo $isUnread ? 'unread' : ''; ?>">
@@ -236,6 +284,42 @@ function get_notify_icon($type) {
                         <button class="btn btn-sm btn-light border px-3" name="mark_read" type="submit">Đã đọc</button>
                     </form>
                     <?php endif; ?>
+=======
+            <?php foreach ($notifications as $notification): ?>
+                <?php $isUnread = empty($notification['read_at']); ?>
+                <article class="notification-card <?php echo $isUnread ? 'unread' : ''; ?>">
+                    <div>
+                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                            <div class="notification-title"><?php echo htmlspecialchars($notification['title']); ?></div>
+                            <?php if ($isUnread): ?><span class="badge text-bg-primary">Mới</span><?php endif; ?>
+                        </div>
+                        <?php if (!empty($notification['body'])): ?>
+                            <div class="notification-body"><?php echo nl2br(htmlspecialchars($notification['body'])); ?></div>
+                        <?php endif; ?>
+                        <div class="notification-meta">
+                            <i class="fas fa-clock"></i> <?php echo date('d/m/Y H:i', strtotime($notification['created_at'])); ?>
+                            <span class="ms-2"><?php echo htmlspecialchars($notification['type']); ?></span>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 justify-content-end align-content-start">
+                        <?php if (!empty($notification['link'])): ?>
+                            <a class="btn btn-outline-primary btn-sm" href="<?php echo htmlspecialchars($notification['link']); ?>">Mở</a>
+                        <?php endif; ?>
+                        <?php if ($isUnread): ?>
+                            <form method="POST">
+                                <input type="hidden" name="notification_id" value="<?php echo (int)$notification['id']; ?>">
+                                <button class="btn btn-primary btn-sm" name="mark_read" type="submit">Đã đọc</button>
+                            </form>
+                        <?php endif; ?>
+                    </div>
+                </article>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <div class="panel empty-state">
+                <div>
+                    <h4 class="fw-bold">Chưa có thông báo</h4>
+                    <p>Những thay đổi quan trọng về đặt phòng, lịch xem và tin đăng sẽ xuất hiện tại đây.</p>
+>>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
                 </div>
             </div>
             <?php if ($isUnread): ?><div class="unread-dot"></div><?php endif; ?>

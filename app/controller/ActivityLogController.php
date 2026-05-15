@@ -196,11 +196,11 @@ class ActivityLogController
         $log['admin'] = $admin;
         
         // Parse JSON fields
-        if ($log['old_value']) {
-            $log['old_value_parsed'] = json_decode($log['old_value'], true) ?: [];
+        if ($log['old_values']) {
+            $log['old_value_parsed'] = json_decode($log['old_values'], true) ?: [];
         }
-        if ($log['new_value']) {
-            $log['new_value_parsed'] = json_decode($log['new_value'], true) ?: [];
+        if ($log['new_values']) {
+            $log['new_value_parsed'] = json_decode($log['new_values'], true) ?: [];
         }
         
         return ['log' => $log];
@@ -289,11 +289,11 @@ class ActivityLogController
             $log['admin'] = $admin_cache[$log['admin_id']];
             
             // Parse JSON if present
-            if ($log['old_value']) {
-                $log['old_value_parsed'] = json_decode($log['old_value'], true) ?: [];
+            if ($log['old_values']) {
+                $log['old_value_parsed'] = json_decode($log['old_values'], true) ?: [];
             }
-            if ($log['new_value']) {
-                $log['new_value_parsed'] = json_decode($log['new_value'], true) ?: [];
+            if ($log['new_values']) {
+                $log['new_value_parsed'] = json_decode($log['new_values'], true) ?: [];
             }
         }
         

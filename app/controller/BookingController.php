@@ -116,7 +116,7 @@ class BookingController {
                     'booking',
                     $id,
                     [],
-                    "Xóa đơn đặt phòng từ khách {$booking['customer_name']}"
+                    "Xóa đơn đặt phòng từ khách {$booking['user_name']}"
                 );
             }
             $_SESSION['success'] = 'Xóa đơn đặt phòng thành công';

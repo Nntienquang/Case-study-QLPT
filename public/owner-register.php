@@ -17,7 +17,7 @@ if (isset($_SESSION['user_id']) && $auth->checkSessionTimeout()) {
     if ($role === 'admin') {
         header('Location: ./admin/index.php');
     } elseif ($role === 'owner') {
-        header('Location: ./owner/dashboard.php');
+        header('Location: ./owner/index.php');
     } else {
         header('Location: ./user/dashboard.php');
     }

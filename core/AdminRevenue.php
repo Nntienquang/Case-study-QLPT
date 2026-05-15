@@ -40,7 +40,7 @@ class AdminRevenue
         $query = "SELECT SUM(amount) as total 
                   FROM {$this->table} 
                   WHERE to_user = {$admin_id} 
-                  AND type = 'commission'";
+                  AND type = 'fee'";
         
         $result = $this->db->query($query);
         $row = $result->fetch_assoc();
@@ -71,7 +71,7 @@ class AdminRevenue
                   LEFT JOIN users u ON b.user_id = u.id
                   LEFT JOIN users uo ON m.user_id = uo.id
                   WHERE t.to_user = {$admin_id}
-                  AND t.type = 'commission'
+                  AND t.type = 'fee'
                   ORDER BY t.created_at DESC
                   LIMIT {$offset}, {$limit}";
         
@@ -89,7 +89,7 @@ class AdminRevenue
         $query = "SELECT COUNT(*) as total 
                   FROM {$this->table} 
                   WHERE to_user = {$admin_id} 
-                  AND type = 'commission'";
+                  AND type = 'fee'";
         
         $result = $this->db->query($query);
         $row = $result->fetch_assoc();
@@ -115,7 +115,7 @@ class AdminRevenue
         $query = "SELECT SUM(amount) as total 
                   FROM {$this->table} 
                   WHERE to_user = {$admin_id}
-                  AND type = 'commission'
+                  AND type = 'fee'
                   AND MONTH(created_at) = MONTH(NOW())
                   AND YEAR(created_at) = YEAR(NOW())";
         
@@ -127,7 +127,7 @@ class AdminRevenue
         $query = "SELECT COUNT(*) as total 
                   FROM {$this->table} 
                   WHERE to_user = {$admin_id}
-                  AND type = 'commission'";
+                  AND type = 'fee'";
         
         $result = $this->db->query($query);
         $row = $result->fetch_assoc();
@@ -157,7 +157,7 @@ class AdminRevenue
         $query = "INSERT INTO {$this->table} 
                   (to_user, booking_id, amount, type, created_at) 
                   VALUES 
-                  ({$admin_id_esc}, {$booking_id_esc}, {$amount_esc}, 'commission', NOW())";
+                  ({$admin_id_esc}, {$booking_id_esc}, {$amount_esc}, 'fee', NOW())";
         
         return $this->db->query($query);
     }
@@ -174,7 +174,7 @@ class AdminRevenue
         $query = "SELECT DATE(created_at) as date, SUM(amount) as total
                   FROM {$this->table}
                   WHERE to_user = {$admin_id}
-                  AND type = 'commission'
+                  AND type = 'fee'
                   AND created_at >= DATE_SUB(NOW(), INTERVAL {$days} DAY)
                   GROUP BY DATE(created_at)
                   ORDER BY date DESC";

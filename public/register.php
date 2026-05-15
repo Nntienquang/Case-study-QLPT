@@ -17,7 +17,7 @@ if (isset($_SESSION['user_id'])) {
         if ($role === 'admin') {
             header('Location: ./admin/index.php');
         } elseif ($role === 'owner') {
-            header('Location: ./owner/dashboard.php');
+            header('Location: ./owner/index.php');
         } else {
             header('Location: ./user/dashboard.php');
         }
@@ -33,10 +33,12 @@ $message = '';
 $type = '';
 $name = '';
 $email = '';
+$phone = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
+    $phone = trim($_POST['phone'] ?? '');
     $password = $_POST['password'] ?? '';
     $confirm = $_POST['confirm'] ?? '';
     $captcha = trim($_POST['captcha'] ?? '');
@@ -45,13 +47,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = 'Mã xác thực không đúng. Vui lòng nhập lại mã trong ảnh.';
         $type = 'error';
     } else {
-        $result = $auth->register($name, $email, $password, $confirm, 'user');
+        $result = $auth->register($name, $email, $password, $confirm, 'user', $phone);
         $message = $result['message'];
         $type = $result['success'] ? 'success' : 'error';
 
         if ($result['success']) {
             $name = '';
             $email = '';
+            $phone = '';
         }
     }
 }
@@ -110,6 +113,12 @@ $captchaChallenge = Captcha::ensure('register_captcha');
                     <div class="input-group">
                         <i class="fa fa-envelope"></i>
                         <input type="email" name="email" placeholder="you@example.com" value="<?php echo htmlspecialchars($email); ?>" required>
+                    </div>
+
+                    <label>Số điện thoại</label>
+                    <div class="input-group">
+                        <i class="fa fa-phone"></i>
+                        <input type="tel" name="phone" placeholder="0123456789" value="<?php echo htmlspecialchars($phone); ?>">
                     </div>
 
                     <label>Mật khẩu</label>

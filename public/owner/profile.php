@@ -44,7 +44,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $bank_account_name = trim($_POST['bank_account_name'] ?? '');
 
     if (empty($name)) {
+<<<<<<< HEAD
         $message = 'Vui lòng nhập tên đầy đủ!';
+=======
+        $message = 'Vui lòng nhập tên!';
+>>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
         $message_type = 'danger';
     } else {
         $upload_dir = '../../public/uploads/kyc/';
@@ -77,7 +81,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($stmt->execute()) {
             $_SESSION['name'] = $name;
+<<<<<<< HEAD
             $message = 'Hồ sơ và thông tin thanh toán đã được cập nhật thành công!';
+=======
+            $message = 'Hồ sơ cập nhật thành công!';
+>>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
             $message_type = 'success';
 
             // Refresh lại dữ liệu hiển thị
@@ -87,7 +95,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = $stmt->get_result()->fetch_assoc();
             $stmt->close();
         } else {
+<<<<<<< HEAD
             $message = 'Lỗi cập nhật cơ sở dữ liệu!';
+=======
+            $message = 'Lỗi cập nhật!';
+>>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
             $message_type = 'danger';
         }
     }
@@ -99,9 +111,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<<<<<<< HEAD
     <title>Hồ Sơ Chủ Nhà - QuanLyPhongTro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+=======
+    <title>Hồ sơ - Owner</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: #f8f9fa; }
+        .navbar { background: linear-gradient(135deg, #667eea, #764ba2); }
+        .navbar-brand { font-size: 22px; font-weight: 700; color: white !important; }
+        .main-content { padding: 30px; }
+        .profile-card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .form-label { font-weight: 600; color: #333; }
+        .form-control { border-radius: 6px; border: 1px solid #ddd; }
+        .form-control:focus { border-color: #667eea; box-shadow: 0 0 0 0.2rem rgba(102,126,234,0.25); }
+        .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); border: none; }
+        .info-item { background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 15px; }
+        .info-label { font-weight: 600; color: #333; }
+        .info-value { color: #666; margin-top: 5px; }
+    </style>
+>>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
     <link href="../assets/css/modern.css" rel="stylesheet">
     <link href="../assets/css/workbench.css" rel="stylesheet">
     <style>
@@ -144,13 +176,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <span class="wb-brand-mark"><i class="fas fa-house-chimney"></i></span>
                 <span>QuanLyPhongTro</span>
             </a>
+<<<<<<< HEAD
             <div class="wb-user">
                 <span><?php echo htmlspecialchars($ownerName); ?></span>
                 <a class="btn btn-outline-secondary btn-sm" href="../logout.php">Đăng xuất</a>
+=======
+        </div>
+    </nav>
+
+    <div class="container-lg" style="padding: 30px 0;">
+        <div class="row">
+            <div class="col-lg-3">
+                <?php
+                $ownerNavActive = 'profile';
+                require __DIR__ . '/_nav_sidebar.php';
+                ?>
+>>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
             </div>
         </div>
     </header>
 
+<<<<<<< HEAD
     <main class="wb-shell">
         <div class="container-lg wb-layout">
             <aside class="wb-sidebar">
@@ -160,6 +206,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <a class="wb-side-link" href="add-listing.php"><i class="fas fa-plus"></i> Đăng phòng</a>
                 <a class="wb-side-link" href="viewing-appointments.php"><i class="fas fa-calendar-day"></i> Lịch xem</a>
                 <a class="wb-side-link" href="bookings.php"><i class="fas fa-calendar-check"></i> Booking</a>
+=======
+            <div class="col-lg-9">
+                <div class="main-content">
+                    <h1 style="font-size: 28px; font-weight: 700; margin-bottom: 30px;">
+                        <i class="fas fa-user"></i> Hồ sơ chủ nhà 
+                    </h1>
+>>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
 
                 <div class="wb-side-title mt-4">Quản lý Vận hành</div>
                 <a class="wb-side-link" href="utilities.php"><i class="fas fa-bolt"></i> Điện, Nước & Dịch vụ</a>
@@ -208,6 +261,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <form method="POST" enctype="multipart/form-data">
                     <div class="row">
+<<<<<<< HEAD
                         <div class="col-lg-7">
                             <div class="wb-card p-4 mb-4">
                                 <h5 class="mb-4 border-bottom pb-2">Thông Tin Liên Hệ</h5>
@@ -314,6 +368,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <div class="text-center mt-2 small text-muted">
                                     <i class="fas fa-shield-halved text-success me-1"></i> Dữ liệu của bạn được mã hóa
                                     bảo mật
+=======
+                        <div class="col-lg-8">
+                            <div class="profile-card">
+                                <h5 style="font-weight: 700; margin-bottom: 20px; border-bottom: 2px solid #667eea; padding-bottom: 10px;">
+                                    Thông tin cơ bản
+                                </h5>
+
+                                <form method="POST">
+                                    <div class="mb-3">
+                                        <label class="form-label">Tên đầy đủ</label>
+                                        <input type="text" name="name" class="form-control" value="<?php echo htmlspecialchars($user['name']); ?>" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Email (Không thể thay đổi)</label>
+                                        <input type="email" class="form-control" value="<?php echo htmlspecialchars($user['email']); ?>" disabled>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Số điện thoại</label>
+                                        <input type="tel" name="phone" class="form-control" value="<?php echo htmlspecialchars($user['phone'] ?? ''); ?>" placeholder="0912345678">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Địa chỉ</label>
+                                        <textarea name="address" class="form-control" rows="3" placeholder="Địa chỉ của bạn"><?php echo htmlspecialchars($user['address'] ?? ''); ?></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save"></i> Lưu thay đổi
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4">
+                            <div class="profile-card">
+                                <h5 style="font-weight: 700; margin-bottom: 20px;">Thông tin tài khoản</h5>
+                                <div class="info-item">
+                                    <div class="info-label"><i class="fas fa-user"></i> Vai trò</div>
+                                    <div class="info-value">Chủ nhà / Chủ phòng trọ</div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label"><i class="fas fa-calendar"></i> Ngày tạo</div>
+                                    <div class="info-value"><?php echo date('d/m/Y', strtotime($user['created_at'])); ?></div>
+                                </div>
+                                <div class="info-item">
+                                    <div class="info-label"><i class="fas fa-shield-alt"></i> Trạng thái</div>
+                                    <div class="info-value"><span class="badge bg-success">Hoạt động</span></div>
+>>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
                                 </div>
                             </div>
                         </div>
