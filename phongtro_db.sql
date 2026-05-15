@@ -2,8 +2,8 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Máy chủ: localhost
--- Thời gian đã tạo: Th5 14, 2026 lúc 09:08 AM
+-- Máy chủ: 127.0.0.1
+-- Thời gian đã tạo: Th5 15, 2026 lúc 11:33 AM
 -- Phiên bản máy phục vụ: 10.4.32-MariaDB
 -- Phiên bản PHP: 8.2.12
 
@@ -106,6 +106,26 @@ INSERT INTO `categories` (`id`, `name`) VALUES
 -- --------------------------------------------------------
 
 --
+-- Cấu trúc bảng cho bảng `contracts`
+--
+
+CREATE TABLE `contracts` (
+  `id` int(11) NOT NULL,
+  `motel_id` int(11) NOT NULL,
+  `owner_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `start_date` date NOT NULL,
+  `end_date` date NOT NULL,
+  `deposit_amount` int(11) NOT NULL,
+  `monthly_price` int(11) NOT NULL,
+  `document_url` varchar(255) DEFAULT NULL,
+  `status` enum('pending_signature','active','expiring_soon','expired','terminated') DEFAULT 'pending_signature',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Cấu trúc bảng cho bảng `conversations`
 --
 
@@ -196,6 +216,7 @@ CREATE TABLE `maintenance_requests` (
   `booking_id` int(11) DEFAULT NULL,
   `title` varchar(180) NOT NULL,
   `description` text NOT NULL,
+  `image_url` varchar(255) DEFAULT NULL,
   `priority` varchar(20) NOT NULL DEFAULT 'normal',
   `status` varchar(30) NOT NULL DEFAULT 'open',
   `resolved_at` datetime DEFAULT NULL,
@@ -215,6 +236,31 @@ CREATE TABLE `messages` (
   `sender_id` int(11) NOT NULL,
   `body` text NOT NULL,
   `read_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Cấu trúc bảng cho bảng `monthly_bills`
+--
+
+CREATE TABLE `monthly_bills` (
+  `id` int(11) NOT NULL,
+  `motel_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `billing_month` int(2) NOT NULL,
+  `billing_year` int(4) NOT NULL,
+  `elec_old` int(11) DEFAULT 0,
+  `elec_new` int(11) DEFAULT 0,
+  `elec_price` int(11) DEFAULT 3500,
+  `water_old` int(11) DEFAULT 0,
+  `water_new` int(11) DEFAULT 0,
+  `water_price` int(11) DEFAULT 20000,
+  `trash_fee` int(11) DEFAULT 50000,
+  `internet_fee` int(11) DEFAULT 100000,
+  `total_amount` int(11) NOT NULL,
+  `status` enum('unpaid','paid','overdue') DEFAULT 'unpaid',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -436,20 +482,29 @@ CREATE TABLE `users` (
   `idcard_number` varchar(50) DEFAULT NULL,
   `trust_score` int(11) NOT NULL DEFAULT 0,
   `admin_note` text DEFAULT NULL,
-  `verified_at` datetime DEFAULT NULL
+  `verified_at` datetime DEFAULT NULL,
+  `id_card_front` varchar(255) DEFAULT NULL,
+  `id_card_back` varchar(255) DEFAULT NULL,
+  `bank_name` varchar(100) DEFAULT NULL,
+  `bank_account_no` varchar(50) DEFAULT NULL,
+  `bank_account_name` varchar(100) DEFAULT NULL,
+  `notify_email` tinyint(1) DEFAULT 1,
+  `notify_booking` tinyint(1) DEFAULT 1,
+  `show_phone` tinyint(1) DEFAULT 1,
+  `dark_mode` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Đang đổ dữ liệu cho bảng `users`
 --
 
-INSERT INTO `users` (`id`, `name`, `email`, `password`, `reset_token`, `reset_expires`, `phone`, `avatar`, `role`, `created_at`, `status`, `approved_by`, `approved_at`, `rejection_reason`, `address`, `idcard_number`, `trust_score`, `admin_note`, `verified_at`) VALUES
-(2, 'User 2', 'user2@gmail.com', '123', NULL, NULL, NULL, NULL, 'user', '2026-04-23 08:39:47', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL),
-(4, 'Admin', 'admin@gmail.com', '123', NULL, NULL, NULL, NULL, 'admin', '2026-04-23 08:39:47', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL),
-(5, 'Admin', 'admin123@gmail.com', '$2y$10$o5dhV8yry9Mmv7Cgdq6ZjuWCGYRSNLrReh5G4DTh4eN/xFYhvTNCy', NULL, NULL, '', NULL, 'admin', '2026-04-25 10:29:43', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL),
-(6, 'Chủ trọ 1', 'owner@gmail.com', '$2y$10$gU1LggXMYCfg4nEh8NZIv.hcB1L1kTxSJMsiMuwvy2mCzRdact4i2', NULL, NULL, NULL, NULL, 'owner', '2026-04-29 09:27:23', 'approved', 5, '2026-05-14 13:05:10', NULL, NULL, NULL, 0, NULL, NULL),
-(7, 'Bảo Phan', 'baopdq1@qlpt.com', '$2y$10$KN3kCa1p67bAncjLp3AZkuvKk6P6idJdAMcMCufdZxayyFKaSkcxu', NULL, NULL, '0123456789', NULL, 'user', '2026-05-14 05:06:30', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL),
-(8, 'Bảo Phan', 'admin1234@gmail.com', '$2y$10$I6QhngehzijRnpltd0cdXeRE0Zq5Ne2hsCYWRXpyEqFwDT.PewGTW', NULL, NULL, '0123456789', NULL, 'owner', '2026-05-14 06:06:46', 'approved', 5, '2026-05-14 13:07:58', NULL, NULL, NULL, 0, NULL, NULL);
+INSERT INTO `users` (`id`, `name`, `email`, `password`, `reset_token`, `reset_expires`, `phone`, `avatar`, `role`, `created_at`, `status`, `approved_by`, `approved_at`, `rejection_reason`, `address`, `idcard_number`, `trust_score`, `admin_note`, `verified_at`, `id_card_front`, `id_card_back`, `bank_name`, `bank_account_no`, `bank_account_name`, `notify_email`, `notify_booking`, `show_phone`, `dark_mode`) VALUES
+(2, 'User 2', 'user2@gmail.com', '123', NULL, NULL, NULL, NULL, 'user', '2026-04-23 08:39:47', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 1, 1, 0),
+(4, 'Admin', 'admin@gmail.com', '123', NULL, NULL, NULL, NULL, 'admin', '2026-04-23 08:39:47', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 1, 1, 0),
+(5, 'Admin', 'admin123@gmail.com', '$2y$10$o5dhV8yry9Mmv7Cgdq6ZjuWCGYRSNLrReh5G4DTh4eN/xFYhvTNCy', NULL, NULL, '', NULL, 'admin', '2026-04-25 10:29:43', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 1, 1, 0),
+(6, 'Chủ trọ 1', 'owner@gmail.com', '$2y$10$gU1LggXMYCfg4nEh8NZIv.hcB1L1kTxSJMsiMuwvy2mCzRdact4i2', NULL, NULL, NULL, NULL, 'owner', '2026-04-29 09:27:23', 'approved', 5, '2026-05-14 13:05:10', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 1, 1, 0),
+(7, 'Bảo Phan', 'baopdq1@qlpt.com', '$2y$10$KN3kCa1p67bAncjLp3AZkuvKk6P6idJdAMcMCufdZxayyFKaSkcxu', NULL, NULL, '0123456789', NULL, 'user', '2026-05-14 05:06:30', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 1, 1, 0),
+(8, 'Bảo Phan', 'admin1234@gmail.com', '$2y$10$I6QhngehzijRnpltd0cdXeRE0Zq5Ne2hsCYWRXpyEqFwDT.PewGTW', NULL, NULL, '0123456789', NULL, 'owner', '2026-05-14 06:06:46', 'approved', 5, '2026-05-14 13:07:58', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 1, 1, 0);
 
 -- --------------------------------------------------------
 
@@ -560,6 +615,15 @@ ALTER TABLE `categories`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Chỉ mục cho bảng `contracts`
+--
+ALTER TABLE `contracts`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `motel_id` (`motel_id`),
+  ADD KEY `owner_id` (`owner_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
 -- Chỉ mục cho bảng `conversations`
 --
 ALTER TABLE `conversations`
@@ -620,6 +684,14 @@ ALTER TABLE `messages`
   ADD KEY `idx_sender_id` (`sender_id`),
   ADD KEY `idx_read_at` (`read_at`),
   ADD KEY `idx_created_at` (`created_at`);
+
+--
+-- Chỉ mục cho bảng `monthly_bills`
+--
+ALTER TABLE `monthly_bills`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `motel_id` (`motel_id`),
+  ADD KEY `user_id` (`user_id`);
 
 --
 -- Chỉ mục cho bảng `monthly_invoices`
@@ -779,6 +851,12 @@ ALTER TABLE `categories`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
+-- AUTO_INCREMENT cho bảng `contracts`
+--
+ALTER TABLE `contracts`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT cho bảng `conversations`
 --
 ALTER TABLE `conversations`
@@ -818,6 +896,12 @@ ALTER TABLE `maintenance_requests`
 -- AUTO_INCREMENT cho bảng `messages`
 --
 ALTER TABLE `messages`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT cho bảng `monthly_bills`
+--
+ALTER TABLE `monthly_bills`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
@@ -916,11 +1000,26 @@ ALTER TABLE `bookings`
   ADD CONSTRAINT `bookings_ibfk_2` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE;
 
 --
+-- Các ràng buộc cho bảng `contracts`
+--
+ALTER TABLE `contracts`
+  ADD CONSTRAINT `contracts_ibfk_1` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `contracts_ibfk_2` FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `contracts_ibfk_3` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
 -- Các ràng buộc cho bảng `favorites`
 --
 ALTER TABLE `favorites`
   ADD CONSTRAINT `favorites_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `favorites_ibfk_2` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE;
+
+--
+-- Các ràng buộc cho bảng `monthly_bills`
+--
+ALTER TABLE `monthly_bills`
+  ADD CONSTRAINT `monthly_bills_ibfk_1` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `monthly_bills_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Các ràng buộc cho bảng `motels`

@@ -175,32 +175,84 @@ function get_trans_type_label($type)
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<<<<<<< HEAD
-    <title>Quản Lý Doanh Thu - QuanLyPhongTro</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-=======
-    <title>Doanh thu - Owner</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body { background: #f8f9fa; }
-        .navbar { background: linear-gradient(135deg, #667eea, #764ba2); }
-        .navbar-brand { font-size: 22px; font-weight: 700; color: white !important; }
-        .main-content { padding: 30px; }
-        .stat-card { background: white; padding: 30px; border-radius: 12px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .stat-icon { font-size: 40px; color: #667eea; margin-bottom: 15px; }
-        .stat-number { font-size: 32px; font-weight: 700; color: #333; }
-        .stat-label { color: #666; font-size: 14px; margin-top: 5px; }
-        .transaction-card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-        .transaction-info { flex: 1; }
-        .transaction-amount { font-size: 18px; font-weight: 700; color: #667eea; }
-    </style>
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
-    <link href="../assets/css/modern.css" rel="stylesheet">
-    <link href="../assets/css/workbench.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
+    <<<<<<< HEAD <title>Quản Lý Doanh Thu - QuanLyPhongTro</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+        =======
+        <title>Doanh thu - Owner</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+        <style>
+        body {
+            background: #f8f9fa;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .navbar-brand {
+            font-size: 22px;
+            font-weight: 700;
+            color: white !important;
+        }
+
+        .main-content {
+            padding: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+
+        .stat-icon {
+            font-size: 40px;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .transaction-card {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .transaction-info {
+            flex: 1;
+        }
+
+        .transaction-amount {
+            font-size: 18px;
+            font-weight: 700;
+            color: #667eea;
+        }
+        </style>
+        >>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
+        <link href="../assets/css/modern.css" rel="stylesheet">
+        <link href="../assets/css/workbench.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <style>
         .balance-card {
             background: linear-gradient(135deg, #0d6efd, #0a58ca);
             color: white;
@@ -256,7 +308,7 @@ function get_trans_type_label($type)
             color: #dc3545;
             font-weight: 700;
         }
-    </style>
+        </style>
 </head>
 
 <body class="workbench">
@@ -266,28 +318,26 @@ function get_trans_type_label($type)
                 <span class="wb-brand-mark"><i class="fas fa-house-chimney"></i></span>
                 <span>QuanLyPhongTro</span>
             </a>
-<<<<<<< HEAD
-            <div class="wb-user">
+            <<<<<<< HEAD <div class="wb-user">
                 <span><?php echo htmlspecialchars($ownerName); ?></span>
                 <a class="btn btn-outline-secondary btn-sm" href="../logout.php">Đăng xuất</a>
-=======
+                =======
         </div>
-    </nav>
+        </nav>
 
-    <div class="container-lg" style="padding: 30px 0;">
-        <div class="row">
-            <div class="col-lg-3">
-                <?php
+        <div class="container-lg" style="padding: 30px 0;">
+            <div class="row">
+                <div class="col-lg-3">
+                    <?php
                 $ownerNavActive = 'revenue';
                 require __DIR__ . '/_nav_sidebar.php';
                 ?>
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
+                    >>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
+                </div>
             </div>
-        </div>
     </header>
 
-<<<<<<< HEAD
-    <main class="wb-shell">
+    <<<<<<< HEAD <main class="wb-shell">
         <div class="container-lg wb-layout">
             <aside class="wb-sidebar">
                 <div class="wb-side-title">Chủ phòng</div>
@@ -314,17 +364,17 @@ function get_trans_type_label($type)
 
             <section>
                 <?php if (isset($_GET['success']) && $_GET['success'] == 'withdraw_requested'): ?>
-                    <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
-                        <i class="fas fa-check-circle me-2"></i> Yêu cầu rút tiền đã được gửi! Quản trị viên sẽ xử lý trong
-                        24h.
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
+                <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+                    <i class="fas fa-check-circle me-2"></i> Yêu cầu rút tiền đã được gửi! Quản trị viên sẽ xử lý trong
+                    24h.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
                 <?php endif; ?>
                 <?php if (isset($_GET['error']) && $_GET['error'] == 'invalid_amount'): ?>
-                    <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
-                        ⚠️ Số tiền rút không hợp lệ hoặc vượt quá số dư trong ví!
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
+                <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+                    ⚠️ Số tiền rút không hợp lệ hoặc vượt quá số dư trong ví!
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
                 <?php endif; ?>
 
                 <div class="wb-section-head d-flex justify-content-between align-items-end mb-4">
@@ -348,8 +398,8 @@ function get_trans_type_label($type)
                                 <span class="badge bg-white text-primary bg-opacity-25"><i
                                         class="fas fa-shield-check"></i> An toàn</span>
                                 <?php if ($pending_withdraw > 0): ?>
-                                    <span class="small opacity-75"><i class="fas fa-hourglass-half"></i> Đang chờ duyệt:
-                                        <?php echo number_format($pending_withdraw); ?>đ</span>
+                                <span class="small opacity-75"><i class="fas fa-hourglass-half"></i> Đang chờ duyệt:
+                                    <?php echo number_format($pending_withdraw); ?>đ</span>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -361,214 +411,231 @@ function get_trans_type_label($type)
                                     <div class="text-muted small mb-1">Tổng doanh thu lịch sử</div>
                                     <h4 class="fw-bold mb-0 text-primary">
                                         <?php echo number_format($lifetime_revenue); ?> đ</h4>
-=======
-            <div class="col-lg-9">
-                <div class="main-content">
-                    <h1 style="font-size: 28px; font-weight: 700; margin-bottom: 30px;">
-                        <i class="fas fa-chart-column"></i> Doanh thu của tôi
-                    </h1>
+                                    =======
+                                    <div class="col-lg-9">
+                                        <div class="main-content">
+                                            <h1 style="font-size: 28px; font-weight: 700; margin-bottom: 30px;">
+                                                <i class="fas fa-chart-column"></i> Doanh thu của tôi
+                                            </h1>
 
-                    <div class="row mb-4">
-                        <div class="col-md-6 col-lg-3">
-                            <div class="stat-card">
-                                <div class="stat-icon"><i class="fas fa-home"></i></div>
-                                <div class="stat-number"><?php echo $stats['total_listings']; ?></div>
-                                <div class="stat-label">Phòng đang cho thuê</div>
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-lg-3">
-                            <div class="stat-card">
-                                <div class="stat-icon"><i class="fas fa-calendar"></i></div>
-                                <div class="stat-number"><?php echo $stats['total_bookings']; ?></div>
-                                <div class="stat-label">Tổng đơn đặt</div>
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-lg-3">
-                            <div class="stat-card">
-                                <div class="stat-icon"><i class="fas fa-hourglass"></i></div>
-                                <div class="stat-number"><?php echo $stats['pending_bookings']; ?></div>
-                                <div class="stat-label">Đơn chưa hoàn thành</div>
-                            </div>
-                        </div>
-                        <div class="col-md-6 col-lg-3">
-                            <div class="stat-card">
-                                <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
-                                <div class="stat-number"><?php echo number_format($stats['total_revenue'] ?? 0); ?></div>
-                                <div class="stat-label">Tổng doanh thu (VNĐ)</div>
-                            </div>
-                        </div>
-                    </div>
+                                            <div class="row mb-4">
+                                                <div class="col-md-6 col-lg-3">
+                                                    <div class="stat-card">
+                                                        <div class="stat-icon"><i class="fas fa-home"></i></div>
+                                                        <div class="stat-number"><?php echo $stats['total_listings']; ?>
+                                                        </div>
+                                                        <div class="stat-label">Phòng đang cho thuê</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6 col-lg-3">
+                                                    <div class="stat-card">
+                                                        <div class="stat-icon"><i class="fas fa-calendar"></i></div>
+                                                        <div class="stat-number"><?php echo $stats['total_bookings']; ?>
+                                                        </div>
+                                                        <div class="stat-label">Tổng đơn đặt</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6 col-lg-3">
+                                                    <div class="stat-card">
+                                                        <div class="stat-icon"><i class="fas fa-hourglass"></i></div>
+                                                        <div class="stat-number">
+                                                            <?php echo $stats['pending_bookings']; ?></div>
+                                                        <div class="stat-label">Đơn chưa hoàn thành</div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6 col-lg-3">
+                                                    <div class="stat-card">
+                                                        <div class="stat-icon"><i class="fas fa-money-bill-wave"></i>
+                                                        </div>
+                                                        <div class="stat-number">
+                                                            <?php echo number_format($stats['total_revenue'] ?? 0); ?>
+                                                        </div>
+                                                        <div class="stat-label">Tổng doanh thu (VNĐ)</div>
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                    <h3 style="font-weight: 700; margin-top: 40px; margin-bottom: 20px;">
-                        <i class="fas fa-list"></i> Lịch sử giao dịch
-                    </h3>
+                                            <h3 style="font-weight: 700; margin-top: 40px; margin-bottom: 20px;">
+                                                <i class="fas fa-list"></i> Lịch sử giao dịch
+                                            </h3>
 
-                    <?php if (count($transactions) > 0): ?>
-                        <?php foreach ($transactions as $trans): ?>
-                            <div class="transaction-card">
-                                <div class="transaction-info">
-                                    <div style="font-weight: 600; color: #333;"><?php echo htmlspecialchars($trans['title']); ?></div>
-                                    <small style="color: #666;">Check-in: <?php echo date('d/m/Y', strtotime($trans['check_in_date'])); ?></small>
+                                            <?php if (count($transactions) > 0): ?>
+                                            <?php foreach ($transactions as $trans): ?>
+                                            <div class="transaction-card">
+                                                <div class="transaction-info">
+                                                    <div style="font-weight: 600; color: #333;">
+                                                        <?php echo htmlspecialchars($trans['title']); ?></div>
+                                                    <small style="color: #666;">Check-in:
+                                                        <?php echo date('d/m/Y', strtotime($trans['check_in_date'])); ?></small>
+                                                </div>
+                                                <div class="transaction-amount">
+                                                    +<?php echo number_format($trans['deposit_amount']); ?> VNĐ
+                                                    >>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
+                                                </div>
+                                            </div>
+                                            <div class="col-sm-6">
+                                                <div class="wb-card stat-small-card p-3 h-100">
+                                                    <div class="text-muted small mb-1">Tỷ lệ phòng lấp đầy</div>
+                                                    <h4 class="fw-bold mb-0"><?php echo $stats['total_listings']; ?>
+                                                        phòng</h4>
+                                                </div>
+                                            </div>
+                                            <div class="col-sm-6">
+                                                <div class="wb-card stat-small-card p-3 h-100">
+                                                    <div class="text-muted small mb-1">Tổng lượt khách đã cọc</div>
+                                                    <h4 class="fw-bold mb-0"><?php echo $stats['total_bookings']; ?> đơn
+                                                    </h4>
+                                                </div>
+                                            </div>
+                                            <div class="col-sm-6">
+                                                <div class="wb-card stat-small-card p-3 h-100">
+                                                    <div class="text-muted small mb-1">Hành động đang chờ</div>
+                                                    <h4 class="fw-bold mb-0 text-warning">
+                                                        <?php echo $stats['pending_actions']; ?> việc
+                                                    </h4>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="transaction-amount">
-                                    +<?php echo number_format($trans['deposit_amount']); ?> VNĐ
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
-                                </div>
-                            </div>
-                            <div class="col-sm-6">
-                                <div class="wb-card stat-small-card p-3 h-100">
-                                    <div class="text-muted small mb-1">Tỷ lệ phòng lấp đầy</div>
-                                    <h4 class="fw-bold mb-0"><?php echo $stats['total_listings']; ?> phòng</h4>
-                                </div>
-                            </div>
-                            <div class="col-sm-6">
-                                <div class="wb-card stat-small-card p-3 h-100">
-                                    <div class="text-muted small mb-1">Tổng lượt khách đã cọc</div>
-                                    <h4 class="fw-bold mb-0"><?php echo $stats['total_bookings']; ?> đơn</h4>
-                                </div>
-                            </div>
-                            <div class="col-sm-6">
-                                <div class="wb-card stat-small-card p-3 h-100">
-                                    <div class="text-muted small mb-1">Hành động đang chờ</div>
-                                    <h4 class="fw-bold mb-0 text-warning"><?php echo $stats['pending_actions']; ?> việc
-                                    </h4>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="wb-card mb-5 border-0 shadow-sm p-4">
-                    <h5 class="fw-bold mb-4"><i class="fas fa-chart-area text-primary me-2"></i> Tăng trưởng doanh thu 6
-                        tháng qua</h5>
-                    <div style="height: 300px;">
-                        <canvas id="revenueChart"></canvas>
-                    </div>
-                </div>
+                                <div class="wb-card mb-5 border-0 shadow-sm p-4">
+                                    <h5 class="fw-bold mb-4"><i class="fas fa-chart-area text-primary me-2"></i> Tăng
+                                        trưởng doanh thu 6
+                                        tháng qua</h5>
+                                    <div style="height: 300px;">
+                                        <canvas id="revenueChart"></canvas>
+                                    </div>
+                                </div>
 
-                <div class="d-flex justify-content-between align-items-center mt-5 mb-3">
-                    <h4 class="fw-bold mb-0"><i class="fas fa-file-invoice-dollar text-primary me-2"></i> Sao Kê Giao
-                        Dịch</h4>
-                    <div class="btn-group shadow-sm">
-                        <button class="btn btn-outline-secondary btn-sm active" onclick="filterTrans('all', this)">Tất
-                            cả</button>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="filterTrans('in', this)">Tiền
-                            vào</button>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="filterTrans('out', this)">Tiền
-                            ra</button>
-                    </div>
-                </div>
+                                <div class="d-flex justify-content-between align-items-center mt-5 mb-3">
+                                    <h4 class="fw-bold mb-0"><i
+                                            class="fas fa-file-invoice-dollar text-primary me-2"></i> Sao Kê Giao
+                                        Dịch</h4>
+                                    <div class="btn-group shadow-sm">
+                                        <button class="btn btn-outline-secondary btn-sm active"
+                                            onclick="filterTrans('all', this)">Tất
+                                            cả</button>
+                                        <button class="btn btn-outline-secondary btn-sm"
+                                            onclick="filterTrans('in', this)">Tiền
+                                            vào</button>
+                                        <button class="btn btn-outline-secondary btn-sm"
+                                            onclick="filterTrans('out', this)">Tiền
+                                            ra</button>
+                                    </div>
+                                </div>
 
-                <div class="wb-card p-0 overflow-hidden mb-5 border-0 shadow-sm">
-                    <?php if (count($transactions) > 0): ?>
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th class="ps-4 py-3">Thời gian</th>
-                                        <th>Loại GD</th>
-                                        <th>Nội dung / Phòng trọ</th>
-                                        <th>Đối tác</th>
-                                        <th class="text-end pe-4">Số tiền (VNĐ)</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="transTableBody">
-                                    <?php foreach ($transactions as $trans):
+                                <div class="wb-card p-0 overflow-hidden mb-5 border-0 shadow-sm">
+                                    <?php if (count($transactions) > 0): ?>
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th class="ps-4 py-3">Thời gian</th>
+                                                    <th>Loại GD</th>
+                                                    <th>Nội dung / Phòng trọ</th>
+                                                    <th>Đối tác</th>
+                                                    <th class="text-end pe-4">Số tiền (VNĐ)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="transTableBody">
+                                                <?php foreach ($transactions as $trans):
                                         $isIn = ($trans['to_user'] == $owner_id);
                                         $rowClass = $isIn ? 'trans-in' : 'trans-out';
                                     ?>
-                                        <tr class="trans-item <?php echo $rowClass; ?>">
-                                            <td class="ps-4">
-                                                <div class="fw-bold text-dark">
-                                                    <?php echo date('d/m/Y', strtotime($trans['created_at'])); ?></div>
-                                                <div class="text-muted small">
-                                                    <?php echo date('H:i', strtotime($trans['created_at'])); ?></div>
-                                            </td>
-                                            <td><?php echo get_trans_type_label($trans['type']); ?></td>
-                                            <td>
-                                                <div class="fw-bold text-dark">
-                                                    <?php echo htmlspecialchars($trans['motel_title'] ?? 'Giao dịch hệ thống'); ?>
-                                                </div>
-                                                <?php if ($trans['booking_id']): ?>
-                                                    <div class="text-muted small">Mã Booking:
-                                                        #BK-<?php echo $trans['booking_id']; ?></div>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <i class="fas fa-user-circle text-muted"></i>
-                                                <?php echo htmlspecialchars($trans['from_name'] ?? 'Hệ thống Admin'); ?>
-                                            </td>
-                                            <td class="text-end pe-4">
-                                                <?php if ($isIn): ?>
-                                                    <span class="amount-plus">+<?php echo number_format($trans['amount']); ?>
-                                                        đ</span>
-                                                <?php else: ?>
-                                                    <span class="amount-minus">-<?php echo number_format($trans['amount']); ?>
-                                                        đ</span>
-                                                <?php endif; ?>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php else: ?>
-<<<<<<< HEAD
-                        <div class="text-center py-5">
-                            <i class="fas fa-receipt fa-4x text-muted mb-3 opacity-25"></i>
-                            <p class="text-muted">Bạn chưa có bất kỳ giao dịch tài chính nào phát sinh.</p>
-=======
-                        <div style="text-align: center; padding: 40px; background: white; border-radius: 12px; color: #999;">
-                            Không có giao dịch hoàn thành
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
-                        </div>
-                    <?php endif; ?>
-                </div>
+                                                <tr class="trans-item <?php echo $rowClass; ?>">
+                                                    <td class="ps-4">
+                                                        <div class="fw-bold text-dark">
+                                                            <?php echo date('d/m/Y', strtotime($trans['created_at'])); ?>
+                                                        </div>
+                                                        <div class="text-muted small">
+                                                            <?php echo date('H:i', strtotime($trans['created_at'])); ?>
+                                                        </div>
+                                                    </td>
+                                                    <td><?php echo get_trans_type_label($trans['type']); ?></td>
+                                                    <td>
+                                                        <div class="fw-bold text-dark">
+                                                            <?php echo htmlspecialchars($trans['motel_title'] ?? 'Giao dịch hệ thống'); ?>
+                                                        </div>
+                                                        <?php if ($trans['booking_id']): ?>
+                                                        <div class="text-muted small">Mã Booking:
+                                                            #BK-<?php echo $trans['booking_id']; ?></div>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                    <td>
+                                                        <i class="fas fa-user-circle text-muted"></i>
+                                                        <?php echo htmlspecialchars($trans['from_name'] ?? 'Hệ thống Admin'); ?>
+                                                    </td>
+                                                    <td class="text-end pe-4">
+                                                        <?php if ($isIn): ?>
+                                                        <span
+                                                            class="amount-plus">+<?php echo number_format($trans['amount']); ?>
+                                                            đ</span>
+                                                        <?php else: ?>
+                                                        <span
+                                                            class="amount-minus">-<?php echo number_format($trans['amount']); ?>
+                                                            đ</span>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <?php else: ?>
+                                    <div class="text-center py-5">
+                                        <i class="fas fa-receipt fa-4x text-muted mb-3 opacity-25"></i>
+                                        <p class="text-muted">Bạn chưa có bất kỳ giao dịch tài chính nào phát sinh.</p>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
             </section>
         </div>
-    </main>
+        </main>
 
-    <div class="modal fade" id="withdrawModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title"><i class="fas fa-building-columns me-2"></i> Rút tiền về Ngân hàng</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                        aria-label="Close"></button>
+        <div class="modal fade" id="withdrawModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title"><i class="fas fa-building-columns me-2"></i> Rút tiền về Ngân hàng</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                    </div>
+                    <form method="POST" action="">
+                        <div class="modal-body p-4">
+                            <input type="hidden" name="action" value="withdraw">
+
+                            <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
+                                <span class="text-muted">Khả dụng:</span>
+                                <strong class="text-success"><?php echo number_format($current_balance); ?> VNĐ</strong>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Nhập số tiền muốn rút (VNĐ)</label>
+                                <input type="number" class="form-control form-control-lg text-end fw-bold text-success"
+                                    name="amount" max="<?php echo $current_balance; ?>" min="50000" step="10000"
+                                    placeholder="Tối thiểu 50.000đ" required>
+                            </div>
+
+                            <div class="alert alert-info small mb-0">
+                                <i class="fas fa-info-circle me-1"></i> Tiền sẽ được chuyển về tài khoản ngân hàng bạn
+                                đã
+                                cài đặt trong phần <strong>Hồ sơ</strong> trong vòng 24h.
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                            <button type="submit" class="btn btn-success"><i class="fas fa-paper-plane me-1"></i> Gửi
+                                Yêu
+                                Cầu</button>
+                        </div>
+                    </form>
                 </div>
-                <form method="POST" action="">
-                    <div class="modal-body p-4">
-                        <input type="hidden" name="action" value="withdraw">
-
-                        <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
-                            <span class="text-muted">Khả dụng:</span>
-                            <strong class="text-success"><?php echo number_format($current_balance); ?> VNĐ</strong>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Nhập số tiền muốn rút (VNĐ)</label>
-                            <input type="number" class="form-control form-control-lg text-end fw-bold text-success"
-                                name="amount" max="<?php echo $current_balance; ?>" min="50000" step="10000"
-                                placeholder="Tối thiểu 50.000đ" required>
-                        </div>
-
-                        <div class="alert alert-info small mb-0">
-                            <i class="fas fa-info-circle me-1"></i> Tiền sẽ được chuyển về tài khoản ngân hàng bạn đã
-                            cài đặt trong phần <strong>Hồ sơ</strong> trong vòng 24h.
-                        </div>
-                    </div>
-                    <div class="modal-footer bg-light">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                        <button type="submit" class="btn btn-success"><i class="fas fa-paper-plane me-1"></i> Gửi Yêu
-                            Cầu</button>
-                    </div>
-                </form>
             </div>
         </div>
-    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
         // 1. Cấu hình Chart.js
         const ctx = document.getElementById('revenueChart').getContext('2d');
         const revenueChart = new Chart(ctx, {
@@ -643,7 +710,7 @@ function get_trans_type_label($type)
                 }
             });
         }
-    </script>
+        </script>
 </body>
 
 </html>
