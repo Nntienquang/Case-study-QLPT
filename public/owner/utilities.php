@@ -242,7 +242,7 @@ if ($filterMonth > 0) {
         <div class="container-lg wb-layout">
             <aside class="wb-sidebar">
                 <div class="wb-side-title">Chủ phòng</div>
-                <a class="wb-side-link" href="dashboard.php"><i class="fas fa-chart-line"></i> Tổng quan</a>
+                <a class="wb-side-link " href="dashboard.php"><i class="fas fa-chart-line"></i> Tổng quan</a>
                 <a class="wb-side-link" href="listings.php"><i class="fas fa-list"></i> Phòng của tôi</a>
                 <a class="wb-side-link" href="add-listing.php"><i class="fas fa-plus"></i> Đăng phòng</a>
                 <a class="wb-side-link" href="viewing-appointments.php"><i class="fas fa-calendar-day"></i> Lịch xem</a>
@@ -252,9 +252,6 @@ if ($filterMonth > 0) {
                 <a class="wb-side-link active" href="utilities.php"><i class="fas fa-bolt"></i> Điện, Nước & Dịch vụ</a>
                 <a class="wb-side-link" href="maintenance.php"><i class="fas fa-screwdriver-wrench"></i> Bảo trì & Sự
                     cố</a>
-                <!-- <a class="wb-side-link" href="contracts.php"><i class="fas fa-file-signature"></i> Hợp đồng</a>
-                <a class="wb-side-link" href="analytics.php"><i class="fas fa-chart-pie"></i> Phân tích thông minh <span
-                        class="badge bg-warning text-dark ms-2" style="font-size: 0.65em;">PRO</span></a> -->
 
                 <div class="wb-side-title mt-4">Tài khoản</div>
                 <a class="wb-side-link" href="revenue.php"><i class="fas fa-chart-column"></i> Doanh thu</a>

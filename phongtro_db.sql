@@ -3,7 +3,11 @@
 -- https://www.phpmyadmin.net/
 --
 -- Máy chủ: 127.0.0.1
+<<<<<<< HEAD
 -- Thời gian đã tạo: Th5 15, 2026 lúc 11:33 AM
+=======
+-- Thời gian đã tạo: Th5 15, 2026 lúc 11:43 AM
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
 -- Phiên bản máy phục vụ: 10.4.32-MariaDB
 -- Phiên bản PHP: 8.2.12
 
@@ -67,6 +71,40 @@ CREATE TABLE `admin_notes` (
 -- --------------------------------------------------------
 
 --
+<<<<<<< HEAD
+=======
+-- Cấu trúc bảng cho bảng `articles`
+--
+
+CREATE TABLE `articles` (
+  `id` int(11) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `slug` varchar(255) NOT NULL,
+  `summary` text DEFAULT NULL,
+  `content` longtext NOT NULL,
+  `thumbnail` varchar(255) DEFAULT NULL,
+  `category_id` int(11) DEFAULT NULL,
+  `author_id` int(11) DEFAULT NULL,
+  `views` int(11) NOT NULL DEFAULT 0,
+  `is_featured` tinyint(1) NOT NULL DEFAULT 0,
+  `status` enum('draft','published','hidden') NOT NULL DEFAULT 'draft',
+  `published_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Đang đổ dữ liệu cho bảng `articles`
+--
+
+INSERT INTO `articles` (`id`, `title`, `slug`, `summary`, `content`, `thumbnail`, `category_id`, `author_id`, `views`, `is_featured`, `status`, `published_at`, `created_at`, `updated_at`) VALUES
+(1, '5 Dấu hiệu nhận biết lừa đảo...', '5-dau-hieu-nhan-biet-lua-dao-tien-coc-phong-tro', 'Tình trạng lừa đảo...', '<p>Gần đây...</p>', 'url_anh_1', 1, 4, 150, 1, 'published', '2026-05-14 08:00:00', '2026-05-13 11:35:05', NULL),
+(2, 'Hướng dẫn thủ tục đăng ký tạm trú...', 'huong-dan-thu-tuc-dang-ky-tam-tru-online', 'Từ năm nay...', '<p>Việc đăng ký...</p>', 'url_anh_2', 2, 4, 320, 0, 'published', '2026-05-10 14:30:00', '2026-05-13 11:35:05', NULL);
+
+-- --------------------------------------------------------
+
+--
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
 -- Cấu trúc bảng cho bảng `bookings`
 --
 
@@ -106,6 +144,7 @@ INSERT INTO `categories` (`id`, `name`) VALUES
 -- --------------------------------------------------------
 
 --
+<<<<<<< HEAD
 -- Cấu trúc bảng cho bảng `contracts`
 --
 
@@ -126,6 +165,8 @@ CREATE TABLE `contracts` (
 -- --------------------------------------------------------
 
 --
+=======
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
 -- Cấu trúc bảng cho bảng `conversations`
 --
 
@@ -242,6 +283,7 @@ CREATE TABLE `messages` (
 -- --------------------------------------------------------
 
 --
+<<<<<<< HEAD
 -- Cấu trúc bảng cho bảng `monthly_bills`
 --
 
@@ -287,6 +329,8 @@ CREATE TABLE `monthly_invoices` (
 -- --------------------------------------------------------
 
 --
+=======
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
 -- Cấu trúc bảng cho bảng `motels`
 --
 
@@ -344,6 +388,32 @@ CREATE TABLE `motel_utilities` (
 -- --------------------------------------------------------
 
 --
+<<<<<<< HEAD
+=======
+-- Cấu trúc bảng cho bảng `news_categories`
+--
+
+CREATE TABLE `news_categories` (
+  `id` int(11) NOT NULL,
+  `name` varchar(150) NOT NULL,
+  `slug` varchar(150) NOT NULL,
+  `description` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Đang đổ dữ liệu cho bảng `news_categories`
+--
+
+INSERT INTO `news_categories` (`id`, `name`, `slug`, `description`, `created_at`) VALUES
+(1, 'Kinh nghiệm thuê trọ', 'kinh-nghiem-thue-tro', 'Các mẹo hay giúp sinh viên và người đi làm tìm phòng trọ ưng ý, tránh lừa đảo.', '2026-05-13 11:35:05'),
+(2, 'Cẩm nang pháp lý', 'cam-nang-phap-ly', 'Kiến thức về hợp đồng, luật cư trú, đăng ký tạm trú tạm vắng.', '2026-05-13 11:35:05'),
+(3, 'Thông báo từ hệ thống', 'thong-bao', 'Các cập nhật tính năng mới hoặc quy định từ Ban quản trị QuanLyPhongTro.', '2026-05-13 11:35:05');
+
+-- --------------------------------------------------------
+
+--
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
 -- Cấu trúc bảng cho bảng `notifications`
 --
 
@@ -601,6 +671,18 @@ ALTER TABLE `admin_notes`
   ADD KEY `idx_entity` (`entity_type`,`entity_id`);
 
 --
+<<<<<<< HEAD
+=======
+-- Chỉ mục cho bảng `articles`
+--
+ALTER TABLE `articles`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `slug` (`slug`),
+  ADD KEY `category_id` (`category_id`),
+  ADD KEY `author_id` (`author_id`);
+
+--
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
 -- Chỉ mục cho bảng `bookings`
 --
 ALTER TABLE `bookings`
@@ -615,6 +697,7 @@ ALTER TABLE `categories`
   ADD PRIMARY KEY (`id`);
 
 --
+<<<<<<< HEAD
 -- Chỉ mục cho bảng `contracts`
 --
 ALTER TABLE `contracts`
@@ -624,6 +707,8 @@ ALTER TABLE `contracts`
   ADD KEY `user_id` (`user_id`);
 
 --
+=======
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
 -- Chỉ mục cho bảng `conversations`
 --
 ALTER TABLE `conversations`
@@ -686,6 +771,7 @@ ALTER TABLE `messages`
   ADD KEY `idx_created_at` (`created_at`);
 
 --
+<<<<<<< HEAD
 -- Chỉ mục cho bảng `monthly_bills`
 --
 ALTER TABLE `monthly_bills`
@@ -704,6 +790,8 @@ ALTER TABLE `monthly_invoices`
   ADD KEY `idx_motel` (`motel_id`);
 
 --
+=======
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
 -- Chỉ mục cho bảng `motels`
 --
 ALTER TABLE `motels`
@@ -727,6 +815,16 @@ ALTER TABLE `motel_utilities`
   ADD KEY `utility_id` (`utility_id`);
 
 --
+<<<<<<< HEAD
+=======
+-- Chỉ mục cho bảng `news_categories`
+--
+ALTER TABLE `news_categories`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `slug` (`slug`);
+
+--
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
 -- Chỉ mục cho bảng `notifications`
 --
 ALTER TABLE `notifications`
@@ -839,6 +937,15 @@ ALTER TABLE `admin_notes`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+<<<<<<< HEAD
+=======
+-- AUTO_INCREMENT cho bảng `articles`
+--
+ALTER TABLE `articles`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
 -- AUTO_INCREMENT cho bảng `bookings`
 --
 ALTER TABLE `bookings`
@@ -851,12 +958,15 @@ ALTER TABLE `categories`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
+<<<<<<< HEAD
 -- AUTO_INCREMENT cho bảng `contracts`
 --
 ALTER TABLE `contracts`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+=======
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
 -- AUTO_INCREMENT cho bảng `conversations`
 --
 ALTER TABLE `conversations`
@@ -899,6 +1009,7 @@ ALTER TABLE `messages`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+<<<<<<< HEAD
 -- AUTO_INCREMENT cho bảng `monthly_bills`
 --
 ALTER TABLE `monthly_bills`
@@ -911,6 +1022,8 @@ ALTER TABLE `monthly_invoices`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+=======
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
 -- AUTO_INCREMENT cho bảng `motels`
 --
 ALTER TABLE `motels`
@@ -923,6 +1036,15 @@ ALTER TABLE `motel_images`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
+<<<<<<< HEAD
+=======
+-- AUTO_INCREMENT cho bảng `news_categories`
+--
+ALTER TABLE `news_categories`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
 -- AUTO_INCREMENT cho bảng `notifications`
 --
 ALTER TABLE `notifications`
@@ -993,6 +1115,16 @@ ALTER TABLE `withdraw_requests`
 --
 
 --
+<<<<<<< HEAD
+=======
+-- Các ràng buộc cho bảng `articles`
+--
+ALTER TABLE `articles`
+  ADD CONSTRAINT `articles_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `news_categories` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `articles_ibfk_2` FOREIGN KEY (`author_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
 -- Các ràng buộc cho bảng `bookings`
 --
 ALTER TABLE `bookings`
@@ -1000,6 +1132,7 @@ ALTER TABLE `bookings`
   ADD CONSTRAINT `bookings_ibfk_2` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE;
 
 --
+<<<<<<< HEAD
 -- Các ràng buộc cho bảng `contracts`
 --
 ALTER TABLE `contracts`
@@ -1008,6 +1141,8 @@ ALTER TABLE `contracts`
   ADD CONSTRAINT `contracts_ibfk_3` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
+=======
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
 -- Các ràng buộc cho bảng `favorites`
 --
 ALTER TABLE `favorites`
@@ -1015,6 +1150,7 @@ ALTER TABLE `favorites`
   ADD CONSTRAINT `favorites_ibfk_2` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE;
 
 --
+<<<<<<< HEAD
 -- Các ràng buộc cho bảng `monthly_bills`
 --
 ALTER TABLE `monthly_bills`
@@ -1022,6 +1158,8 @@ ALTER TABLE `monthly_bills`
   ADD CONSTRAINT `monthly_bills_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
+=======
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
 -- Các ràng buộc cho bảng `motels`
 --
 ALTER TABLE `motels`

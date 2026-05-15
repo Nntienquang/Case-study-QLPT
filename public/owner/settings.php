@@ -10,12 +10,6 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'owner') {
     exit;
 }
 
-$userQuery = $conn->prepare("SELECT dark_mode FROM users WHERE id = ?");
-$userQuery->bind_param("i", $owner_id);
-$userQuery->execute();
-$userTheme = $userQuery->get_result()->fetch_assoc();
-$is_dark = $userTheme['dark_mode'] ?? 0;
-
 $db = new Database($conn);
 $owner_id = (int)$_SESSION['user_id'];
 $ownerName = $_SESSION['name'] ?? 'Chủ phòng';
@@ -32,7 +26,6 @@ $stmt->close();
 // 2. XỬ LÝ CÁC ACTION TỪ FORM
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-<<<<<<< HEAD
     // ACTION: Thay đổi mật khẩu
     if (isset($_POST['change_password'])) {
         $old = $_POST['old_password'];
@@ -41,30 +34,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!password_verify($old, $user['password'])) {
             $message = 'Mật khẩu cũ không chính xác!';
-=======
-    if (empty($old_password) || empty($new_password)) {
-        $message = 'Vui lòng điền đầy đủ mật khẩu!';
-        $message_type = 'danger';
-    } elseif (strlen($new_password) < 6) {
-        $message = 'Mật khẩu mới phải ít nhất 6 ký tự!';
-        $message_type = 'danger';
-    } elseif ($new_password !== $confirm_password) {
-        $message = 'Mật khẩu xác nhận không khớp!';
-        $message_type = 'danger';
-    } elseif (!password_verify($old_password, $user['password'])) {
-        $message = 'Mật khẩu cũ không chính xác!';
-        $message_type = 'danger';
-    } else {
-        $hashed = password_hash($new_password, PASSWORD_BCRYPT);
-        $stmt = $db->prepare("UPDATE users SET password = ? WHERE id = ?");
-        $stmt->bind_param("si", $hashed, $owner_id);
-        
-        if ($stmt->execute()) {
-            $message = 'Mật khẩu đã thay đổi thành công!';
-            $message_type = 'success';
-        } else {
-            $message = 'Lỗi thay đổi mật khẩu!';
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
             $message_type = 'danger';
         } elseif (strlen($new) < 6) {
             $message = 'Mật khẩu mới phải từ 6 ký tự trở lên!';
@@ -123,34 +92,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 <!DOCTYPE html>
-<html lang="vi" <?php echo $user['dark_mode'] ? 'data-bs-theme="dark"' : ''; ?>>
+<html lang="vi">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<<<<<<< HEAD
     <title>Cài Đặt Hệ Thống - QuanLyPhongTro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-=======
-    <title>Cài đặt - Owner</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body { background: #f8f9fa; }
-        .navbar { background: linear-gradient(135deg, #667eea, #764ba2); }
-        .navbar-brand { font-size: 22px; font-weight: 700; color: white !important; }
-        .main-content { padding: 30px; }
-        .settings-card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .settings-card h5 { font-weight: 700; margin-bottom: 20px; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
-        .form-label { font-weight: 600; color: #333; }
-        .form-control { border-radius: 6px; border: 1px solid #ddd; }
-        .form-control:focus { border-color: #667eea; box-shadow: 0 0 0 0.2rem rgba(102,126,234,0.25); }
-        .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); border: none; }
-        .danger-zone { background: #fff5f5; border-left: 4px solid #d32f2f; padding: 20px; border-radius: 6px; }
-        .danger-zone h6 { color: #d32f2f; font-weight: 700; }
-    </style>
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
     <link href="../assets/css/modern.css" rel="stylesheet">
     <link href="../assets/css/workbench.css" rel="stylesheet">
     <style>
@@ -184,120 +133,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         height: 1.5em;
         cursor: pointer;
     }
-
-    /* --- DARK MODE TUNING --- */
-    [data-bs-theme="dark"] body.workbench {
-        background-color: #0f172a !important;
-        /* Màu xanh đen sâu */
-        color: #e2e8f0;
-    }
-
-    [data-bs-theme="dark"] .wb-topbar {
-        background: #1e293b !important;
-        border-bottom: 1px solid #334155;
-    }
-
-    [data-bs-theme="dark"] .wb-sidebar {
-        background: #1e293b !important;
-        border: 1px solid #334155;
-    }
-
-    [data-bs-theme="dark"] .wb-sidebar .wb-side-link {
-        color: #94a3b8;
-    }
-
-    [data-bs-theme="dark"] .wb-sidebar .wb-side-link:hover,
-    [data-bs-theme="dark"] .wb-sidebar .wb-side-link.active {
-        background: #334155;
-        color: #38bdf8;
-    }
-
-    [data-bs-theme="dark"] .wb-card {
-        background: #1e293b !important;
-        border: 1px solid #334155;
-        color: #f1f5f9;
-    }
-
-    [data-bs-theme="dark"] .settings-card:hover {
-        border-color: #38bdf8;
-    }
-
-    [data-bs-theme="dark"] .card-header-custom {
-        border-bottom-color: #334155;
-        color: #f1f5f9;
-    }
-
-    [data-bs-theme="dark"] .text-muted {
-        color: #94a3b8 !important;
-    }
-
-    [data-bs-theme="dark"] .form-control,
-    [data-bs-theme="dark"] .form-select {
-        background-color: #0f172a;
-        border-color: #334155;
-        color: #f1f5f9;
-    }
-
-    [data-bs-theme="dark"] .danger-zone {
-        background: #451a1a;
-        border-color: #7f1d1d;
-    }
-
-    /* --- DARK MODE GLOBAL TUNING --- */
-    [data-bs-theme="dark"] body.workbench {
-        background-color: #0f172a !important;
-        color: #e2e8f0;
-    }
-
-    /* Sửa lỗi Header quá tối - dùng màu Deep Navy để nổi bật text */
-    [data-bs-theme="dark"] .wb-topbar {
-        background: #1e293b !important;
-        border-bottom: 1px solid #334155;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
-    }
-
-    [data-bs-theme="dark"] .wb-brand,
-    [data-bs-theme="dark"] .wb-user span {
-        color: #f1f5f9 !important;
-    }
-
-    [data-bs-theme="dark"] .wb-sidebar {
-        background: #1e293b !important;
-        border: 1px solid #334155;
-    }
-
-    [data-bs-theme="dark"] .wb-sidebar .wb-side-link {
-        color: #94a3b8;
-    }
-
-    [data-bs-theme="dark"] .wb-sidebar .wb-side-link:hover,
-    [data-bs-theme="dark"] .wb-sidebar .wb-side-link.active {
-        background: #334155;
-        color: #38bdf8;
-    }
-
-    [data-bs-theme="dark"] .wb-card {
-        background: #1e293b !important;
-        border: 1px solid #334155;
-        color: #f1f5f9;
-    }
-
-    [data-bs-theme="dark"] .form-control,
-    [data-bs-theme="dark"] .form-select {
-        background-color: #0f172a;
-        border-color: #334155;
-        color: #f1f5f9;
-    }
-
-    /* Các bảng (Table) trong dark mode */
-    [data-bs-theme="dark"] .table {
-        color: #f1f5f9;
-    }
-
-    [data-bs-theme="dark"] .table-light {
-        --bs-table-bg: #334155;
-        --bs-table-color: #f1f5f9;
-    }
     </style>
 </head>
 
@@ -308,60 +143,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <span class="wb-brand-mark"><i class="fas fa-house-chimney"></i></span>
                 <span>QuanLyPhongTro</span>
             </a>
-<<<<<<< HEAD
             <div class="wb-user">
                 <span><?php echo htmlspecialchars($ownerName); ?></span>
                 <a class="btn btn-outline-secondary btn-sm" href="../logout.php">Đăng xuất</a>
-=======
-        </div>
-    </nav>
-
-    <div class="container-lg" style="padding: 30px 0;">
-        <div class="row">
-            <div class="col-lg-3">
-                <?php
-                $ownerNavActive = 'settings';
-                require __DIR__ . '/_nav_sidebar.php';
-                ?>
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
             </div>
         </div>
     </header>
 
-<<<<<<< HEAD
     <main class="wb-shell">
         <div class="container-lg wb-layout">
             <aside class="wb-sidebar">
                 <div class="wb-side-title">Chủ phòng</div>
-                <a class="wb-side-link" href="dashboard.php"><i class="fas fa-chart-line"></i> Tổng quan</a>
+                <a class="wb-side-link " href="dashboard.php"><i class="fas fa-chart-line"></i> Tổng quan</a>
                 <a class="wb-side-link" href="listings.php"><i class="fas fa-list"></i> Phòng của tôi</a>
                 <a class="wb-side-link" href="add-listing.php"><i class="fas fa-plus"></i> Đăng phòng</a>
                 <a class="wb-side-link" href="viewing-appointments.php"><i class="fas fa-calendar-day"></i> Lịch xem</a>
                 <a class="wb-side-link" href="bookings.php"><i class="fas fa-calendar-check"></i> Booking</a>
-=======
-            <div class="col-lg-9">
-                <div class="main-content">
-                    <h1 style="font-size: 28px; font-weight: 700; margin-bottom: 30px;">
-                        <i class="fas fa-cog"></i> Cài đặt
-                    </h1>
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
 
                 <div class="wb-side-title mt-4">Quản lý Vận hành</div>
                 <a class="wb-side-link" href="utilities.php"><i class="fas fa-bolt"></i> Điện, Nước & Dịch vụ</a>
                 <a class="wb-side-link" href="maintenance.php"><i class="fas fa-screwdriver-wrench"></i> Bảo trì & Sự
                     cố</a>
-                <!-- <a class="wb-side-link " href="contracts.php"><i class="fas fa-file-signature"></i> Hợp đồng</a>
-                <a class="wb-side-link" href="analytics.php"><i class="fas fa-chart-pie"></i> Phân tích thông minh <span
-                        class="badge bg-warning text-dark ms-2" style="font-size: 0.65em;">PRO</span></a> -->
 
-<<<<<<< HEAD
                 <div class="wb-side-title mt-4">Tài khoản</div>
                 <a class="wb-side-link" href="revenue.php"><i class="fas fa-chart-column"></i> Doanh thu</a>
                 <a class="wb-side-link" href="../notifications.php"><i class="fas fa-bell"></i> Thông báo</a>
                 <a class="wb-side-link" href="profile.php"><i class="fas fa-user"></i> Hồ sơ</a>
                 <a class="wb-side-link active" href="settings.php"><i class="fas fa-gear"></i> Cài đặt</a>
             </aside>
-
 
             <section>
                 <div class="wb-section-head">
@@ -387,15 +196,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div class="p-4">
                                 <form method="POST">
                                     <div class="d-flex justify-content-between align-items-center mb-4">
-                                        <div>
+                                        <!-- <div>
                                             <div class="fw-bold">Chế độ tối (Dark Mode)</div>
                                             <small class="text-muted">Thay đổi giao diện sang tông màu tối để bảo vệ
                                                 mắt.</small>
-                                        </div>
-                                        <div class="form-check form-switch">
+                                        </div> -->
+                                        <!-- <div class="form-check form-switch">
                                             <input class="form-check-input" type="checkbox" name="dark_mode"
                                                 <?php echo $user['dark_mode'] ? 'checked' : ''; ?>>
-                                        </div>
+                                        </div> -->
                                     </div>
                                     <div class="d-flex justify-content-between align-items-center mb-4">
                                         <div>
@@ -459,52 +268,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <button type="submit" name="change_password" class="btn btn-outline-primary">Cập
                                         Nhật Mật Khẩu</button>
                                 </form>
-=======
-                    <!-- Password Change -->
-                    <div class="settings-card">
-                        <h5><i class="fas fa-lock"></i> Thay đổi mật khẩu</h5>
-                        <form method="POST">
-                            <div class="mb-3">
-                                <label class="form-label">Mật khẩu cũ</label>
-                                <input type="password" name="old_password" class="form-control" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Mật khẩu mới</label>
-                                <input type="password" name="new_password" class="form-control" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Xác nhận mật khẩu mới</label>
-                                <input type="password" name="confirm_password" class="form-control" required>
-                            </div>
-                            <button type="submit" name="change_password" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Thay đổi mật khẩu
-                            </button>
-                        </form>
-                    </div>
-
-                    <!-- Notification Settings -->
-                    <div class="settings-card">
-                        <h5><i class="fas fa-bell"></i> Thông báo</h5>
-                        <div class="mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="email_notify" checked>
-                                <label class="form-check-label" for="email_notify">
-                                    Nhận thông báo qua email
-                                </label>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="booking_notify" checked>
-                                <label class="form-check-label" for="booking_notify">
-                                    Thông báo khi có đơn đặt phòng
-                                </label>
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
                             </div>
                         </div>
                     </div>
 
-<<<<<<< HEAD
                     <div class="col-lg-5">
                         <div class="wb-card settings-card p-0">
                             <div class="card-header-custom"><i class="fas fa-file-export text-info"></i> Sao Lưu Dữ Liệu
@@ -517,17 +284,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             class="fas fa-download me-1"></i> Xuất dữ liệu .CSV</button>
                                 </form>
                             </div>
-=======
-                    <!-- Account Information -->
-                    <div class="settings-card">
-                        <h5><i class="fas fa-info-circle"></i> Thông tin tài khoản</h5>
-                        <div class="info-item" style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 10px;">
-                            <strong>Email:</strong> <?php echo htmlspecialchars($user['email']); ?><br>
-                            <small style="color: #666;">Không thể thay đổi email. Liên hệ admin nếu cần.</small>
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
                         </div>
 
-<<<<<<< HEAD
                         <div class="wb-card danger-zone p-4">
                             <h6 class="text-danger fw-bold"><i class="fas fa-triangle-exclamation"></i> Vùng Nguy Hiểm
                             </h6>
@@ -535,16 +293,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 sẽ bị xóa vĩnh viễn và không thể khôi phục.</p>
                             <button class="btn btn-danger w-100" data-bs-toggle="modal"
                                 data-bs-target="#deleteModal">Xóa Vĩnh Viễn Tài Khoản</button>
-=======
-                    <!-- Danger Zone -->
-                    <div class="settings-card">
-                        <div class="danger-zone">
-                            <h6><i class="fas fa-exclamation-triangle"></i> Vùng nguy hiểm</h6>
-                            <p style="color: #666; margin-top: 10px;">Thao tác này sẽ xóa vĩnh viễn tài khoản của bạn và tất cả dữ liệu.</p>
-                            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
-                                <i class="fas fa-trash-alt"></i> Xóa tài khoản
-                            </button>
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
                         </div>
                     </div>
                 </div>
@@ -555,7 +303,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="modal fade" id="deleteModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
-<<<<<<< HEAD
                 <div class="modal-header">
                     <h5 class="modal-title fw-bold">Xác nhận xóa tài khoản</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -567,20 +314,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
                     <button type="button" class="btn btn-danger">Tôi đã hiểu, hãy xóa tài khoản</button>
-=======
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title"><i class="fas fa-exclamation-circle"></i> Xóa tài khoản</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p><strong>Cảnh báo:</strong> Thao tác này không thể hoàn tác!</p>
-                    <p>Toàn bộ dữ liệu tài khoản của bạn sẽ bị xóa vĩnh viễn.</p>
-                    <p>Bạn có chắc muốn tiếp tục?</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="button" class="btn btn-danger">Xóa tài khoản</button>
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
                 </div>
             </div>
         </div>

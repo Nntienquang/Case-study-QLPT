@@ -28,13 +28,11 @@ $is_dark = $userTheme['dark_mode'] ?? 0;
 $db = new Database($conn);
 
 // Các hàm helper format
-function owner_dash_e(?string $value): string
-{
+function owner_dash_e(?string $value): string {
     return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 }
 
-function req_priority_badge(string $priority): string
-{
+function req_priority_badge(string $priority): string {
     return match (strtolower($priority)) {
         'high' => '<span class="badge bg-danger bg-opacity-10 text-danger border border-danger"><i class="fas fa-fire me-1"></i> Khẩn cấp</span>',
         'normal' => '<span class="badge bg-warning bg-opacity-10 text-warning border border-warning">Bình thường</span>',
@@ -43,8 +41,7 @@ function req_priority_badge(string $priority): string
     };
 }
 
-function req_status_badge(string $status): string
-{
+function req_status_badge(string $status): string {
     return match (strtolower($status)) {
         'open' => '<span class="badge bg-danger"><i class="fas fa-circle-exclamation me-1"></i> Mới tạo</span>',
         'in_progress' => '<span class="badge bg-warning text-dark"><i class="fas fa-person-digging me-1"></i> Đang sửa</span>',
@@ -59,18 +56,18 @@ function req_status_badge(string $status): string
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_status') {
     $req_id = (int)$_POST['request_id'];
     $new_status = $_POST['new_status'];
-
+    
     // Validate trạng thái
     $allowed_statuses = ['open', 'in_progress', 'resolved'];
     if (in_array($new_status, $allowed_statuses)) {
         $resolved_sql = ($new_status === 'resolved') ? ", resolved_at = NOW()" : ", resolved_at = NULL";
-
+        
         $updateQuery = "UPDATE maintenance_requests SET status = ?, updated_at = NOW() $resolved_sql WHERE id = ? AND owner_id = ?";
         $stmtUpdate = $conn->prepare($updateQuery);
         $stmtUpdate->bind_param("sii", $new_status, $req_id, $ownerId);
         $stmtUpdate->execute();
-
-        $filter_param = isset($_GET['filter']) ? "&filter=" . $_GET['filter'] : "";
+        
+        $filter_param = isset($_GET['filter']) ? "&filter=".$_GET['filter'] : "";
         header("Location: maintenance.php?success=status_updated" . $filter_param);
         exit;
     }
@@ -199,7 +196,7 @@ $requests = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         <div class="container-lg wb-layout">
             <aside class="wb-sidebar">
                 <div class="wb-side-title">Chủ phòng</div>
-                <a class="wb-side-link" href="dashboard.php"><i class="fas fa-chart-line"></i> Tổng quan</a>
+                <a class="wb-side-link " href="dashboard.php"><i class="fas fa-chart-line"></i> Tổng quan</a>
                 <a class="wb-side-link" href="listings.php"><i class="fas fa-list"></i> Phòng của tôi</a>
                 <a class="wb-side-link" href="add-listing.php"><i class="fas fa-plus"></i> Đăng phòng</a>
                 <a class="wb-side-link" href="viewing-appointments.php"><i class="fas fa-calendar-day"></i> Lịch xem</a>
@@ -208,10 +205,8 @@ $requests = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                 <div class="wb-side-title mt-4">Quản lý Vận hành</div>
                 <a class="wb-side-link" href="utilities.php"><i class="fas fa-bolt"></i> Điện, Nước & Dịch vụ</a>
                 <a class="wb-side-link active" href="maintenance.php"><i class="fas fa-screwdriver-wrench"></i> Bảo trì
-                    & Sự cố</a>
-                <!-- <a class="wb-side-link" href="contracts.php"><i class="fas fa-file-signature"></i> Hợp đồng</a>
-                <a class="wb-side-link" href="analytics.php"><i class="fas fa-chart-pie"></i> Phân tích thông minh <span
-                        class="badge bg-warning text-dark ms-2" style="font-size: 0.65em;">PRO</span></a> -->
+                    & Sự
+                    cố</a>
 
                 <div class="wb-side-title mt-4">Tài khoản</div>
                 <a class="wb-side-link" href="revenue.php"><i class="fas fa-chart-column"></i> Doanh thu</a>
@@ -298,7 +293,7 @@ $requests = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                                         <span><i class="fas fa-clock text-secondary me-1"></i> Gửi lúc:
                                             <?php echo date('H:i d/m/Y', strtotime($req['created_at'])); ?></span>
 
-                                        <?php if ($req['status'] === 'resolved' && $req['resolved_at']): ?>
+                                        <?php if($req['status'] === 'resolved' && $req['resolved_at']): ?>
                                         <span class="text-success"><i class="fas fa-check text-success me-1"></i> Xong
                                             lúc: <?php echo date('H:i d/m/Y', strtotime($req['resolved_at'])); ?></span>
                                         <?php endif; ?>

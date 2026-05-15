@@ -17,6 +17,8 @@ if (($_SESSION['role'] ?? '') !== 'owner') {
     exit;
 }
 
+$owner_id = (int)$_SESSION['user_id'];
+
 $userQuery = $conn->prepare("SELECT dark_mode FROM users WHERE id = ?");
 $userQuery->bind_param("i", $owner_id);
 $userQuery->execute();
@@ -172,7 +174,6 @@ $upcomingViewings = $hasViewingAppointments
     <main class="wb-shell">
         <div class="container-lg wb-layout">
             <aside class="wb-sidebar">
-<<<<<<< HEAD
                 <div class="wb-side-title">Chủ phòng</div>
                 <a class="wb-side-link active" href="dashboard.php"><i class="fas fa-chart-line"></i> Tổng quan</a>
                 <a class="wb-side-link" href="listings.php"><i class="fas fa-list"></i> Phòng của tôi</a>
@@ -184,37 +185,26 @@ $upcomingViewings = $hasViewingAppointments
                 <a class="wb-side-link" href="utilities.php"><i class="fas fa-bolt"></i> Điện, Nước & Dịch vụ</a>
                 <a class="wb-side-link" href="maintenance.php"><i class="fas fa-screwdriver-wrench"></i> Bảo trì & Sự
                     cố</a>
-                <!-- <a class="wb-side-link " href="contracts.php"><i class="fas fa-file-signature"></i> Hợp đồng</a>
-                <a class="wb-side-link" href="analytics.php"><i class="fas fa-chart-pie"></i> Phân tích thông minh <span
-                        class="badge bg-warning text-dark ms-2" style="font-size: 0.65em;">PRO</span></a> -->
 
                 <div class="wb-side-title mt-4">Tài khoản</div>
                 <a class="wb-side-link" href="revenue.php"><i class="fas fa-chart-column"></i> Doanh thu</a>
                 <a class="wb-side-link" href="../notifications.php"><i class="fas fa-bell"></i> Thông báo</a>
                 <a class="wb-side-link" href="profile.php"><i class="fas fa-user"></i> Hồ sơ</a>
                 <a class="wb-side-link" href="settings.php"><i class="fas fa-gear"></i> Cài đặt</a>
-=======
-                <?php
-                $ownerNavActive = 'dashboard';
-                $ownerNavVariant = 'workbench';
-                require __DIR__ . '/_nav_sidebar.php';
-                ?>
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
             </aside>
-
 
             <section>
                 <?php if ($accountStatus === 'pending'): ?>
-                <div class="alert alert-warning border-0 shadow-sm mb-4">
-                    <i class="fas fa-circle-exclamation me-2"></i>
-                    <strong>Tài khoản đang chờ duyệt:</strong> Bạn có thể đăng tin nhưng chúng sẽ chưa được hiển thị
-                    công khai cho đến khi Admin phê duyệt tài khoản của bạn.
-                </div>
+                    <div class="alert alert-warning border-0 shadow-sm mb-4">
+                        <i class="fas fa-circle-exclamation me-2"></i>
+                        <strong>Tài khoản đang chờ duyệt:</strong> Bạn có thể đăng tin nhưng chúng sẽ chưa được hiển thị
+                        công khai cho đến khi Admin phê duyệt tài khoản của bạn.
+                    </div>
                 <?php elseif ($accountStatus === 'rejected'): ?>
-                <div class="alert alert-danger border-0 shadow-sm mb-4">
-                    <i class="fas fa-circle-xmark me-2"></i>
-                    <strong>Tài khoản bị từ chối:</strong> Vui lòng kiểm tra lại hồ sơ hoặc liên hệ Admin.
-                </div>
+                    <div class="alert alert-danger border-0 shadow-sm mb-4">
+                        <i class="fas fa-circle-xmark me-2"></i>
+                        <strong>Tài khoản bị từ chối:</strong> Vui lòng kiểm tra lại hồ sơ hoặc liên hệ Admin.
+                    </div>
                 <?php endif; ?>
 
                 <div class="wb-hero owner mb-3">
@@ -299,22 +289,22 @@ $upcomingViewings = $hasViewingAppointments
                         </div>
                         <div class="wb-list-card">
                             <?php if ($upcomingViewings): ?>
-                            <?php foreach ($upcomingViewings as $viewing): ?>
-                            <div class="wb-list-row">
-                                <div>
-                                    <div class="wb-title"><?php echo owner_dash_e($viewing['motel_title'] ?? 'N/A'); ?>
+                                <?php foreach ($upcomingViewings as $viewing): ?>
+                                    <div class="wb-list-row">
+                                        <div>
+                                            <div class="wb-title"><?php echo owner_dash_e($viewing['motel_title'] ?? 'N/A'); ?>
+                                            </div>
+                                            <div class="wb-muted">
+                                                <?php echo owner_dash_e($viewing['tenant_name'] ?? 'Khách'); ?> ·
+                                                <?php echo date('H:i d/m', strtotime((string)$viewing['preferred_time'])); ?>
+                                            </div>
+                                        </div>
+                                        <span
+                                            class="wb-pill warning"><?php echo owner_dash_booking_status($viewing['status']); ?></span>
                                     </div>
-                                    <div class="wb-muted">
-                                        <?php echo owner_dash_e($viewing['tenant_name'] ?? 'Khách'); ?> ·
-                                        <?php echo date('H:i d/m', strtotime((string)$viewing['preferred_time'])); ?>
-                                    </div>
-                                </div>
-                                <span
-                                    class="wb-pill warning"><?php echo owner_dash_booking_status($viewing['status']); ?></span>
-                            </div>
-                            <?php endforeach; ?>
+                                <?php endforeach; ?>
                             <?php else: ?>
-                            <div class="wb-empty">Không có lịch xem.</div>
+                                <div class="wb-empty">Không có lịch xem.</div>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -324,24 +314,24 @@ $upcomingViewings = $hasViewingAppointments
                         </div>
                         <div class="wb-list-card">
                             <?php if ($recentBookings): ?>
-                            <?php foreach ($recentBookings as $booking): ?>
-                            <div class="wb-list-row">
-                                <div>
-                                    <div class="wb-title"><?php echo owner_dash_e($booking['motel_title'] ?? 'N/A'); ?>
+                                <?php foreach ($recentBookings as $booking): ?>
+                                    <div class="wb-list-row">
+                                        <div>
+                                            <div class="wb-title"><?php echo owner_dash_e($booking['motel_title'] ?? 'N/A'); ?>
+                                            </div>
+                                            <div class="wb-muted">
+                                                <?php echo owner_dash_e($booking['tenant_name'] ?? 'Khách'); ?></div>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="wb-price" style="font-size: 0.9rem">
+                                                <?php echo owner_dash_money($booking['deposit_amount']); ?></div>
+                                            <span class="wb-pill warning mt-1"
+                                                style="font-size: 0.7rem"><?php echo owner_dash_booking_status($booking['status']); ?></span>
+                                        </div>
                                     </div>
-                                    <div class="wb-muted">
-                                        <?php echo owner_dash_e($booking['tenant_name'] ?? 'Khách'); ?></div>
-                                </div>
-                                <div class="text-end">
-                                    <div class="wb-price" style="font-size: 0.9rem">
-                                        <?php echo owner_dash_money($booking['deposit_amount']); ?></div>
-                                    <span class="wb-pill warning mt-1"
-                                        style="font-size: 0.7rem"><?php echo owner_dash_booking_status($booking['status']); ?></span>
-                                </div>
-                            </div>
-                            <?php endforeach; ?>
+                                <?php endforeach; ?>
                             <?php else: ?>
-                            <div class="wb-empty">Không có booking mới.</div>
+                                <div class="wb-empty">Không có booking mới.</div>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -353,30 +343,30 @@ $upcomingViewings = $hasViewingAppointments
                 </div>
                 <div class="wb-list-card">
                     <?php if ($listings): ?>
-                    <?php foreach (array_slice($listings, 0, 3) as $listing): ?>
-                    <div class="wb-list-row">
-                        <div class="flex-grow-1">
-                            <div class="d-flex align-items-center gap-2">
-                                <div class="wb-title"><?php echo owner_dash_e($listing['title']); ?></div>
-                                <span class="wb-pill"><?php echo owner_dash_motel_status($listing['status']); ?></span>
+                        <?php foreach (array_slice($listings, 0, 3) as $listing): ?>
+                            <div class="wb-list-row">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="wb-title"><?php echo owner_dash_e($listing['title']); ?></div>
+                                        <span class="wb-pill"><?php echo owner_dash_motel_status($listing['status']); ?></span>
+                                    </div>
+                                    <div class="wb-muted small mt-1"><i class="fas fa-location-dot me-1"></i>
+                                        <?php echo owner_dash_e($listing['address']); ?></div>
+                                    <div class="d-flex align-items-center gap-3 mt-2">
+                                        <div style="width: 100px" class="wb-progress"><span
+                                                style="width: <?php echo $listing['health_score']; ?>%;"></span></div>
+                                        <span class="small text-muted">Chất lượng:
+                                            <?php echo $listing['health_score']; ?>%</span>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="wb-price text-primary"><?php echo owner_dash_money($listing['price']); ?></div>
+                                    <div class="small text-muted"><?php echo (int)$listing['count_view']; ?> lượt xem</div>
+                                    <a href="edit-listing.php?id=<?php echo $listing['id']; ?>"
+                                        class="btn btn-sm btn-light border mt-2">Sửa</a>
+                                </div>
                             </div>
-                            <div class="wb-muted small mt-1"><i class="fas fa-location-dot me-1"></i>
-                                <?php echo owner_dash_e($listing['address']); ?></div>
-                            <div class="d-flex align-items-center gap-3 mt-2">
-                                <div style="width: 100px" class="wb-progress"><span
-                                        style="width: <?php echo $listing['health_score']; ?>%;"></span></div>
-                                <span class="small text-muted">Chất lượng:
-                                    <?php echo $listing['health_score']; ?>%</span>
-                            </div>
-                        </div>
-                        <div class="text-end">
-                            <div class="wb-price text-primary"><?php echo owner_dash_money($listing['price']); ?></div>
-                            <div class="small text-muted"><?php echo (int)$listing['count_view']; ?> lượt xem</div>
-                            <a href="edit-listing.php?id=<?php echo $listing['id']; ?>"
-                                class="btn btn-sm btn-light border mt-2">Sửa</a>
-                        </div>
-                    </div>
-                    <?php endforeach; ?>
+                        <?php endforeach; ?>
                     <?php endif; ?>
                 </div>
             </section>

@@ -13,23 +13,7 @@ if (!isset($_SESSION['user_id'])) {
 $db = new Database($conn);
 $user_id = (int)$_SESSION['user_id'];
 $role = $_SESSION['role'] ?? 'user';
-<<<<<<< HEAD
 $userName = $_SESSION['name'] ?? 'Người dùng';
-=======
-
-if ($role === 'owner') {
-    header('Location: owner/notifications.php');
-    exit;
-}
-
-if ($role === 'user') {
-    header('Location: user/notifications.php');
-    exit;
-}
-
-$home = 'admin/index.php';
-$message = '';
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
 
 // Xác định link quay về trang chủ dashboard dựa theo vai trò
 $home = $role === 'owner' ? 'owner/dashboard.php' : ($role === 'admin' ? 'admin/index.php' : 'user/dashboard.php');
@@ -39,15 +23,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['mark_all_read'])) {
         $stmt = $db->prepare('UPDATE notifications SET read_at = NOW() WHERE user_id = ? AND read_at IS NULL');
         $stmt->bind_param('i', $user_id);
-<<<<<<< HEAD
         $stmt->execute();
-=======
-        if ($stmt->execute()) {
-            $message = 'Đã đánh dấu tất cả là đã đọc.';
-        }
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
         $stmt->close();
-        
+
         $_SESSION['message'] = 'Đã đánh dấu tất cả thông báo là đã đọc.';
         header("Location: notifications.php");
         exit;
@@ -57,15 +35,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $notification_id = (int)$_POST['notification_id'];
         $stmt = $db->prepare('UPDATE notifications SET read_at = NOW() WHERE id = ? AND user_id = ?');
         $stmt->bind_param('ii', $notification_id, $user_id);
-<<<<<<< HEAD
         $stmt->execute();
-=======
-        if ($stmt->execute()) {
-            $message = 'Đã cập nhật thông báo.';
-        }
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
         $stmt->close();
-        
+
         // Nếu có link đính kèm trong thông báo, nhấn "Đã đọc" xong thì chuyển hướng luôn
         if (!empty($_POST['redirect_link'])) {
             header("Location: " . $_POST['redirect_link']);
@@ -96,13 +68,19 @@ $unread_count = (int)($stmt->get_result()->fetch_assoc()['count'] ?? 0);
 $stmt->close();
 
 // Hàm hiển thị icon theo loại thông báo
-function get_notify_icon($type) {
+function get_notify_icon($type)
+{
     switch ($type) {
-        case 'booking_status': return '<i class="fas fa-calendar-check text-primary"></i>';
-        case 'viewing_status': return '<i class="fas fa-eye text-info"></i>';
-        case 'payment': return '<i class="fas fa-money-bill-wave text-success"></i>';
-        case 'system': return '<i class="fas fa-bullhorn text-warning"></i>';
-        default: return '<i class="fas fa-bell text-secondary"></i>';
+        case 'booking_status':
+            return '<i class="fas fa-calendar-check text-primary"></i>';
+        case 'viewing_status':
+            return '<i class="fas fa-eye text-info"></i>';
+        case 'payment':
+            return '<i class="fas fa-money-bill-wave text-success"></i>';
+        case 'system':
+            return '<i class="fas fa-bullhorn text-warning"></i>';
+        default:
+            return '<i class="fas fa-bell text-secondary"></i>';
     }
 }
 ?>
@@ -118,88 +96,87 @@ function get_notify_icon($type) {
     <link href="assets/css/modern.css" rel="stylesheet">
     <link href="assets/css/workbench.css" rel="stylesheet">
     <style>
-    .notify-container {
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 40px 15px;
-    }
+        .notify-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 15px;
+        }
 
-    .notify-card {
-        padding: 20px;
-        border-radius: 12px;
-        margin-bottom: 12px;
-        border: 1px solid #e9ecef;
-        transition: 0.2s;
-        background: white;
-        display: flex;
-        gap: 15px;
-        position: relative;
-    }
+        .notify-card {
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            border: 1px solid #e9ecef;
+            transition: 0.2s;
+            background: white;
+            display: flex;
+            gap: 15px;
+            position: relative;
+        }
 
-    .notify-card.unread {
-        background: #f0f7ff;
-        border-left: 4px solid #0d6efd;
-    }
+        .notify-card.unread {
+            background: #f0f7ff;
+            border-left: 4px solid #0d6efd;
+        }
 
-    .notify-card:hover {
-        border-color: #dee2e6;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    }
+        .notify-card:hover {
+            border-color: #dee2e6;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
 
-    .notify-icon {
-        width: 45px;
-        height: 45px;
-        border-radius: 50%;
-        background: #f8f9fa;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.2rem;
-        flex-shrink: 0;
-    }
+        .notify-icon {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
 
-    .notify-content {
-        flex-grow: 1;
-    }
+        .notify-content {
+            flex-grow: 1;
+        }
 
-    .notify-title {
-        font-weight: 700;
-        color: #2d3748;
-        margin-bottom: 4px;
-    }
+        .notify-title {
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
 
-    .notify-body {
-        color: #4a5568;
-        font-size: 0.95rem;
-        line-height: 1.5;
-    }
+        .notify-body {
+            color: #4a5568;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
 
-    .notify-time {
-        font-size: 0.8rem;
-        color: #a0aec0;
-        margin-top: 8px;
-        display: flex;
-        align-items: center;
-        gap: 5px;
-    }
+        .notify-time {
+            font-size: 0.8rem;
+            color: #a0aec0;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
 
-    .unread-dot {
-        width: 10px;
-        height: 10px;
-        background: #0d6efd;
-        border-radius: 50%;
-        position: absolute;
-        right: 20px;
-        top: 20px;
-    }
+        .unread-dot {
+            width: 10px;
+            height: 10px;
+            background: #0d6efd;
+            border-radius: 50%;
+            position: absolute;
+            right: 20px;
+            top: 20px;
+        }
     </style>
 </head>
-<<<<<<< HEAD
 
 <body class="workbench">
     <header class="wb-topbar">
         <div class="container-lg wb-topbar-inner">
-            <a class="wb-brand" href="index.php">
+            <a class="wb-brand" href="<?php echo htmlspecialchars($home); ?>">
                 <span class="wb-brand-mark"><i class="fas fa-house-chimney"></i></span>
                 <span>QuanLyPhongTro</span>
             </a>
@@ -207,15 +184,6 @@ function get_notify_icon($type) {
                 <span class="me-3 d-none d-sm-inline">Chào,
                     <strong><?php echo htmlspecialchars($userName); ?></strong></span>
                 <a class="btn btn-primary btn-sm px-3" href="<?php echo htmlspecialchars($home); ?>">Dashboard</a>
-=======
-<body>
-    <nav class="navbar app-nav navbar-expand-lg sticky-top">
-        <div class="container-lg">
-            <a class="navbar-brand fw-bold" href="index.php"><i class="fas fa-house-chimney"></i> QuanLyPhongTro</a>
-            <div class="ms-auto d-flex gap-2">
-                <a class="btn btn-outline-primary btn-sm" href="<?php echo htmlspecialchars($home); ?>">Dashboard</a>
-                <a class="btn btn-outline-secondary btn-sm" href="logout.php">Đăng xuất</a>
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
             </div>
         </div>
     </header>
@@ -223,117 +191,72 @@ function get_notify_icon($type) {
     <main class="notify-container">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-<<<<<<< HEAD
                 <h2 class="fw-bold mb-0">Thông báo</h2>
                 <p class="text-muted mb-0">Bạn có <?php echo $unread_count; ?> thông báo mới chưa đọc.</p>
-=======
-                <h1 class="fw-bold mb-2">Thông báo</h1>
-                <p class="text-muted mb-0"><?php echo $unread_count; ?> thông báo chưa đọc.</p>
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
             </div>
             <?php if ($unread_count > 0): ?>
-            <form method="POST">
-<<<<<<< HEAD
-                <button class="btn btn-outline-primary btn-sm rounded-pill px-3" name="mark_all_read" type="submit">
-                    <i class="fas fa-check-double me-1"></i> Đọc tất cả
-                </button>
-=======
-                <button class="btn btn-primary" name="mark_all_read" type="submit">Đánh dấu đã đọc</button>
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
-            </form>
+                <form method="POST">
+                    <button class="btn btn-outline-primary btn-sm rounded-pill px-3" name="mark_all_read" type="submit">
+                        <i class="fas fa-check-double me-1"></i> Đọc tất cả
+                    </button>
+                </form>
             <?php endif; ?>
         </div>
 
         <?php if (isset($_SESSION['message'])): ?>
-        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4">
-            <i class="fas fa-check-circle me-2"></i> <?php echo $_SESSION['message']; ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        <?php unset($_SESSION['message']); ?>
+            <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4">
+                <i class="fas fa-check-circle me-2"></i> <?php echo $_SESSION['message']; ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            <?php unset($_SESSION['message']); ?>
         <?php endif; ?>
 
         <?php if ($notifications): ?>
-<<<<<<< HEAD
-        <?php foreach ($notifications as $notification): ?>
-        <?php $isUnread = empty($notification['read_at']); ?>
-        <div class="notify-card <?php echo $isUnread ? 'unread' : ''; ?>">
-            <div class="notify-icon">
-                <?php echo get_notify_icon($notification['type']); ?>
-            </div>
-            <div class="notify-content">
-                <div class="notify-title"><?php echo htmlspecialchars($notification['title']); ?></div>
-                <div class="notify-body"><?php echo nl2br(htmlspecialchars($notification['body'])); ?></div>
-                <div class="notify-time">
-                    <i class="far fa-clock"></i>
-                    <?php echo date('H:i - d/m/Y', strtotime($notification['created_at'])); ?>
-                </div>
-
-                <div class="mt-3 d-flex gap-2">
-                    <?php if (!empty($notification['link'])): ?>
-                    <a class="btn btn-sm btn-primary px-3"
-                        href="<?php echo htmlspecialchars($notification['link']); ?>">
-                        Xem chi tiết
-                    </a>
-                    <?php endif; ?>
-
-                    <?php if ($isUnread): ?>
-                    <form method="POST" class="d-inline">
-                        <input type="hidden" name="notification_id" value="<?php echo (int)$notification['id']; ?>">
-                        <input type="hidden" name="redirect_link"
-                            value="<?php echo htmlspecialchars($notification['link']); ?>">
-                        <button class="btn btn-sm btn-light border px-3" name="mark_read" type="submit">Đã đọc</button>
-                    </form>
-                    <?php endif; ?>
-=======
             <?php foreach ($notifications as $notification): ?>
                 <?php $isUnread = empty($notification['read_at']); ?>
-                <article class="notification-card <?php echo $isUnread ? 'unread' : ''; ?>">
-                    <div>
-                        <div class="d-flex flex-wrap gap-2 align-items-center">
-                            <div class="notification-title"><?php echo htmlspecialchars($notification['title']); ?></div>
-                            <?php if ($isUnread): ?><span class="badge text-bg-primary">Mới</span><?php endif; ?>
+                <div class="notify-card <?php echo $isUnread ? 'unread' : ''; ?>">
+                    <div class="notify-icon">
+                        <?php echo get_notify_icon($notification['type']); ?>
+                    </div>
+                    <div class="notify-content">
+                        <div class="notify-title"><?php echo htmlspecialchars($notification['title']); ?></div>
+                        <div class="notify-body"><?php echo nl2br(htmlspecialchars($notification['body'])); ?></div>
+                        <div class="notify-time">
+                            <i class="far fa-clock"></i>
+                            <?php echo date('H:i - d/m/Y', strtotime($notification['created_at'])); ?>
                         </div>
-                        <?php if (!empty($notification['body'])): ?>
-                            <div class="notification-body"><?php echo nl2br(htmlspecialchars($notification['body'])); ?></div>
-                        <?php endif; ?>
-                        <div class="notification-meta">
-                            <i class="fas fa-clock"></i> <?php echo date('d/m/Y H:i', strtotime($notification['created_at'])); ?>
-                            <span class="ms-2"><?php echo htmlspecialchars($notification['type']); ?></span>
+
+                        <div class="mt-3 d-flex gap-2">
+                            <?php if (!empty($notification['link'])): ?>
+                                <a class="btn btn-sm btn-primary px-3"
+                                    href="<?php echo htmlspecialchars($notification['link']); ?>">
+                                    Xem chi tiết
+                                </a>
+                            <?php endif; ?>
+
+                            <?php if ($isUnread): ?>
+                                <form method="POST" class="d-inline">
+                                    <input type="hidden" name="notification_id" value="<?php echo (int)$notification['id']; ?>">
+                                    <input type="hidden" name="redirect_link"
+                                        value="<?php echo htmlspecialchars($notification['link']); ?>">
+                                    <button class="btn btn-sm btn-light border px-3" name="mark_read" type="submit">Đã đọc</button>
+                                </form>
+                            <?php endif; ?>
                         </div>
                     </div>
-                    <div class="d-flex flex-wrap gap-2 justify-content-end align-content-start">
-                        <?php if (!empty($notification['link'])): ?>
-                            <a class="btn btn-outline-primary btn-sm" href="<?php echo htmlspecialchars($notification['link']); ?>">Mở</a>
-                        <?php endif; ?>
-                        <?php if ($isUnread): ?>
-                            <form method="POST">
-                                <input type="hidden" name="notification_id" value="<?php echo (int)$notification['id']; ?>">
-                                <button class="btn btn-primary btn-sm" name="mark_read" type="submit">Đã đọc</button>
-                            </form>
-                        <?php endif; ?>
-                    </div>
-                </article>
+                    <?php if ($isUnread): ?><div class="unread-dot"></div><?php endif; ?>
+                </div>
             <?php endforeach; ?>
         <?php else: ?>
-            <div class="panel empty-state">
-                <div>
-                    <h4 class="fw-bold">Chưa có thông báo</h4>
-                    <p>Những thay đổi quan trọng về đặt phòng, lịch xem và tin đăng sẽ xuất hiện tại đây.</p>
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
+            <div class="wb-card text-center py-5">
+                <div class="mb-3 opacity-25">
+                    <i class="fas fa-bell-slash fa-4x"></i>
                 </div>
+                <h5 class="text-dark">Chưa có thông báo nào</h5>
+                <p class="text-muted">Các cập nhật quan trọng về phòng trọ sẽ hiện tại đây.</p>
+                <a href="<?php echo htmlspecialchars($home); ?>" class="btn btn-link text-decoration-none">Quay về trang
+                    chủ</a>
             </div>
-            <?php if ($isUnread): ?><div class="unread-dot"></div><?php endif; ?>
-        </div>
-        <?php endforeach; ?>
-        <?php else: ?>
-        <div class="wb-card text-center py-5">
-            <div class="mb-3 opacity-25">
-                <i class="fas fa-bell-slash fa-4x"></i>
-            </div>
-            <h5 class="text-dark">Chưa có thông báo nào</h5>
-            <p class="text-muted">Các cập nhật quan trọng về phòng trọ sẽ hiện tại đây.</p>
-            <a href="index.php" class="btn btn-link text-decoration-none">Quay về trang chủ</a>
-        </div>
         <?php endif; ?>
     </main>
 

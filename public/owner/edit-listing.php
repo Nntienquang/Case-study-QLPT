@@ -13,6 +13,10 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'owner') {
     exit;
 }
 
+// Chuyển việc gán biến này lên trước để fix lỗi undefined variable
+$owner_id = (int)$_SESSION['user_id'];
+$ownerName = $_SESSION['name'] ?? 'Chủ phòng';
+
 $userQuery = $conn->prepare("SELECT dark_mode FROM users WHERE id = ?");
 $userQuery->bind_param("i", $owner_id);
 $userQuery->execute();
@@ -20,8 +24,6 @@ $userTheme = $userQuery->get_result()->fetch_assoc();
 $is_dark = $userTheme['dark_mode'] ?? 0;
 
 $db = new Database($conn);
-$owner_id = $_SESSION['user_id'];
-$ownerName = $_SESSION['name'] ?? 'Chủ phòng';
 
 $ownerStatus = new OwnerStatusMiddleware($db);
 $ownerStatus->checkOwnerAccess($owner_id, 'edit-listing.php');
@@ -91,11 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $health_score = $quality['score'];
 
     if (empty($title) || empty($price) || empty($address)) {
-<<<<<<< HEAD
         $message = 'Vui lòng điền đầy đủ thông tin bắt buộc (*)!';
-=======
-        $message = 'Vui lòng điền đầy đủ thông tin bắt buộc!';
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
         $message_type = 'danger';
     } else {
         // Cập nhật thông tin phòng
@@ -109,7 +107,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param("ssiiiisiissididdii", $title, $description, $price, $area, $bedrooms, $bathrooms, $address, $category_id, $district_id, $utilities_string, $available_from, $service_fee, $deposit_months, $health_score, $lat, $lng, $motel_id, $owner_id);
 
         if ($stmt->execute()) {
-<<<<<<< HEAD
             // Xóa ảnh cũ nếu người dùng chọn xóa
             if (!empty($_POST['delete_images'])) {
                 foreach ($_POST['delete_images'] as $del_img_id) {
@@ -165,18 +162,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         } else {
             $message = 'Lỗi hệ thống: ' . $stmt->error;
-=======
-            $message = 'Phòng đã cập nhật thành công!';
-            $message_type = 'success';
-            // Refresh motel data
-            $stmt = $db->prepare("SELECT * FROM motels WHERE id = ? AND user_id = ?");
-            $stmt->bind_param("ii", $motel_id, $owner_id);
-            $stmt->execute();
-            $motel = $stmt->get_result()->fetch_assoc();
-            $stmt->close();
-        } else {
-            $message = 'Lỗi: ' . $stmt->error;
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
             $message_type = 'danger';
         }
         $stmt->close();
@@ -189,34 +174,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<<<<<<< HEAD
     <title>Sửa Phòng - QuanLyPhongTro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-=======
-    <title>Sửa phòng - Owner</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body { background: #f8f9fa; font-family: 'Segoe UI', sans-serif; }
-        .navbar { background: linear-gradient(135deg, #667eea, #764ba2); }
-        .navbar-brand { font-size: 22px; font-weight: 700; color: white !important; }
-        .main-content { padding: 30px; }
-        .form-card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .form-section { margin-bottom: 30px; }
-        .form-section h5 { font-weight: 700; color: #333; margin-bottom: 20px; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
-        .form-control, .form-select { border-radius: 6px; border: 1px solid #ddd; }
-        .form-control:focus, .form-select:focus { border-color: #667eea; box-shadow: 0 0 0 0.2rem rgba(102,126,234,0.25); }
-        .form-label { font-weight: 600; color: #333; margin-bottom: 8px; }
-        .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); border: none; }
-        .utilities-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
-        .utility-check { display: flex; align-items: center; }
-        .utility-check input { cursor: pointer; }
-        .utility-check label { margin: 0 0 0 8px; cursor: pointer; }
-        .alert { border-radius: 12px; }
-    </style>
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
     <link href="../assets/css/modern.css" rel="stylesheet">
     <link href="../assets/css/workbench.css" rel="stylesheet">
     <style>
@@ -318,7 +279,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         right: 0;
         bottom: 0;
         background: rgba(220, 53, 69, 0.85);
-        /* Màu đỏ cảnh báo */
         color: white;
         display: flex;
         flex-direction: column;
@@ -347,37 +307,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .delete-img-check:checked+.existing-img-label .overlay {
         opacity: 1;
     }
+
+    .delete-img-check {
+        display: none;
+    }
     </style>
 </head>
 
 <body class="workbench">
     <header class="wb-topbar">
-        <div class="container-lg wb-topbar-inner">
+        <div class="container-lg wb-topbar-inner d-flex justify-content-between align-items-center">
             <a class="wb-brand" href="../index.php">
                 <span class="wb-brand-mark"><i class="fas fa-house-chimney"></i></span>
                 <span>QuanLyPhongTro</span>
             </a>
-<<<<<<< HEAD
-            <div class="wb-user">
-                <span><?php echo htmlspecialchars($ownerName); ?></span>
+            <div class="wb-user d-flex align-items-center gap-3">
+                <span class="fw-medium"><?php echo htmlspecialchars($ownerName); ?></span>
                 <a class="btn btn-outline-secondary btn-sm" href="../logout.php">Đăng xuất</a>
-=======
-        </div>
-    </nav>
-
-    <div class="container-lg" style="padding: 30px 0;">
-        <div class="row">
-            <div class="col-lg-3">
-                <?php
-                $ownerNavActive = 'listings';
-                require __DIR__ . '/_nav_sidebar.php';
-                ?>
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
             </div>
         </div>
     </header>
 
-<<<<<<< HEAD
     <main class="wb-shell">
         <div class="container-lg wb-layout">
             <aside class="wb-sidebar">
@@ -387,21 +337,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <a class="wb-side-link" href="add-listing.php"><i class="fas fa-plus"></i> Đăng phòng</a>
                 <a class="wb-side-link" href="viewing-appointments.php"><i class="fas fa-calendar-day"></i> Lịch xem</a>
                 <a class="wb-side-link" href="bookings.php"><i class="fas fa-calendar-check"></i> Booking</a>
-=======
-            <div class="col-lg-9">
-                <div class="main-content">
-                    <h1 style="font-size: 28px; font-weight: 700; margin-bottom: 30px;">
-                        <i class="fas fa-edit"></i> Chỉnh sửa phòng
-                    </h1>
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
 
                 <div class="wb-side-title mt-4">Quản lý Vận hành</div>
                 <a class="wb-side-link" href="utilities.php"><i class="fas fa-bolt"></i> Điện, Nước & Dịch vụ</a>
                 <a class="wb-side-link" href="maintenance.php"><i class="fas fa-screwdriver-wrench"></i> Bảo trì & Sự
                     cố</a>
-                <!-- <a class="wb-side-link " href="contracts.php"><i class="fas fa-file-signature"></i> Hợp đồng</a>
-                <a class="wb-side-link" href="analytics.php"><i class="fas fa-chart-pie"></i> Phân tích thông minh <span
-                        class="badge bg-warning text-dark ms-2" style="font-size: 0.65em;">PRO</span></a> -->
 
                 <div class="wb-side-title mt-4">Tài khoản</div>
                 <a class="wb-side-link" href="revenue.php"><i class="fas fa-chart-column"></i> Doanh thu</a>
@@ -410,15 +350,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <a class="wb-side-link" href="settings.php"><i class="fas fa-gear"></i> Cài đặt</a>
             </aside>
 
-
             <section>
-                <div class="wb-section-head">
-                    <h2><i class="fas fa-edit text-primary me-2"></i> Chỉnh Sử Phòng</h2>
+                <div class="wb-section-head d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h2 class="mb-1"><i class="fas fa-edit text-primary me-2"></i> Chỉnh Sửa Phòng</h2>
+                    </div>
                     <a href="listings.php" class="btn btn-outline-secondary btn-sm">Hủy & Quay lại</a>
                 </div>
 
                 <?php if ($message): ?>
-                <div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show">
+                <div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show border-0 shadow-sm">
                     <?php echo $message; ?>
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
@@ -436,7 +377,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="existing-img-container">
                             <?php foreach ($existing_images as $img): ?>
                             <div class="existing-img-item">
-                                <input type="checkbox" class="btn-check delete-img-check" name="delete_images[]"
+                                <input type="checkbox" class="delete-img-check" name="delete_images[]"
                                     value="<?php echo $img['id']; ?>" id="del_img_<?php echo $img['id']; ?>"
                                     autocomplete="off">
                                 <label class="existing-img-label" for="del_img_<?php echo $img['id']; ?>"
@@ -453,7 +394,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <?php endif; ?>
 
-<<<<<<< HEAD
                     <div class="row mb-4">
                         <div class="col-12">
                             <label class="form-label">Thêm ảnh mới</label>
@@ -483,7 +423,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <?php foreach ($categories as $cat): ?>
                                 <option value="<?php echo $cat['id']; ?>"
                                     <?php echo $motel['category_id'] == $cat['id'] ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($cat['name']); ?></option>
+                                    <?php echo htmlspecialchars($cat['name']); ?>
+                                </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -494,7 +435,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <?php foreach ($districts as $district): ?>
                                 <option value="<?php echo $district['id']; ?>"
                                     <?php echo $motel['district_id'] == $district['id'] ? 'selected' : ''; ?>>
-                                    <?php echo htmlspecialchars($district['name']); ?></option>
+                                    <?php echo htmlspecialchars($district['name']); ?>
+                                </option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -528,78 +470,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <input type="text" name="lng" id="longitude" class="form-control bg-white"
                                             placeholder="Kinh độ" readonly value="<?php echo $motel['lng']; ?>">
                                     </div>
-=======
-                    <form method="POST" class="form-card">
-                        <div class="form-section">
-                            <h5><i class="fas fa-info-circle"></i> Thông tin cơ bản</h5>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Tên phòng *</label>
-                                    <input type="text" name="title" class="form-control" required value="<?php echo htmlspecialchars($motel['title']); ?>">
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Giá thuê (VNĐ/tháng) *</label>
-                                    <input type="number" name="price" class="form-control" required value="<?php echo $motel['price']; ?>">
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Mô tả chi tiết</label>
-                                <textarea name="description" class="form-control" rows="5"><?php echo htmlspecialchars($motel['description']); ?></textarea>
-                            </div>
-                        </div>
-
-                        <div class="form-section">
-                            <h5><i class="fas fa-map-marker-alt"></i> Địa điểm</h5>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Quận *</label>
-                                    <select name="district_id" class="form-select" required>
-                                        <option value="">-- Chọn quận --</option>
-                                        <?php foreach ($districts as $district): ?>
-                                            <option value="<?php echo $district['id']; ?>" <?php echo $motel['district_id'] == $district['id'] ? 'selected' : ''; ?>>
-                                                <?php echo htmlspecialchars($district['name']); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Danh mục *</label>
-                                    <select name="category_id" class="form-select" required>
-                                        <option value="">-- Chọn danh mục --</option>
-                                        <?php foreach ($categories as $cat): ?>
-                                            <option value="<?php echo $cat['id']; ?>" <?php echo $motel['category_id'] == $cat['id'] ? 'selected' : ''; ?>>
-                                                <?php echo htmlspecialchars($cat['name']); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Địa chỉ chi tiết *</label>
-                                <input type="text" name="address" class="form-control" required value="<?php echo htmlspecialchars($motel['address']); ?>">
-                            </div>
-                        </div>
-
-                        <div class="form-section">
-                            <h5><i class="fas fa-ruler-combined"></i> Thông tin phòng</h5>
-                            <div class="row">
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label">Diện tích (m²)</label>
-                                    <input type="number" step="0.01" name="area" class="form-control" value="<?php echo $motel['area']; ?>">
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label">Phòng ngủ</label>
-                                    <input type="number" name="bedrooms" class="form-control" value="<?php echo $motel['bedrooms']; ?>">
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label">Phòng tắm</label>
-                                    <input type="number" name="bathrooms" class="form-control" value="<?php echo $motel['bathrooms']; ?>">
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
                                 </div>
                             </div>
                         </div>
 
-<<<<<<< HEAD
                         <div class="col-12 mb-3 mt-2">
                             <label class="form-label">Mô Tả Chi Tiết</label>
                             <textarea name="description" class="form-control"
@@ -653,29 +527,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <label class="form-check-label" for="util_<?php echo $util['id']; ?>">
                                     <?php echo htmlspecialchars($util['name']); ?>
                                 </label>
-=======
-                        <div class="form-section">
-                            <h5><i class="fas fa-wallet"></i> Chi Phi Va Ngay Trong</h5>
-                            <div class="row">
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label">Ngay Co The Vao O</label>
-                                    <input type="date" name="available_from" class="form-control" value="<?php echo htmlspecialchars($motel['available_from'] ?? ''); ?>">
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label">Phí dịch vụ / tháng (VNĐ)</label>
-                                    <input type="number" name="service_fee" class="form-control" min="0" value="<?php echo (int)($motel['service_fee'] ?? 0); ?>">
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label class="form-label">So Thang Coc</label>
-                                    <input type="number" step="0.5" min="0.5" name="deposit_months" class="form-control" value="<?php echo htmlspecialchars($motel['deposit_months'] ?? '1'); ?>">
-                                </div>
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
                             </div>
                         </div>
                         <?php endforeach; ?>
                     </div>
 
-<<<<<<< HEAD
                     <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
                         <a href="listings.php" class="btn btn-light border">Hủy</a>
                         <button type="submit" class="btn btn-primary px-4"><i class="fas fa-save me-1"></i> Lưu Thay
@@ -683,49 +539,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </form>
             </section>
-=======
-                        <div class="form-section">
-                            <h5><i class="fas fa-star"></i> Tiện nghi</h5>
-                            <div class="utilities-grid">
-                                <div class="utility-check">
-                                    <input type="checkbox" name="utilities[]" value="wifi" id="util_wifi" <?php echo in_array('wifi', $utilities_array) ? 'checked' : ''; ?>>
-                                    <label for="util_wifi">Wi-Fi</label>
-                                </div>
-                                <div class="utility-check">
-                                    <input type="checkbox" name="utilities[]" value="air_conditioner" id="util_ac" <?php echo in_array('air_conditioner', $utilities_array) ? 'checked' : ''; ?>>
-                                    <label for="util_ac">Điều hòa</label>
-                                </div>
-                                <div class="utility-check">
-                                    <input type="checkbox" name="utilities[]" value="water_heater" id="util_water" <?php echo in_array('water_heater', $utilities_array) ? 'checked' : ''; ?>>
-                                    <label for="util_water">Nước nóng</label>
-                                </div>
-                                <div class="utility-check">
-                                    <input type="checkbox" name="utilities[]" value="kitchen" id="util_kitchen" <?php echo in_array('kitchen', $utilities_array) ? 'checked' : ''; ?>>
-                                    <label for="util_kitchen">Bếp</label>
-                                </div>
-                                <div class="utility-check">
-                                    <input type="checkbox" name="utilities[]" value="washing_machine" id="util_wash" <?php echo in_array('washing_machine', $utilities_array) ? 'checked' : ''; ?>>
-                                    <label for="util_wash">Máy giặt</label>
-                                </div>
-                                <div class="utility-check">
-                                    <input type="checkbox" name="utilities[]" value="parking" id="util_parking" <?php echo in_array('parking', $utilities_array) ? 'checked' : ''; ?>>
-                                    <label for="util_parking">Chỗ đỗ xe</label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Cập nhật
-                            </button>
-                            <a href="listings.php" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left"></i> Quay lại
-                            </a>
-                        </div>
-                    </form>
-                </div>
-            </div>
->>>>>>> 92a21b256ef57b3d3c0eac465598c9a102eac9f4
         </div>
     </main>
 
