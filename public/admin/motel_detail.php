@@ -52,6 +52,14 @@ admin_flash_messages();
             <div><?php echo admin_e($motel['phone'] ?? 'N/A'); ?></div>
         </div>
     </div>
+    <?php if (!empty($motel['rejection_reason'])): ?>
+        <div class="wb-list-row">
+            <div>
+                <div class="wb-title">Lý do từ chối</div>
+                <div class="wb-muted"><?php echo nl2br(admin_e($motel['rejection_reason'])); ?></div>
+            </div>
+        </div>
+    <?php endif; ?>
 </div>
 
 <?php if (!empty($data['images'])): ?>
@@ -80,13 +88,37 @@ admin_flash_messages();
 
 <div class="wb-card">
     <div class="wb-actions">
+        <?php if (in_array($status, ['pending', 'hidden', 'rejected'], true)): ?>
+            <form method="POST" action="<?php echo ADMIN_URL; ?>motels.php" class="d-inline" onsubmit="return confirm('Duyệt/phục hồi phòng này?');">
+                <?php echo Csrf::field('admin_motel_action'); ?>
+                <input type="hidden" name="action" value="approve">
+                <input type="hidden" name="id" value="<?php echo (int)($motel['id'] ?? 0); ?>">
+                <button type="submit" class="btn btn-success"><i class="fa fa-check"></i> Duyệt phòng</button>
+            </form>
+        <?php endif; ?>
         <?php if ($status === 'pending'): ?>
-            <a href="<?php echo ADMIN_URL . 'motels.php?action=approve&id=' . (int)($motel['id'] ?? 0); ?>" class="btn btn-success" onclick="return confirm('Duyệt phòng này?');"><i class="fa fa-check"></i> Duyệt phòng</a>
+            <form method="POST" action="<?php echo ADMIN_URL; ?>motels.php" class="d-inline" onsubmit="const reason = prompt('Nhập lý do từ chối tin phòng:'); if (!reason) return false; this.rejection_reason.value = reason; return true;">
+                <?php echo Csrf::field('admin_motel_action'); ?>
+                <input type="hidden" name="action" value="reject">
+                <input type="hidden" name="id" value="<?php echo (int)($motel['id'] ?? 0); ?>">
+                <input type="hidden" name="rejection_reason" value="">
+                <button type="submit" class="btn btn-outline-danger"><i class="fa fa-ban"></i> Từ chối</button>
+            </form>
         <?php endif; ?>
         <?php if ($status !== 'hidden'): ?>
-            <a href="<?php echo ADMIN_URL . 'motels.php?action=hide&id=' . (int)($motel['id'] ?? 0); ?>" class="btn btn-warning" onclick="return confirm('Ẩn phòng này?');"><i class="fa fa-times"></i> Ẩn phòng</a>
+            <form method="POST" action="<?php echo ADMIN_URL; ?>motels.php" class="d-inline" onsubmit="return confirm('Ẩn phòng này?');">
+                <?php echo Csrf::field('admin_motel_action'); ?>
+                <input type="hidden" name="action" value="hide">
+                <input type="hidden" name="id" value="<?php echo (int)($motel['id'] ?? 0); ?>">
+                <button type="submit" class="btn btn-warning"><i class="fa fa-times"></i> Ẩn phòng</button>
+            </form>
         <?php endif; ?>
-        <a href="<?php echo ADMIN_URL . 'motels.php?action=delete&id=' . (int)($motel['id'] ?? 0); ?>" class="btn btn-outline-danger" onclick="return confirm('Xóa phòng này?');"><i class="fa fa-trash"></i> Xóa phòng</a>
+        <form method="POST" action="<?php echo ADMIN_URL; ?>motels.php" class="d-inline" onsubmit="return confirm('Xóa phòng này?');">
+            <?php echo Csrf::field('admin_motel_action'); ?>
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="id" value="<?php echo (int)($motel['id'] ?? 0); ?>">
+            <button type="submit" class="btn btn-outline-danger"><i class="fa fa-trash"></i> Xóa phòng</button>
+        </form>
     </div>
 </div>
 

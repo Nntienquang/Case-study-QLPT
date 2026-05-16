@@ -17,10 +17,22 @@ admin_flash_messages();
 ?>
 
 <div class="wb-grid wb-stats-4 mb-3">
-    <div class="wb-card"><i class="fa fa-money wb-card-icon"></i><div class="wb-card-value fs-4"><?php echo admin_money($stats['total'] ?? 0); ?></div><div class="wb-card-label">Tổng doanh thu</div></div>
-    <div class="wb-card"><i class="fa fa-calendar wb-card-icon"></i><div class="wb-card-value fs-4"><?php echo admin_money($stats['month'] ?? 0); ?></div><div class="wb-card-label">Tháng này</div></div>
-    <div class="wb-card"><i class="fa fa-check-circle wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($stats['count'] ?? 0); ?></div><div class="wb-card-label">Lần nhận commission</div></div>
-    <div class="wb-card"><i class="fa fa-bar-chart wb-card-icon"></i><div class="wb-card-value fs-4"><?php echo admin_money($stats['average'] ?? 0); ?></div><div class="wb-card-label">Trung bình/commission</div></div>
+    <div class="wb-card"><i class="fa fa-money wb-card-icon"></i>
+        <div class="wb-card-value fs-4"><?php echo admin_money($stats['total'] ?? 0); ?></div>
+        <div class="wb-card-label">Tổng doanh thu</div>
+    </div>
+    <div class="wb-card"><i class="fa fa-calendar wb-card-icon"></i>
+        <div class="wb-card-value fs-4"><?php echo admin_money($stats['month'] ?? 0); ?></div>
+        <div class="wb-card-label">Tháng này</div>
+    </div>
+    <div class="wb-card"><i class="fa fa-check-circle wb-card-icon"></i>
+        <div class="wb-card-value"><?php echo (int)($stats['count'] ?? 0); ?></div>
+        <div class="wb-card-label">Lần nhận commission</div>
+    </div>
+    <div class="wb-card"><i class="fa fa-bar-chart wb-card-icon"></i>
+        <div class="wb-card-value fs-4"><?php echo admin_money($stats['average'] ?? 0); ?></div>
+        <div class="wb-card-label">Trung bình/commission</div>
+    </div>
 </div>
 
 <div class="wb-section-head">

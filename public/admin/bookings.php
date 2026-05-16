@@ -9,13 +9,22 @@ if (!$is_logged_in) {
 
 $activityLog = new ActivityLog($db);
 $controller = new BookingController($db, $activityLog);
-$action = $_GET['action'] ?? '';
+$action = $_POST['action'] ?? '';
 
-if ($action === 'update_status' && isset($_GET['id'], $_GET['status'])) {
-    $controller->updateStatus();
-}
-if ($action === 'delete' && isset($_GET['id'])) {
-    $controller->deleteBooking();
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($action, ['update_status', 'delete'], true)) {
+    if (!Csrf::validateRequest('admin_booking_action')) {
+        $_SESSION['error'] = 'Phiên thao tác không hợp lệ, vui lòng thử lại.';
+        header('Location: ' . ADMIN_URL . 'bookings.php');
+        exit;
+    }
+
+    if ($action === 'update_status') {
+        $controller->updateStatus();
+    }
+
+    if ($action === 'delete') {
+        $controller->deleteBooking();
+    }
 }
 
 $data = $controller->listBookings();
@@ -74,7 +83,36 @@ admin_flash_messages();
                         <td><span class="wb-pill <?php echo admin_pill_class($status); ?>"><?php echo admin_status_label($status); ?></span></td>
                         <td class="text-end">
                             <a href="<?php echo ADMIN_URL . 'booking_detail.php?id=' . (int)$booking['id']; ?>" class="btn btn-sm btn-primary"><i class="fa fa-eye"></i> Xem</a>
-                            <a href="<?php echo ADMIN_URL . 'bookings.php?action=delete&id=' . (int)$booking['id']; ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Xóa đơn này?');"><i class="fa fa-trash"></i></a>
+                            <?php if ($status === 'pending'): ?>
+                                <form method="POST" class="d-inline" onsubmit="return confirm('Chấp nhận booking này?');">
+                                    <?php echo Csrf::field('admin_booking_action'); ?>
+                                    <input type="hidden" name="action" value="update_status">
+                                    <input type="hidden" name="status" value="accepted">
+                                    <input type="hidden" name="id" value="<?php echo (int)$booking['id']; ?>">
+                                    <button type="submit" class="btn btn-sm btn-success"><i class="fa fa-check"></i></button>
+                                </form>
+                                <form method="POST" class="d-inline" onsubmit="return confirm('Từ chối booking này?');">
+                                    <?php echo Csrf::field('admin_booking_action'); ?>
+                                    <input type="hidden" name="action" value="update_status">
+                                    <input type="hidden" name="status" value="rejected">
+                                    <input type="hidden" name="id" value="<?php echo (int)$booking['id']; ?>">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa fa-times"></i></button>
+                                </form>
+                            <?php elseif (in_array($status, ['paid', 'accepted'], true)): ?>
+                                <form method="POST" class="d-inline" onsubmit="return confirm('Đánh dấu booking hoàn tất?');">
+                                    <?php echo Csrf::field('admin_booking_action'); ?>
+                                    <input type="hidden" name="action" value="update_status">
+                                    <input type="hidden" name="status" value="completed">
+                                    <input type="hidden" name="id" value="<?php echo (int)$booking['id']; ?>">
+                                    <button type="submit" class="btn btn-sm btn-success"><i class="fa fa-flag-checkered"></i></button>
+                                </form>
+                            <?php endif; ?>
+                            <form method="POST" class="d-inline" onsubmit="return confirm('Xóa đơn này?');">
+                                <?php echo Csrf::field('admin_booking_action'); ?>
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="id" value="<?php echo (int)$booking['id']; ?>">
+                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa fa-trash"></i></button>
+                            </form>
                         </td>
                     </tr>
                 <?php endforeach; ?>

@@ -9,9 +9,15 @@ if (!$is_logged_in) {
 
 $activityLog = new ActivityLog($db);
 $controller = new PaymentController($db, $activityLog);
-$action = $_GET['action'] ?? '';
+$action = $_POST['action'] ?? '';
 
-if ($action === 'update_status' && isset($_GET['id'], $_GET['status'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'update_status') {
+    if (!Csrf::validateRequest('admin_payment_action')) {
+        $_SESSION['error'] = 'Phiên thao tác không hợp lệ, vui lòng thử lại.';
+        header('Location: ' . ADMIN_URL . 'payments.php');
+        exit;
+    }
+
     $controller->updateStatus();
 }
 
@@ -73,6 +79,33 @@ admin_flash_messages();
                         <td><span class="wb-pill <?php echo admin_pill_class($status); ?>"><?php echo admin_status_label($status); ?></span></td>
                         <td class="text-end">
                             <a href="<?php echo ADMIN_URL . 'payment_detail.php?id=' . (int)$payment['id']; ?>" class="btn btn-sm btn-primary"><i class="fa fa-eye"></i> Xem</a>
+                            <?php if ($status === 'pending'): ?>
+                                <form method="POST" class="d-inline" onsubmit="return confirm('Xác nhận giữ khoản thanh toán này?');">
+                                    <?php echo Csrf::field('admin_payment_action'); ?>
+                                    <input type="hidden" name="action" value="update_status">
+                                    <input type="hidden" name="status" value="held">
+                                    <input type="hidden" name="id" value="<?php echo (int)$payment['id']; ?>">
+                                    <button type="submit" class="btn btn-sm btn-warning"><i class="fa fa-pause"></i></button>
+                                </form>
+                            <?php endif; ?>
+                            <?php if ($status === 'held'): ?>
+                                <form method="POST" class="d-inline" onsubmit="return confirm('Giải ngân khoản thanh toán này?');">
+                                    <?php echo Csrf::field('admin_payment_action'); ?>
+                                    <input type="hidden" name="action" value="update_status">
+                                    <input type="hidden" name="status" value="released">
+                                    <input type="hidden" name="id" value="<?php echo (int)$payment['id']; ?>">
+                                    <button type="submit" class="btn btn-sm btn-success"><i class="fa fa-check"></i></button>
+                                </form>
+                            <?php endif; ?>
+                            <?php if (in_array($status, ['pending', 'held'], true)): ?>
+                                <form method="POST" class="d-inline" onsubmit="return confirm('Hoàn tiền khoản thanh toán này?');">
+                                    <?php echo Csrf::field('admin_payment_action'); ?>
+                                    <input type="hidden" name="action" value="update_status">
+                                    <input type="hidden" name="status" value="refunded">
+                                    <input type="hidden" name="id" value="<?php echo (int)$payment['id']; ?>">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa fa-undo"></i></button>
+                                </form>
+                            <?php endif; ?>
                         </td>
                     </tr>
                 <?php endforeach; ?>

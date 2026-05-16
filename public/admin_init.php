@@ -5,6 +5,8 @@
 
 // Bắt đầu session
 session_start();
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
 
 // Include config
 require_once __DIR__ . '/../config/database.php';
@@ -12,6 +14,7 @@ require_once __DIR__ . '/../config/constants.php';
 
 // Include Database class
 require_once __DIR__ . '/../core/Database.php';
+require_once __DIR__ . '/../core/Csrf.php';
 
 // Include Models
 require_once __DIR__ . '/../core/Auth.php';
@@ -53,6 +56,17 @@ $auth = new Auth($db);
 // Check login
 $is_logged_in = $auth->isLoggedIn();
 $auth->checkTimeout();
+
+if ($is_logged_in && ($_SESSION['status'] ?? '') === 'blocked') {
+    $auth->logout();
+    header('Location: ' . BASE_URL . 'login.php');
+    exit;
+}
+
+if ($is_logged_in && (int)($_SESSION['force_password_change'] ?? 0) === 1) {
+    header('Location: ' . BASE_URL . 'change-password.php');
+    exit;
+}
 
 // Get current page
 $page = isset($_GET['page']) ? $_GET['page'] : 'dashboard';

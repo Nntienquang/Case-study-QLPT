@@ -17,10 +17,22 @@ $activityLog = new ActivityLog($db);
 $conn = $db->getConnection();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_status') {
+    if (!Csrf::validateRequest('admin_report_action')) {
+        $_SESSION['error'] = 'Phiên thao tác không hợp lệ, vui lòng thử lại.';
+        header('Location: report_detail.php?id=' . $id);
+        exit;
+    }
+
     $status = $_POST['status'] ?? '';
-    $adminNote = $_POST['admin_note'] ?? '';
+    $adminNote = trim((string)($_POST['admin_note'] ?? ''));
     $validStatuses = ['investigating', 'resolved', 'rejected', 'closed'];
     if (in_array($status, $validStatuses, true)) {
+        if (in_array($status, ['resolved', 'rejected', 'closed'], true) && $adminNote === '') {
+            $_SESSION['error'] = 'Vui lòng nhập ghi chú xử lý cho trạng thái này.';
+            header('Location: report_detail.php?id=' . $id);
+            exit;
+        }
+
         $existing = $db->getRow("SELECT * FROM reports WHERE id = {$id}");
         $statusEsc = $conn->real_escape_string($status);
         $noteEsc = $conn->real_escape_string($adminNote);
@@ -109,6 +121,7 @@ admin_flash_messages();
 
 <div class="wb-card">
     <form method="POST" class="row g-3">
+        <?php echo Csrf::field('admin_report_action'); ?>
         <input type="hidden" name="action" value="update_status">
         <div class="col-md-4">
             <label class="form-label fw-semibold">Trạng thái mới</label>

@@ -7,55 +7,29 @@ if (!$is_logged_in) {
     exit;
 }
 
-$activityLog = new ActivityLog($db);
-$controller = new CategoryController($db, $activityLog);
-$action = $_GET['action'] ?? '';
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if ($action === 'add') {
-        $controller->createCategory();
-    } elseif ($action === 'edit' && isset($_GET['id'])) {
-        $controller->updateCategory();
+$controller = new CategoryController($db, new ActivityLog($db));
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
+    if (!Csrf::validateRequest('admin_category_action')) {
+        $_SESSION['error'] = 'Phiên thao tác không hợp lệ, vui lòng thử lại.';
+        header('Location: ' . ADMIN_URL . 'categories.php');
+        exit;
     }
-}
 
-if ($action === 'delete' && isset($_GET['id'])) {
     $controller->deleteCategory();
 }
 
 $data = $controller->listCategories();
-$editCategory = null;
-if ($action === 'edit' && isset($_GET['id'])) {
-    foreach ($data['categories'] as $category) {
-        if ((int)$category['id'] === (int)$_GET['id']) {
-            $editCategory = $category;
-            break;
-        }
-    }
-}
 
-admin_layout_start('Quản lý danh mục', 'Chuẩn hóa nhóm loại phòng để người thuê lọc và tìm kiếm chính xác hơn.', 'categories');
+admin_layout_start('Quản lý danh mục', 'Danh sách nhóm loại phòng. Thêm và sửa ở màn hình riêng.', 'categories');
 admin_flash_messages();
 ?>
 
-<div class="wb-card mb-3">
-    <form method="POST" class="row g-3 align-items-end">
-        <div class="col-md-8">
-            <label class="form-label fw-semibold">Tên danh mục</label>
-            <input type="text" name="name" class="form-control" value="<?php echo admin_e($editCategory['name'] ?? ''); ?>" placeholder="Ví dụ: Phòng trọ, căn hộ mini" required>
-        </div>
-        <div class="col-md-4 d-flex gap-2">
-            <button type="submit" class="btn btn-primary flex-fill"><i class="fa fa-save"></i> <?php echo $editCategory ? 'Cập nhật' : 'Thêm mới'; ?></button>
-            <?php if ($editCategory): ?>
-                <a href="<?php echo ADMIN_URL; ?>categories.php" class="btn btn-outline-secondary">Hủy</a>
-            <?php endif; ?>
-        </div>
-    </form>
-</div>
-
 <div class="wb-section-head">
     <h2>Danh sách danh mục</h2>
-    <span class="wb-pill"><?php echo count($data['categories'] ?? []); ?> danh mục</span>
+    <div class="wb-actions">
+        <span class="wb-pill"><?php echo count($data['categories'] ?? []); ?> danh mục</span>
+        <a href="<?php echo ADMIN_URL; ?>category_create.php" class="btn btn-primary btn-sm"><i class="fa fa-plus"></i> Thêm danh mục</a>
+    </div>
 </div>
 
 <div class="wb-table-card">
@@ -68,8 +42,14 @@ admin_flash_messages();
                         <td>#<?php echo (int)$category['id']; ?></td>
                         <td class="wb-title"><?php echo admin_e($category['name'] ?? ''); ?></td>
                         <td class="text-end">
-                            <a href="<?php echo ADMIN_URL . 'categories.php?action=edit&id=' . (int)$category['id']; ?>" class="btn btn-sm btn-warning"><i class="fa fa-edit"></i> Sửa</a>
-                            <a href="<?php echo ADMIN_URL . 'categories.php?action=delete&id=' . (int)$category['id']; ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Xóa danh mục này?');"><i class="fa fa-trash"></i></a>
+                            <a href="<?php echo ADMIN_URL . 'category_detail.php?id=' . (int)$category['id']; ?>" class="btn btn-sm btn-primary"><i class="fa fa-eye"></i></a>
+                            <a href="<?php echo ADMIN_URL . 'category_edit.php?id=' . (int)$category['id']; ?>" class="btn btn-sm btn-warning"><i class="fa fa-edit"></i></a>
+                            <form method="POST" class="d-inline" onsubmit="return confirm('Xóa danh mục này?');">
+                                <?php echo Csrf::field('admin_category_action'); ?>
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="id" value="<?php echo (int)$category['id']; ?>">
+                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa fa-trash"></i></button>
+                            </form>
                         </td>
                     </tr>
                 <?php endforeach; ?>

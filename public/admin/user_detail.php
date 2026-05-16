@@ -63,7 +63,10 @@ admin_layout_start('Chi tiết tài khoản', 'Xem hồ sơ người dùng, lị
 admin_flash_messages();
 ?>
 
-<a href="<?php echo $user['role'] === 'owner' ? ADMIN_URL . 'user_approvals.php' : ADMIN_URL . 'users.php'; ?>" class="btn btn-outline-secondary mb-3"><i class="fa fa-arrow-left"></i> Quay lại</a>
+<div class="wb-actions mb-3">
+    <a href="<?php echo $user['role'] === 'owner' ? ADMIN_URL . 'user_approvals.php' : ADMIN_URL . 'users.php'; ?>" class="btn btn-outline-secondary"><i class="fa fa-arrow-left"></i> Quay lại</a>
+    <a href="<?php echo ADMIN_URL . 'user_edit.php?id=' . (int)$user['id']; ?>" class="btn btn-warning"><i class="fa fa-edit"></i> Sửa tài khoản</a>
+</div>
 
 <div class="wb-grid wb-stats-4 mb-3">
     <div class="wb-card"><div class="wb-card-label">Tài khoản</div><div class="wb-card-value">#<?php echo (int)$user['id']; ?></div></div>

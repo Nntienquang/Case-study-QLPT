@@ -9,9 +9,15 @@ if (!$is_logged_in) {
 
 $activityLog = new ActivityLog($db);
 $controller = new ReviewController($db, $activityLog);
-$action = $_GET['action'] ?? '';
+$action = $_POST['action'] ?? '';
 
-if ($action === 'delete' && isset($_GET['id'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'delete') {
+    if (!Csrf::validateRequest('admin_review_action')) {
+        $_SESSION['error'] = 'Phiên thao tác không hợp lệ, vui lòng thử lại.';
+        header('Location: ' . ADMIN_URL . 'reviews.php');
+        exit;
+    }
+
     $controller->deleteReview();
 }
 
@@ -51,7 +57,12 @@ admin_flash_messages();
                         <td><?php echo !empty($review['created_at']) ? date('d/m/Y', strtotime((string)$review['created_at'])) : ''; ?></td>
                         <td class="text-end">
                             <a href="<?php echo ADMIN_URL . 'review_detail.php?id=' . (int)$review['id']; ?>" class="btn btn-sm btn-primary"><i class="fa fa-eye"></i> Xem</a>
-                            <a href="<?php echo ADMIN_URL . 'reviews.php?action=delete&id=' . (int)$review['id']; ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Xóa đánh giá này?');"><i class="fa fa-trash"></i></a>
+                            <form method="POST" class="d-inline" onsubmit="return confirm('Xóa đánh giá này?');">
+                                <?php echo Csrf::field('admin_review_action'); ?>
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="id" value="<?php echo (int)$review['id']; ?>">
+                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa fa-trash"></i></button>
+                            </form>
                         </td>
                     </tr>
                 <?php endforeach; ?>

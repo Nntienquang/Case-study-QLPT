@@ -9,21 +9,32 @@ if (!$is_logged_in) {
 
 $activityLog = new ActivityLog($db);
 $controller = new MotelController($db, $activityLog);
-$action = $_GET['action'] ?? '';
+$action = $_POST['action'] ?? '';
 
-if ($action === 'approve' && isset($_GET['id'])) {
-    $controller->approveMotel();
-}
-if ($action === 'hide' && isset($_GET['id'])) {
-    $controller->hideMotel();
-}
-if ($action === 'delete' && isset($_GET['id'])) {
-    $controller->deleteMotel();
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($action, ['approve', 'hide', 'reject', 'delete'], true)) {
+    if (!Csrf::validateRequest('admin_motel_action')) {
+        $_SESSION['error'] = 'Phiên thao tác không hợp lệ, vui lòng thử lại.';
+        header('Location: ' . ADMIN_URL . 'motels.php');
+        exit;
+    }
+
+    if ($action === 'approve') {
+        $controller->approveMotel();
+    }
+    if ($action === 'hide') {
+        $controller->hideMotel();
+    }
+    if ($action === 'reject') {
+        $controller->rejectMotel();
+    }
+    if ($action === 'delete') {
+        $controller->deleteMotel();
+    }
 }
 
 $data = $controller->listMotels();
 
-admin_layout_start('Quản lý phòng trọ', 'Kiểm duyệt tin đăng, rà soát trạng thái hiển thị và xử lý phòng không đạt chuẩn.', 'motels');
+admin_layout_start('Quản lý phòng trọ', 'Kiểm duyệt tin đăng của owner, rà soát trạng thái hiển thị và xử lý phòng không đạt chuẩn.', 'motels');
 admin_flash_messages();
 ?>
 
@@ -36,6 +47,7 @@ admin_flash_messages();
                 <option value="pending" <?php echo ($data['status'] ?? '') === 'pending' ? 'selected' : ''; ?>>Chờ duyệt</option>
                 <option value="approved" <?php echo ($data['status'] ?? '') === 'approved' ? 'selected' : ''; ?>>Đã duyệt</option>
                 <option value="hidden" <?php echo ($data['status'] ?? '') === 'hidden' ? 'selected' : ''; ?>>Đã ẩn</option>
+                <option value="rejected" <?php echo ($data['status'] ?? '') === 'rejected' ? 'selected' : ''; ?>>Từ chối</option>
             </select>
         </div>
         <div class="col-md-8">
@@ -78,13 +90,37 @@ admin_flash_messages();
                         <td><span class="wb-pill <?php echo admin_pill_class($status); ?>"><?php echo admin_status_label($status); ?></span></td>
                         <td class="text-end">
                             <a href="<?php echo ADMIN_URL . 'motel_detail.php?id=' . (int)$motel['id']; ?>" class="btn btn-sm btn-primary"><i class="fa fa-eye"></i> Xem</a>
+                            <?php if (in_array($status, ['pending', 'hidden', 'rejected'], true)): ?>
+                                <form method="POST" class="d-inline" onsubmit="return confirm('Duyệt/phục hồi phòng này?');">
+                                    <?php echo Csrf::field('admin_motel_action'); ?>
+                                    <input type="hidden" name="action" value="approve">
+                                    <input type="hidden" name="id" value="<?php echo (int)$motel['id']; ?>">
+                                    <button type="submit" class="btn btn-sm btn-success"><i class="fa fa-check"></i></button>
+                                </form>
+                            <?php endif; ?>
                             <?php if ($status === 'pending'): ?>
-                                <a href="<?php echo ADMIN_URL . 'motels.php?action=approve&id=' . (int)$motel['id']; ?>" class="btn btn-sm btn-success" onclick="return confirm('Duyệt phòng này?');"><i class="fa fa-check"></i> Duyệt</a>
+                                <form method="POST" class="d-inline" onsubmit="const reason = prompt('Nhập lý do từ chối tin phòng:'); if (!reason) return false; this.rejection_reason.value = reason; return true;">
+                                    <?php echo Csrf::field('admin_motel_action'); ?>
+                                    <input type="hidden" name="action" value="reject">
+                                    <input type="hidden" name="id" value="<?php echo (int)$motel['id']; ?>">
+                                    <input type="hidden" name="rejection_reason" value="">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa fa-ban"></i></button>
+                                </form>
                             <?php endif; ?>
                             <?php if ($status !== 'hidden'): ?>
-                                <a href="<?php echo ADMIN_URL . 'motels.php?action=hide&id=' . (int)$motel['id']; ?>" class="btn btn-sm btn-warning" onclick="return confirm('Ẩn phòng này?');"><i class="fa fa-times"></i> Ẩn</a>
+                                <form method="POST" class="d-inline" onsubmit="return confirm('Ẩn phòng này?');">
+                                    <?php echo Csrf::field('admin_motel_action'); ?>
+                                    <input type="hidden" name="action" value="hide">
+                                    <input type="hidden" name="id" value="<?php echo (int)$motel['id']; ?>">
+                                    <button type="submit" class="btn btn-sm btn-warning"><i class="fa fa-times"></i></button>
+                                </form>
                             <?php endif; ?>
-                            <a href="<?php echo ADMIN_URL . 'motels.php?action=delete&id=' . (int)$motel['id']; ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Xóa phòng này?');"><i class="fa fa-trash"></i></a>
+                            <form method="POST" class="d-inline" onsubmit="return confirm('Xóa phòng này?');">
+                                <?php echo Csrf::field('admin_motel_action'); ?>
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="id" value="<?php echo (int)$motel['id']; ?>">
+                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa fa-trash"></i></button>
+                            </form>
                         </td>
                     </tr>
                 <?php endforeach; ?>

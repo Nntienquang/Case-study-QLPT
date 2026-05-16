@@ -3,6 +3,7 @@
 class Captcha
 {
     private const CODE_LENGTH = 5;
+    private const TTL = 300;
     private const SLIDER_MIN = 42;
     private const SLIDER_MAX = 248;
     private const SLIDER_TOLERANCE = 8;
@@ -35,6 +36,12 @@ class Captcha
 
     public static function validate(string $key, string $answer): bool
     {
+        $createdAt = (int)($_SESSION[$key]['created_at'] ?? 0);
+        if ($createdAt <= 0 || time() - $createdAt > self::TTL) {
+            unset($_SESSION[$key]);
+            return false;
+        }
+
         $expected = strtoupper(trim((string)($_SESSION[$key]['code'] ?? '')));
         $actual = strtoupper(trim($answer));
 
@@ -42,7 +49,10 @@ class Captcha
             return false;
         }
 
-        return hash_equals($expected, $actual);
+        $valid = hash_equals($expected, $actual);
+        unset($_SESSION[$key]);
+
+        return $valid;
     }
 
     public static function ensureSlider(string $key): array

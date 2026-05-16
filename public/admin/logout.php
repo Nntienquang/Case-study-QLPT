@@ -1,16 +1,11 @@
 <?php
-require_once __DIR__ . '/../admin_init.php';
+require_once __DIR__ . '/../../config/constants.php';
 
-// Check login
-if (!$is_logged_in) {
-    header('Location: ' . ADMIN_URL . 'login.php');
-    exit;
-}
+session_start();
+session_unset();
+session_destroy();
 
-// Logout
-$auth->logout();
-
-header('Location: ' . ADMIN_URL . 'login.php');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Location: ' . BASE_URL . 'login.php');
 exit;
-
-?>

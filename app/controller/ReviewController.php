@@ -56,12 +56,12 @@ class ReviewController {
      * Delete review
      */
     public function deleteReview() {
-        if (!isset($_GET['id'])) {
+        if (!isset($_POST['id'])) {
             header('Location: ' . ADMIN_URL . 'reviews.php');
             exit;
         }
         
-        $id = (int)$_GET['id'];
+        $id = (int)$_POST['id'];
         $review = $this->review->getById($id);
         
         if ($this->review->delete($id)) {

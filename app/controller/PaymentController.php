@@ -58,20 +58,31 @@ class PaymentController {
      * Update payment status
      */
     public function updateStatus() {
-        if (!isset($_GET['id']) || !isset($_GET['status'])) {
+        if (!isset($_POST['id']) || !isset($_POST['status'])) {
             $_SESSION['error'] = 'Dữ liệu không hợp lệ';
             header('Location: ' . ADMIN_URL . 'payments.php');
             exit;
         }
         
-        $id = (int)$_GET['id'];
-        $status = $_GET['status'];
+        $id = (int)$_POST['id'];
+        $status = (string)$_POST['status'];
         $payment_old = $this->payment->getById($id);
         
         // Validate status
         $valid_status = ['pending', 'held', 'released', 'refunded'];
         if (!in_array($status, $valid_status)) {
             $_SESSION['error'] = 'Trạng thái không hợp lệ';
+            header('Location: ' . ADMIN_URL . 'payments.php');
+            exit;
+        }
+
+        $oldStatus = (string)($payment_old['status'] ?? '');
+        $allowedTransitions = [
+            'pending' => ['held', 'refunded'],
+            'held' => ['released', 'refunded'],
+        ];
+        if (!in_array($status, $allowedTransitions[$oldStatus] ?? [], true)) {
+            $_SESSION['error'] = 'Luồng cập nhật trạng thái thanh toán không hợp lệ';
             header('Location: ' . ADMIN_URL . 'payments.php');
             exit;
         }

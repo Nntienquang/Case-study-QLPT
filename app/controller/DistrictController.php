@@ -1,59 +1,65 @@
 <?php
+
 /**
  * District Controller
  */
 
-class DistrictController {
+class DistrictController
+{
     private $district;
     private $db;
     private $activityLog;
-    
-    public function __construct($db, $activityLog = null) {
+
+    public function __construct($db, $activityLog = null)
+    {
         $this->district = new District($db);
         $this->db = $db;
         $this->activityLog = $activityLog;
     }
-    
+
     /**
      * List all districts
      */
-    public function listDistricts() {
+    public function listDistricts()
+    {
         $districts = $this->district->getAll();
         return ['districts' => $districts];
     }
-    
+
     /**
      * View district details
      */
-    public function viewDistrict() {
+    public function viewDistrict()
+    {
         if (!isset($_GET['id'])) {
             header('Location: ' . ADMIN_URL . 'districts.php');
             exit;
         }
-        
+
         $id = (int)$_GET['id'];
         $district = $this->district->getById($id);
-        
+
         if (!$district) {
             header('Location: ' . ADMIN_URL . 'districts.php');
             exit;
         }
-        
+
         return ['district' => $district];
     }
-    
+
     /**
      * Create district
      */
-    public function createDistrict() {
+    public function createDistrict()
+    {
         if (!isset($_POST['name']) || empty($_POST['name'])) {
             $_SESSION['error'] = 'Vui lòng nhập tên quận';
-            header('Location: ' . ADMIN_URL . 'districts.php?action=add');
+            header('Location: ' . ADMIN_URL . 'district_create.php');
             exit;
         }
-        
+
         $name = $_POST['name'];
-        
+
         if ($this->district->create($name)) {
             if ($this->activityLog) {
                 $this->activityLog->log(
@@ -69,25 +75,27 @@ class DistrictController {
         } else {
             $_SESSION['error'] = 'Có lỗi xảy ra';
         }
-        
+
         header('Location: ' . ADMIN_URL . 'districts.php');
         exit;
     }
-    
+
     /**
      * Update district
      */
-    public function updateDistrict() {
+    public function updateDistrict()
+    {
         if (!isset($_GET['id']) || !isset($_POST['name']) || empty($_POST['name'])) {
             $_SESSION['error'] = 'Dữ liệu không hợp lệ';
-            header('Location: ' . ADMIN_URL . 'districts.php');
+            $target = isset($_GET['id']) ? 'district_edit.php?id=' . (int)$_GET['id'] : 'districts.php';
+            header('Location: ' . ADMIN_URL . $target);
             exit;
         }
-        
+
         $id = (int)$_GET['id'];
         $name = $_POST['name'];
         $district_old = $this->district->getById($id);
-        
+
         if ($this->district->update($id, $name)) {
             if ($this->activityLog && $district_old) {
                 $this->activityLog->log(
@@ -103,23 +111,24 @@ class DistrictController {
         } else {
             $_SESSION['error'] = 'Có lỗi xảy ra';
         }
-        
+
         header('Location: ' . ADMIN_URL . 'districts.php');
         exit;
     }
-    
+
     /**
      * Delete district
      */
-    public function deleteDistrict() {
-        if (!isset($_GET['id'])) {
+    public function deleteDistrict()
+    {
+        if (!isset($_POST['id'])) {
             header('Location: ' . ADMIN_URL . 'districts.php');
             exit;
         }
-        
-        $id = (int)$_GET['id'];
+
+        $id = (int)$_POST['id'];
         $district = $this->district->getById($id);
-        
+
         if ($this->district->delete($id)) {
             if ($this->activityLog && $district) {
                 $this->activityLog->log(
@@ -135,10 +144,8 @@ class DistrictController {
         } else {
             $_SESSION['error'] = 'Có lỗi xảy ra';
         }
-        
+
         header('Location: ' . ADMIN_URL . 'districts.php');
         exit;
     }
 }
-
-?>

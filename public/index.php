@@ -51,6 +51,7 @@ try {
 ?>
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -65,24 +66,27 @@ try {
             color: #172033;
             overflow-x: hidden;
         }
+
         .home-nav {
             position: fixed;
             inset: 18px 0 auto;
             z-index: 30;
         }
+
         .nav-frame {
             height: 66px;
             padding: 0 16px 0 20px;
             border-radius: 18px;
-            background: rgba(255,255,255,.82);
-            border: 1px solid rgba(255,255,255,.78);
-            box-shadow: 0 18px 50px rgba(15,23,42,.12);
+            background: rgba(255, 255, 255, .82);
+            border: 1px solid rgba(255, 255, 255, .78);
+            box-shadow: 0 18px 50px rgba(15, 23, 42, .12);
             backdrop-filter: blur(18px);
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 20px;
         }
+
         .brand {
             display: inline-flex;
             align-items: center;
@@ -91,6 +95,7 @@ try {
             text-decoration: none;
             font-weight: 900;
         }
+
         .brand-mark {
             width: 40px;
             height: 40px;
@@ -100,11 +105,13 @@ try {
             background: #101828;
             color: #fff;
         }
+
         .nav-links {
             display: flex;
             align-items: center;
             gap: 6px;
         }
+
         .nav-links a {
             color: #475467;
             text-decoration: none;
@@ -112,14 +119,17 @@ try {
             padding: 10px 12px;
             border-radius: 12px;
         }
+
         .nav-links a:hover {
             color: #101828;
-            background: rgba(16,24,40,.06);
+            background: rgba(16, 24, 40, .06);
         }
+
         .nav-cta {
             color: #fff !important;
             background: #101828 !important;
         }
+
         .hero {
             position: relative;
             min-height: 100vh;
@@ -128,6 +138,7 @@ try {
             align-items: center;
             overflow: hidden;
         }
+
         .hero-media {
             position: absolute;
             inset: 0;
@@ -135,6 +146,7 @@ try {
             overflow: hidden;
             background: #dbe7f0;
         }
+
         .hero-media span {
             position: absolute;
             inset: -7%;
@@ -144,57 +156,83 @@ try {
             transform: scale(1.08);
             animation: roomFilm 24s infinite;
         }
+
         .hero-media span:nth-child(1) {
             background-image: url('https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=2200&q=88');
             animation-delay: 0s;
         }
+
         .hero-media span:nth-child(2) {
             background-image: url('https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=2200&q=88');
             animation-delay: 8s;
         }
+
         .hero-media span:nth-child(3) {
             background-image: url('https://images.unsplash.com/photo-1560448204-603b3fc33ddc?auto=format&fit=crop&w=2200&q=88');
             animation-delay: 16s;
         }
+
         .hero::after {
             content: "";
             position: absolute;
             inset: 0;
             z-index: 1;
             background:
-                linear-gradient(90deg, rgba(246,248,251,.98) 0%, rgba(246,248,251,.86) 42%, rgba(246,248,251,.22) 76%),
-                linear-gradient(0deg, #f6f8fb 0%, rgba(246,248,251,0) 34%);
+                linear-gradient(90deg, rgba(246, 248, 251, .98) 0%, rgba(246, 248, 251, .86) 42%, rgba(246, 248, 251, .22) 76%),
+                linear-gradient(0deg, #f6f8fb 0%, rgba(246, 248, 251, 0) 34%);
         }
+
         @keyframes roomFilm {
-            0% { opacity: 0; transform: scale(1.08) translateX(0); }
-            8% { opacity: 1; }
-            34% { opacity: 1; transform: scale(1.02) translateX(-1.5%); }
-            42% { opacity: 0; transform: scale(1.02) translateX(-1.5%); }
-            100% { opacity: 0; }
+            0% {
+                opacity: 0;
+                transform: scale(1.08) translateX(0);
+            }
+
+            8% {
+                opacity: 1;
+            }
+
+            34% {
+                opacity: 1;
+                transform: scale(1.02) translateX(-1.5%);
+            }
+
+            42% {
+                opacity: 0;
+                transform: scale(1.02) translateX(-1.5%);
+            }
+
+            100% {
+                opacity: 0;
+            }
         }
+
         .hero-content {
             position: relative;
             z-index: 2;
         }
+
         .hero-grid {
             display: grid;
             grid-template-columns: minmax(0, 1fr) 430px;
             gap: 46px;
             align-items: center;
         }
+
         .eyebrow {
             display: inline-flex;
             align-items: center;
             gap: 8px;
             padding: 8px 12px;
             border-radius: 999px;
-            background: rgba(255,255,255,.76);
-            border: 1px solid rgba(16,24,40,.08);
+            background: rgba(255, 255, 255, .76);
+            border: 1px solid rgba(16, 24, 40, .08);
             color: #344054;
             font-weight: 850;
-            box-shadow: 0 12px 36px rgba(15,23,42,.08);
+            box-shadow: 0 12px 36px rgba(15, 23, 42, .08);
             margin-bottom: 18px;
         }
+
         .hero h1 {
             max-width: 780px;
             font-size: clamp(46px, 7.6vw, 92px);
@@ -203,9 +241,11 @@ try {
             letter-spacing: 0;
             margin-bottom: 22px;
         }
+
         .hero h1 span {
             color: #0e7490;
         }
+
         .hero-copy {
             max-width: 650px;
             color: #475467;
@@ -213,12 +253,14 @@ try {
             line-height: 1.75;
             margin-bottom: 26px;
         }
+
         .hero-actions {
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
             margin-bottom: 28px;
         }
+
         .btn-home {
             display: inline-flex;
             align-items: center;
@@ -230,70 +272,83 @@ try {
             text-decoration: none;
             font-weight: 900;
         }
+
         .btn-home.primary {
             color: #fff;
             background: #101828;
-            box-shadow: 0 18px 45px rgba(16,24,40,.22);
+            box-shadow: 0 18px 45px rgba(16, 24, 40, .22);
         }
+
         .btn-home.secondary {
             color: #101828;
-            background: rgba(255,255,255,.74);
-            border: 1px solid rgba(16,24,40,.1);
+            background: rgba(255, 255, 255, .74);
+            border: 1px solid rgba(16, 24, 40, .1);
         }
+
         .metrics {
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 12px;
             max-width: 770px;
         }
+
         .metric {
-            background: rgba(255,255,255,.72);
-            border: 1px solid rgba(16,24,40,.08);
+            background: rgba(255, 255, 255, .72);
+            border: 1px solid rgba(16, 24, 40, .08);
             border-radius: 16px;
             padding: 16px;
-            box-shadow: 0 14px 40px rgba(15,23,42,.08);
+            box-shadow: 0 14px 40px rgba(15, 23, 42, .08);
             backdrop-filter: blur(12px);
         }
+
         .metric strong {
             display: block;
             font-size: 28px;
             line-height: 1;
         }
+
         .metric span {
             color: #667085;
             font-size: 13px;
         }
+
         .search-card {
             border-radius: 24px;
             padding: 24px;
-            background: rgba(255,255,255,.86);
-            border: 1px solid rgba(255,255,255,.88);
-            box-shadow: 0 30px 80px rgba(15,23,42,.18);
+            background: rgba(255, 255, 255, .86);
+            border: 1px solid rgba(255, 255, 255, .88);
+            box-shadow: 0 30px 80px rgba(15, 23, 42, .18);
             backdrop-filter: blur(18px);
         }
+
         .search-card h2 {
             font-weight: 950;
             font-size: 26px;
             margin-bottom: 8px;
         }
+
         .search-card p {
             color: #667085;
             margin-bottom: 20px;
         }
+
         .search-card label {
             color: #344054;
             font-size: 13px;
             font-weight: 850;
             margin-bottom: 7px;
         }
+
         .search-card .form-control,
         .search-card .form-select {
             min-height: 48px;
             background: #fff !important;
         }
+
         .section {
             padding: 78px 0;
         }
+
         .section-head {
             display: flex;
             justify-content: space-between;
@@ -301,40 +356,47 @@ try {
             gap: 22px;
             margin-bottom: 28px;
         }
+
         .kicker {
             color: #0e7490;
             font-weight: 950;
             margin-bottom: 8px;
         }
+
         .section-title {
             font-size: clamp(32px, 4vw, 52px);
             line-height: 1.04;
             font-weight: 950;
             margin: 0;
         }
+
         .section-desc {
             max-width: 660px;
             color: #667085;
             line-height: 1.7;
             margin: 12px 0 0;
         }
+
         .feature-grid,
         .room-grid {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 18px;
         }
+
         .feature-card,
         .room-card,
         .area-card {
             background: #fff;
             border: 1px solid #e5eaf2;
             border-radius: 18px;
-            box-shadow: 0 18px 50px rgba(15,23,42,.08);
+            box-shadow: 0 18px 50px rgba(15, 23, 42, .08);
         }
+
         .feature-card {
             padding: 24px;
         }
+
         .feature-icon {
             width: 52px;
             height: 52px;
@@ -345,20 +407,24 @@ try {
             background: #101828;
             margin-bottom: 18px;
         }
+
         .feature-card h3 {
             font-weight: 950;
             font-size: 21px;
         }
+
         .feature-card p {
             color: #667085;
             line-height: 1.65;
             margin: 0;
         }
+
         .area-grid {
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 14px;
         }
+
         .area-card {
             min-height: 92px;
             padding: 18px;
@@ -369,47 +435,56 @@ try {
             align-items: center;
             font-weight: 950;
         }
+
         .area-card small {
             display: block;
             color: #667085;
             font-weight: 650;
             margin-top: 4px;
         }
+
         .room-card {
             overflow: hidden;
         }
+
         .room-photo {
             height: 190px;
             background:
-                linear-gradient(135deg, rgba(16,24,40,.08), rgba(14,116,144,.16)),
+                linear-gradient(135deg, rgba(16, 24, 40, .08), rgba(14, 116, 144, .16)),
                 url('https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=900&q=82') center/cover;
         }
+
         .room-body {
             padding: 20px;
         }
+
         .room-body h3 {
             min-height: 48px;
             font-size: 19px;
             font-weight: 950;
             line-height: 1.32;
         }
+
         .room-price {
             color: #0e7490;
             font-size: 22px;
             font-weight: 950;
             margin-bottom: 10px;
         }
+
         .room-meta {
             color: #667085;
             min-height: 44px;
             line-height: 1.55;
         }
+
         .room-tags {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
             margin: 16px 0;
         }
+
         .room-tag {
             padding: 6px 10px;
             border-radius: 999px;
@@ -418,31 +493,37 @@ try {
             font-weight: 850;
             font-size: 12px;
         }
+
         .empty-market {
             padding: 32px;
             background: #fff;
             border: 1px solid #e5eaf2;
             border-radius: 18px;
-            box-shadow: 0 18px 50px rgba(15,23,42,.08);
+            box-shadow: 0 18px 50px rgba(15, 23, 42, .08);
         }
+
         .footer {
             padding: 34px 0;
             border-top: 1px solid #e5eaf2;
             color: #667085;
         }
+
         .footer a {
             color: #475467;
             text-decoration: none;
             margin-left: 18px;
             font-weight: 750;
         }
+
         @media (max-width: 991px) {
             .home-nav {
                 inset: 10px 0 auto;
             }
+
             .nav-links {
                 display: none;
             }
+
             .hero-grid,
             .metrics,
             .feature-grid,
@@ -450,35 +531,227 @@ try {
             .room-grid {
                 grid-template-columns: 1fr;
             }
+
             .hero {
                 padding-top: 110px;
             }
+
             .hero::after {
-                background: linear-gradient(0deg, rgba(246,248,251,.95), rgba(246,248,251,.76));
+                background: linear-gradient(0deg, rgba(246, 248, 251, .95), rgba(246, 248, 251, .76));
             }
+
             .section-head {
                 align-items: start;
                 flex-direction: column;
             }
         }
+
+        .home-nav {
+            width: 100%;
+            position: absolute;
+            top: 20px;
+            left: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+        }
+
+
+        .nav-container {
+            background-color: #ffffff;
+            width: 90%;
+            max-width: 1200px;
+            border-radius: 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px 10px 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 25px;
+            align-items: center;
+        }
+
+        .nav-item::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: #1185a1;
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .login-text {
+            color: #111827;
+        }
+
+        .btn-post {
+            background-color: #111827;
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-post:hover {
+            background-color: #1f2937;
+            transform: translateY(-2px);
+            bo x-shadow: 0 4px 12px rgba(17, 24, 39, 0.3);
+        }
+
+        .hamburger-btn {
+            display: none;
+            background: transparent;
+            border: none;
+            font-size: 24px;
+            color: #111827;
+            cursor: pointer;
+        }
+
+        .menu-content {
+            display: flex;
+            flex-grow: 1;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .menu-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+        }
+
+
+        .nav-links {
+            display: flex;
+            gap: 45px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+
+        .nav-item {
+            text-decoration: none;
+            color: #1f2937;
+            font-size: 18px;
+            font-weight: 600;
+            padding: 10px 0;
+            transition: color 0.2s ease, transform 0.2s ease;
+            display: inline-block;
+        }
+
+
+        .nav-item:hover {
+            color: #000;
+            transform: translateY(-1px);
+        }
+
+
+        .nav-actions {
+            min-width: 200px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 20px;
+        }
+
+
+        @media (max-width: 991px) {
+            .hamburger-btn {
+                display: block;
+            }
+
+
+            .menu-content {
+                display: none;
+                flex-direction: column;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                width: 100%;
+                background-color: #ffffff;
+                border-radius: 24px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+                padding: 20px;
+                margin-top: 15px;
+            }
+
+
+            .menu-content.show {
+                display: flex;
+            }
+
+
+            .nav-links,
+            .nav-actions {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+                width: 100%;
+            }
+
+
+            .nav-actions {
+                margin-top: 15px;
+                padding-top: 20px;
+                border-top: 1px solid #f3f4f6;
+                align-items: stretch;
+            }
+
+            .btn-post {
+                text-align: center;
+            }
+        }
     </style>
 </head>
+
 <body>
     <nav class="home-nav">
-        <div class="container-lg">
-            <div class="nav-frame">
-                <a href="index.php" class="brand">
-                    <span class="brand-mark"><i class="fas fa-house-chimney"></i></span>
-                    <span>QuanLyPhongTro</span>
-                </a>
+        <div class="nav-container">
+
+
+            <a href="index.php" class="brand">
+                <span class="brand-mark"><i class="fas fa-house-chimney"></i></span>
+                <span class="brand-name">QuanLyPhongTro</span>
+            </a>
+
+
+            <button class="hamburger-btn" id="mobile-menu-btn">
+                <i class="fas fa-bars"></i>
+            </button>
+
+            <div class="menu-content" id="mobile-menu">
+
                 <div class="nav-links">
-                    <a href="#rooms">Phòng đang thuê</a>
-                    <a href="#areas">Khu vực</a>
-                    <a href="#system">Chức năng</a>
-                    <a href="login.php">Đăng nhập</a>
-                    <a href="owner-register.php" class="nav-cta">Đăng phòng</a>
+                    <a href="phongtro.php" class="nav-item">Phòng trọ</a>
+                    <a href="khuvuc.php" class="nav-item">Khu vực</a>
+                    <a href="blog.php" class="nav-item">Tin tức</a>
+                    <a href="trogiup.php" class="nav-item">Trợ giúp</a>
+                </div>
+
+
+
+                <div class="nav-actions">
+                    <a href="login.php" class="nav-item login-text">Đăng nhập</a>
+                    <a href="owner-register.php" class="btn-post">Đăng phòng</a>
                 </div>
             </div>
+
         </div>
     </nav>
 
@@ -622,7 +895,7 @@ try {
                     <div class="room-grid">
                         <?php foreach ($rooms as $room): ?>
                             <?php
-                                $moveInCost = (int)$room['price'] + (int)($room['service_fee'] ?? 0) + (int)round((int)$room['price'] * (float)($room['deposit_months'] ?? 1));
+                            $moveInCost = (int)$room['price'] + (int)($room['service_fee'] ?? 0) + (int)round((int)$room['price'] * (float)($room['deposit_months'] ?? 1));
                             ?>
                             <article class="room-card">
                                 <div class="room-photo"></div>
@@ -653,18 +926,164 @@ try {
         </section>
     </main>
 
-    <footer class="footer">
-        <div class="container-lg d-flex flex-wrap justify-content-between gap-3">
-            <div><strong>QuanLyPhongTro</strong> · Tìm phòng sạch đẹp, quản lý thuê trọ dễ dàng.</div>
-            <div>
-                <a href="login.php">Đăng nhập</a>
-                <a href="register.php">Người thuê</a>
-                <a href="owner-register.php">Chủ phòng</a>
-                <a href="admin/login.php">Admin</a>
+    <footer class="footer py-5 mt-5 bg-dark text-white">
+        <style>
+            /* Tối ưu nền và độ sáng */
+            .footer {
+                background-color: #121416 !important;
+                /* Đen sâu hơn để chữ nổi lên */
+                border-top: 1px solid #2d3238;
+            }
+
+            /* Làm sáng mô tả và thông tin liên hệ */
+            .footer-description,
+            .footer-info,
+            .footer-copyright {
+                color: #ced4da !important;
+                /* Màu xám bạc sáng, rất rõ trên nền đen */
+                font-size: 0.95rem;
+                line-height: 1.6;
+            }
+
+            /* Tùy chỉnh các đường link */
+            .footer-link {
+                color: #adb5bd !important;
+                text-decoration: none;
+                transition: all 0.3s ease;
+                display: inline-block;
+                padding: 2px 0;
+            }
+
+            .footer-link:hover {
+                color: #ffffff !important;
+                /* Khi di chuột vào sẽ sáng trắng rực rỡ */
+                transform: translateX(5px);
+                /* Hiệu ứng trượt nhẹ sang phải */
+            }
+
+            /* Đường kẻ ngăn cách */
+            .footer-divider {
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            /* Icon mạng xã hội */
+            .social-links a {
+                color: #ffffff;
+                font-size: 1.2rem;
+                opacity: 0.7;
+                transition: 0.3s;
+            }
+
+            .social-links a:hover {
+                opacity: 1;
+                color: #0d6efd;
+                /* Đổi màu xanh khi hover */
+            }
+
+            /* Nút Admin sáng hơn */
+            .btn-light {
+                background-color: #f8f9fa;
+                border: none;
+                color: #212529 !important;
+            }
+
+            .btn-light:hover {
+                background-color: #ffffff;
+                box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+            }
+        </style>
+        <div class="container-lg">
+            <div class="row gy-4">
+                <!-- Cột 1: Giới thiệu -->
+                <div class="col-lg-4 col-md-6">
+                    <h5 class="fw-bold mb-3 text-white">🏠 QuanLyPhongTro</h5>
+                    <p class="footer-description">Tìm phòng sạch đẹp, quản lý thuê trọ dễ dàng và minh bạch. Nền tảng kết nối chủ trọ và người thuê hàng đầu.</p>
+                    <div class="social-links mt-3">
+                        <a href="#" class="me-3"><i class="bi bi-facebook"></i></a>
+                        <a href="#" class="me-3"><i class="bi bi-instagram"></i></a>
+                        <a href="#"><i class="bi bi-twitter-x"></i></a>
+                    </div>
+                </div>
+
+                <!-- Cột 2: Dành cho người thuê -->
+                <div class="col-lg-2 col-md-6">
+                    <h6 class="fw-bold mb-3 text-white text-uppercase small">Người Thuê</h6>
+                    <ul class="list-unstyled">
+                        <li><a href="index.php" class="footer-link">Tìm phòng trọ</a></li>
+                        <li><a href="register.php" class="footer-link">Đăng ký tài khoản</a></li>
+                        <li><a href="login.php" class="footer-link">Đăng nhập</a></li>
+                    </ul>
+                </div>
+
+
+                <div class="col-lg-2 col-md-6">
+                    <h6 class="fw-bold mb-3 text-white text-uppercase small">Chủ Phòng</h6>
+                    <ul class="list-unstyled">
+                        <li><a href="owner-register.php" class="footer-link">Đăng tin cho thuê</a></li>
+                        <li><a href="login.php" class="footer-link">Quản lý phòng</a></li>
+                        <li><a href="#" class="footer-link">Chính sách chủ trọ</a></li>
+                    </ul>
+                </div>
+
+
+                <div class="col-lg-4 col-md-6">
+                    <h6 class="fw-bold mb-3 text-white text-uppercase small">Liên hệ hệ thống</h6>
+                    <p class="footer-info"><i class="bi bi-geo-alt-fill me-2"></i> Trường Đại học Vinh, Nghệ An</p>
+                    <p class="footer-info"><i class="bi bi-envelope-fill me-2"></i> ho-tro@quanlyphongtro.vn</p>
+                    <a href="admin/login.php" class="btn btn-light btn-sm fw-bold px-3 mt-2">Quản trị viên (Admin)</a>
+                </div>
+            </div>
+
+            <hr class="my-4 footer-divider">
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center">
+                <div class="footer-copyright">
+                    © 2026 <strong>QuanLyPhongTro</strong>. Bản quyền thuộc về Team dự án.
+                </div>
+                <div class="footer-bottom-links">
+                    <a href="#" class="footer-link me-3">Chính sách bảo mật</a>
+                    <a href="#" class="footer-link">Điều khoản sử dụng</a>
+                </div>
             </div>
         </div>
     </footer>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Xử lý nút Hamburger trên Mobile
+            const menuBtn = document.getElementById('mobile-menu-btn');
+            const menuContent = document.getElementById('mobile-menu');
+            const icon = menuBtn.querySelector('i');
+
+            menuBtn.addEventListener('click', function() {
+                menuContent.classList.toggle('show');
+                if (menuContent.classList.contains('show')) {
+                    icon.classList.remove('fa-bars');
+                    icon.classList.add('fa-times');
+                } else {
+                    icon.classList.remove('fa-times');
+                    icon.classList.add('fa-bars');
+                }
+            });
+
+            // Xử lý gạch chân cho menu
+            const links = document.querySelectorAll('.nav-links .nav-item');
+            links.forEach(link => {
+                link.addEventListener('click', function() {
+                    links.forEach(l => l.classList.remove('active'));
+                    this.classList.add('active');
+
+                    // Tự động đóng menu trên điện thoại khi chọn xong
+                    if (window.innerWidth <= 991) {
+                        menuContent.classList.remove('show');
+                        icon.classList.remove('fa-times');
+                        icon.classList.add('fa-bars');
+                    }
+                });
+            });
+        });
+    </script>
 </body>
+
 </html>

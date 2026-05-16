@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 13, 2026 at 11:02 AM
+-- Generation Time: May 15, 2026 at 04:04 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -41,6 +41,13 @@ CREATE TABLE `activity_logs` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `activity_logs`
+--
+
+INSERT INTO `activity_logs` (`id`, `admin_id`, `action`, `entity_type`, `entity_id`, `old_values`, `new_values`, `description`, `ip_address`, `user_agent`, `created_at`) VALUES
+(2, 5, 'approve_user', 'user', 8, NULL, NULL, 'Duyệt tài khoản owner: Owner (owner123@gmail.com)', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', '2026-05-15 13:08:08');
+
 -- --------------------------------------------------------
 
 --
@@ -54,6 +61,29 @@ CREATE TABLE `admin_notes` (
   `entity_id` int(11) NOT NULL,
   `note` text NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `articles`
+--
+
+CREATE TABLE `articles` (
+  `id` int(11) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `slug` varchar(255) NOT NULL,
+  `summary` text DEFAULT NULL,
+  `content` longtext NOT NULL,
+  `thumbnail` varchar(255) DEFAULT NULL,
+  `category_id` int(11) DEFAULT NULL,
+  `author_id` int(11) DEFAULT NULL,
+  `views` int(11) NOT NULL DEFAULT 0,
+  `is_featured` tinyint(1) NOT NULL DEFAULT 0,
+  `status` enum('draft','published','hidden') NOT NULL DEFAULT 'draft',
+  `published_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -177,6 +207,42 @@ CREATE TABLE `listing_quality_checks` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `login_attempts`
+--
+
+CREATE TABLE `login_attempts` (
+  `id` int(11) NOT NULL,
+  `email` varchar(150) DEFAULT NULL,
+  `ip_address` varchar(45) NOT NULL,
+  `user_agent` varchar(255) DEFAULT NULL,
+  `success` tinyint(1) NOT NULL DEFAULT 0,
+  `failure_reason` varchar(100) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `login_security_state`
+--
+
+CREATE TABLE `login_security_state` (
+  `id` int(11) NOT NULL,
+  `identity_hash` char(64) NOT NULL,
+  `email` varchar(150) DEFAULT NULL,
+  `ip_address` varchar(45) NOT NULL,
+  `failures` int(11) NOT NULL DEFAULT 0,
+  `captcha_required` tinyint(1) NOT NULL DEFAULT 0,
+  `locked_until` datetime DEFAULT NULL,
+  `lock_level` tinyint(1) NOT NULL DEFAULT 0,
+  `last_failure_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `maintenance_requests`
 --
 
@@ -229,7 +295,10 @@ CREATE TABLE `motels` (
   `user_id` int(11) NOT NULL,
   `category_id` int(11) DEFAULT NULL,
   `district_id` int(11) DEFAULT NULL,
-  `status` enum('pending','approved','hidden') DEFAULT 'pending',
+  `status` enum('pending','approved','hidden','rejected') DEFAULT 'pending',
+  `rejection_reason` text DEFAULT NULL,
+  `rejected_by` int(11) DEFAULT NULL,
+  `rejected_at` datetime DEFAULT NULL,
   `count_view` int(11) DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NULL DEFAULT NULL,
@@ -270,6 +339,29 @@ CREATE TABLE `motel_utilities` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `news_categories`
+--
+
+CREATE TABLE `news_categories` (
+  `id` int(11) NOT NULL,
+  `name` varchar(150) NOT NULL,
+  `slug` varchar(150) NOT NULL,
+  `description` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `news_categories`
+--
+
+INSERT INTO `news_categories` (`id`, `name`, `slug`, `description`, `created_at`) VALUES
+(1, 'Kinh nghiệm thuê trọ', 'kinh-nghiem-thue-tro', 'Các mẹo hay giúp sinh viên và người đi làm tìm phòng trọ ưng ý, tránh lừa đảo.', '2026-05-15 13:02:47'),
+(2, 'Cẩm nang pháp lý', 'cam-nang-phap-ly', 'Kiến thức về hợp đồng, luật cư trú, đăng ký tạm trú tạm vắng.', '2026-05-15 13:02:47'),
+(3, 'Thông báo từ hệ thống', 'thong-bao', 'Các cập nhật tính năng mới hoặc quy định từ Ban quản trị QuanLyPhongTro.', '2026-05-15 13:02:47');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `notifications`
 --
 
@@ -283,6 +375,21 @@ CREATE TABLE `notifications` (
   `read_at` datetime DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `password_resets`
+--
+
+CREATE TABLE `password_resets` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `token_hash` char(64) NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `used_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -333,6 +440,7 @@ CREATE TABLE `reviews` (
   `motel_id` int(11) DEFAULT NULL,
   `rating` int(11) DEFAULT NULL,
   `comment` text DEFAULT NULL,
+  `status` varchar(20) NOT NULL DEFAULT 'visible',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -396,6 +504,7 @@ CREATE TABLE `users` (
   `password` varchar(255) DEFAULT NULL,
   `reset_token` varchar(64) DEFAULT NULL,
   `reset_expires` datetime DEFAULT NULL,
+  `force_password_change` tinyint(1) NOT NULL DEFAULT 0,
   `phone` varchar(20) DEFAULT NULL,
   `avatar` varchar(255) DEFAULT NULL,
   `role` enum('user','owner','admin') DEFAULT 'user',
@@ -415,11 +524,13 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `name`, `email`, `password`, `reset_token`, `reset_expires`, `phone`, `avatar`, `role`, `created_at`, `status`, `approved_by`, `approved_at`, `rejection_reason`, `address`, `idcard_number`, `trust_score`, `admin_note`, `verified_at`) VALUES
-(2, 'User 2', 'user2@gmail.com', '123', NULL, NULL, NULL, NULL, 'user', '2026-04-23 08:39:47', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL),
-(4, 'Admin', 'admin@gmail.com', '123', NULL, NULL, NULL, NULL, 'admin', '2026-04-23 08:39:47', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL),
-(5, 'Admin', 'admin123@gmail.com', '$2y$10$o5dhV8yry9Mmv7Cgdq6ZjuWCGYRSNLrReh5G4DTh4eN/xFYhvTNCy', NULL, NULL, '', NULL, 'admin', '2026-04-25 10:29:43', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL),
-(6, 'Chủ trọ 1', 'owner@gmail.com', '$2y$10$gU1LggXMYCfg4nEh8NZIv.hcB1L1kTxSJMsiMuwvy2mCzRdact4i2', NULL, NULL, NULL, NULL, 'owner', '2026-04-29 09:27:23', 'pending', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL);
+INSERT INTO `users` (`id`, `name`, `email`, `password`, `reset_token`, `reset_expires`, `force_password_change`, `phone`, `avatar`, `role`, `created_at`, `status`, `approved_by`, `approved_at`, `rejection_reason`, `address`, `idcard_number`, `trust_score`, `admin_note`, `verified_at`) VALUES
+(2, 'User 2', 'user2@gmail.com', '123', NULL, NULL, 0, NULL, NULL, 'user', '2026-04-23 08:39:47', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL),
+(4, 'Admin', 'admin@gmail.com', '123', NULL, NULL, 0, NULL, NULL, 'admin', '2026-04-23 08:39:47', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL),
+(5, 'Admin', 'admin123@gmail.com', '$2y$10$o5dhV8yry9Mmv7Cgdq6ZjuWCGYRSNLrReh5G4DTh4eN/xFYhvTNCy', NULL, NULL, 0, '', NULL, 'admin', '2026-04-25 10:29:43', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL),
+(6, 'Chủ trọ 1', 'owner@gmail.com', '$2y$10$gU1LggXMYCfg4nEh8NZIv.hcB1L1kTxSJMsiMuwvy2mCzRdact4i2', NULL, NULL, 0, NULL, NULL, 'owner', '2026-04-29 09:27:23', 'approved', 5, '2026-05-13 16:15:55', NULL, NULL, NULL, 0, NULL, NULL),
+(7, 'User', 'user123@gmail.com', '$2y$10$udXXi/ARGfseLfIHPa0GE..0qplAgd75dGcDCNt1toASvuJiRJhTa', NULL, NULL, 0, '', NULL, 'user', '2026-05-15 13:07:14', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL),
+(8, 'Owner', 'owner123@gmail.com', '$2y$10$a/REVjGxzRqT3BcRRu.I5.FOtLbx2ORNEKRL.jAp4Lg31RXsvqTFC', NULL, NULL, 0, '0193839338', NULL, 'owner', '2026-05-15 13:07:39', 'approved', 5, '2026-05-15 20:08:08', NULL, NULL, NULL, 0, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -516,6 +627,15 @@ ALTER TABLE `admin_notes`
   ADD KEY `idx_entity` (`entity_type`,`entity_id`);
 
 --
+-- Indexes for table `articles`
+--
+ALTER TABLE `articles`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `slug` (`slug`),
+  ADD KEY `category_id` (`category_id`),
+  ADD KEY `author_id` (`author_id`);
+
+--
 -- Indexes for table `bookings`
 --
 ALTER TABLE `bookings`
@@ -570,6 +690,22 @@ ALTER TABLE `listing_quality_checks`
   ADD KEY `idx_score` (`score`);
 
 --
+-- Indexes for table `login_attempts`
+--
+ALTER TABLE `login_attempts`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_login_attempts_email_ip` (`email`,`ip_address`),
+  ADD KEY `idx_login_attempts_created_at` (`created_at`);
+
+--
+-- Indexes for table `login_security_state`
+--
+ALTER TABLE `login_security_state`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_login_security_identity` (`identity_hash`),
+  ADD KEY `idx_login_security_email_ip` (`email`,`ip_address`);
+
+--
 -- Indexes for table `maintenance_requests`
 --
 ALTER TABLE `maintenance_requests`
@@ -615,6 +751,13 @@ ALTER TABLE `motel_utilities`
   ADD KEY `utility_id` (`utility_id`);
 
 --
+-- Indexes for table `news_categories`
+--
+ALTER TABLE `news_categories`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `slug` (`slug`);
+
+--
 -- Indexes for table `notifications`
 --
 ALTER TABLE `notifications`
@@ -623,6 +766,15 @@ ALTER TABLE `notifications`
   ADD KEY `idx_type` (`type`),
   ADD KEY `idx_read_at` (`read_at`),
   ADD KEY `idx_created_at` (`created_at`);
+
+--
+-- Indexes for table `password_resets`
+--
+ALTER TABLE `password_resets`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_password_resets_token_hash` (`token_hash`),
+  ADD KEY `idx_password_resets_user_id` (`user_id`),
+  ADD KEY `idx_password_resets_expires_at` (`expires_at`);
 
 --
 -- Indexes for table `payments`
@@ -648,7 +800,8 @@ ALTER TABLE `reports`
 ALTER TABLE `reviews`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `user_id` (`user_id`,`motel_id`),
-  ADD KEY `motel_id` (`motel_id`);
+  ADD KEY `motel_id` (`motel_id`),
+  ADD KEY `idx_reviews_status` (`status`);
 
 --
 -- Indexes for table `saved_searches`
@@ -718,12 +871,18 @@ ALTER TABLE `withdraw_requests`
 -- AUTO_INCREMENT for table `activity_logs`
 --
 ALTER TABLE `activity_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `admin_notes`
 --
 ALTER TABLE `admin_notes`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `articles`
+--
+ALTER TABLE `articles`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
@@ -769,6 +928,18 @@ ALTER TABLE `listing_quality_checks`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `login_attempts`
+--
+ALTER TABLE `login_attempts`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `login_security_state`
+--
+ALTER TABLE `login_security_state`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `maintenance_requests`
 --
 ALTER TABLE `maintenance_requests`
@@ -793,9 +964,21 @@ ALTER TABLE `motel_images`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
+-- AUTO_INCREMENT for table `news_categories`
+--
+ALTER TABLE `news_categories`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `password_resets`
+--
+ALTER TABLE `password_resets`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
@@ -808,7 +991,7 @@ ALTER TABLE `payments`
 -- AUTO_INCREMENT for table `reports`
 --
 ALTER TABLE `reports`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `reviews`
@@ -832,7 +1015,7 @@ ALTER TABLE `transactions`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `utilities`
@@ -861,6 +1044,13 @@ ALTER TABLE `withdraw_requests`
 --
 -- Constraints for dumped tables
 --
+
+--
+-- Constraints for table `articles`
+--
+ALTER TABLE `articles`
+  ADD CONSTRAINT `articles_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `news_categories` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `articles_ibfk_2` FOREIGN KEY (`author_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `bookings`
@@ -896,6 +1086,12 @@ ALTER TABLE `motel_images`
 ALTER TABLE `motel_utilities`
   ADD CONSTRAINT `motel_utilities_ibfk_1` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `motel_utilities_ibfk_2` FOREIGN KEY (`utility_id`) REFERENCES `utilities` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `password_resets`
+--
+ALTER TABLE `password_resets`
+  ADD CONSTRAINT `fk_password_resets_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `payments`

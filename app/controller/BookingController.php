@@ -1,30 +1,34 @@
 <?php
+
 /**
  * Booking Controller
  */
 
-class BookingController {
+class BookingController
+{
     private $booking;
     private $db;
     private $activityLog;
-    
-    public function __construct($db, $activityLog = null) {
+
+    public function __construct($db, $activityLog = null)
+    {
         $this->booking = new Booking($db);
         $this->db = $db;
         $this->activityLog = $activityLog;
     }
-    
+
     /**
      * List all bookings
      */
-    public function listBookings() {
+    public function listBookings()
+    {
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
         $status = isset($_GET['status']) ? $_GET['status'] : '';
-        
+
         $bookings = $this->booking->getAll($page, ITEMS_PER_PAGE, $status);
         $total = $this->booking->getTotal($status);
         $total_pages = ceil($total / ITEMS_PER_PAGE);
-        
+
         return [
             'bookings' => $bookings,
             'total' => $total,
@@ -33,41 +37,43 @@ class BookingController {
             'status' => $status
         ];
     }
-    
+
     /**
      * View booking details
      */
-    public function viewBooking() {
+    public function viewBooking()
+    {
         if (!isset($_GET['id'])) {
             header('Location: ' . ADMIN_URL . 'bookings.php');
             exit;
         }
-        
+
         $id = (int)$_GET['id'];
         $booking = $this->booking->getById($id);
-        
+
         if (!$booking) {
             header('Location: ' . ADMIN_URL . 'bookings.php');
             exit;
         }
-        
+
         return ['booking' => $booking];
     }
-    
+
     /**
      * Update booking status
      */
-    public function updateStatus() {
-        if (!isset($_GET['id']) || !isset($_GET['status'])) {
+    public function updateStatus()
+    {
+        if (!isset($_POST['id']) || !isset($_POST['status'])) {
             $_SESSION['error'] = 'Dữ liệu không hợp lệ';
             header('Location: ' . ADMIN_URL . 'bookings.php');
             exit;
         }
-        
-        $id = (int)$_GET['id'];
-        $status = $_GET['status'];
+
+        $id = (int)$_POST['id'];
+        $status = (string)$_POST['status'];
         $booking_old = $this->booking->getById($id);
-        
+
         // Validate status
         $valid_status = ['pending', 'paid', 'accepted', 'completed', 'rejected', 'cancelled'];
         if (!in_array($status, $valid_status)) {
@@ -75,7 +81,7 @@ class BookingController {
             header('Location: ' . ADMIN_URL . 'bookings.php');
             exit;
         }
-        
+
         if ($this->booking->updateStatus($id, $status)) {
             if ($this->activityLog && $booking_old) {
                 $this->activityLog->log(
@@ -91,23 +97,24 @@ class BookingController {
         } else {
             $_SESSION['error'] = 'Có lỗi xảy ra';
         }
-        
+
         header('Location: ' . ADMIN_URL . 'bookings.php');
         exit;
     }
-    
+
     /**
      * Delete booking
      */
-    public function deleteBooking() {
-        if (!isset($_GET['id'])) {
+    public function deleteBooking()
+    {
+        if (!isset($_POST['id'])) {
             header('Location: ' . ADMIN_URL . 'bookings.php');
             exit;
         }
-        
-        $id = (int)$_GET['id'];
+
+        $id = (int)$_POST['id'];
         $booking = $this->booking->getById($id);
-        
+
         if ($this->booking->delete($id)) {
             if ($this->activityLog && $booking) {
                 $this->activityLog->log(
@@ -123,10 +130,8 @@ class BookingController {
         } else {
             $_SESSION['error'] = 'Có lỗi xảy ra';
         }
-        
+
         header('Location: ' . ADMIN_URL . 'bookings.php');
         exit;
     }
 }
-
-?>

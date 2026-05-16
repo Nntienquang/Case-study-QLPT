@@ -12,10 +12,9 @@ session_start();
 $db = new Database($conn);
 $auth = new AuthController($db->getConnection());
 
-// Logout
 $auth->logout();
 
-// Redirect to login
-header("Location: login.php");
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Location: login.php');
 exit();
-?>

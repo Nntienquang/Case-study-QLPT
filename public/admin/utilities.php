@@ -7,55 +7,29 @@ if (!$is_logged_in) {
     exit;
 }
 
-$activityLog = new ActivityLog($db);
-$controller = new UtilityController($db, $activityLog);
-$action = $_GET['action'] ?? '';
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if ($action === 'add') {
-        $controller->createUtility();
-    } elseif ($action === 'edit' && isset($_GET['id'])) {
-        $controller->updateUtility();
+$controller = new UtilityController($db, new ActivityLog($db));
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
+    if (!Csrf::validateRequest('admin_utility_action')) {
+        $_SESSION['error'] = 'Phiên thao tác không hợp lệ, vui lòng thử lại.';
+        header('Location: ' . ADMIN_URL . 'utilities.php');
+        exit;
     }
-}
 
-if ($action === 'delete' && isset($_GET['id'])) {
     $controller->deleteUtility();
 }
 
 $data = $controller->listUtilities();
-$editUtility = null;
-if ($action === 'edit' && isset($_GET['id'])) {
-    foreach ($data['utilities'] as $utility) {
-        if ((int)$utility['id'] === (int)$_GET['id']) {
-            $editUtility = $utility;
-            break;
-        }
-    }
-}
 
-admin_layout_start('Quản lý tiện nghi', 'Chuẩn hóa tiện nghi để tin đăng rõ thông tin và dễ so sánh hơn.', 'utilities');
+admin_layout_start('Quản lý tiện nghi', 'Danh sách tiện nghi chuẩn hóa cho tin đăng.', 'utilities');
 admin_flash_messages();
 ?>
 
-<div class="wb-card mb-3">
-    <form method="POST" class="row g-3 align-items-end">
-        <div class="col-md-8">
-            <label class="form-label fw-semibold">Tên tiện nghi</label>
-            <input type="text" name="name" class="form-control" value="<?php echo admin_e($editUtility['name'] ?? ''); ?>" placeholder="Ví dụ: Wifi, máy lạnh, chỗ để xe" required>
-        </div>
-        <div class="col-md-4 d-flex gap-2">
-            <button type="submit" class="btn btn-primary flex-fill"><i class="fa fa-save"></i> <?php echo $editUtility ? 'Cập nhật' : 'Thêm mới'; ?></button>
-            <?php if ($editUtility): ?>
-                <a href="<?php echo ADMIN_URL; ?>utilities.php" class="btn btn-outline-secondary">Hủy</a>
-            <?php endif; ?>
-        </div>
-    </form>
-</div>
-
 <div class="wb-section-head">
     <h2>Danh sách tiện nghi</h2>
-    <span class="wb-pill"><?php echo count($data['utilities'] ?? []); ?> tiện nghi</span>
+    <div class="wb-actions">
+        <span class="wb-pill"><?php echo count($data['utilities'] ?? []); ?> tiện nghi</span>
+        <a href="<?php echo ADMIN_URL; ?>utility_create.php" class="btn btn-primary btn-sm"><i class="fa fa-plus"></i> Thêm tiện nghi</a>
+    </div>
 </div>
 
 <div class="wb-table-card">
@@ -68,8 +42,14 @@ admin_flash_messages();
                         <td>#<?php echo (int)$utility['id']; ?></td>
                         <td class="wb-title"><?php echo admin_e($utility['name'] ?? ''); ?></td>
                         <td class="text-end">
-                            <a href="<?php echo ADMIN_URL . 'utilities.php?action=edit&id=' . (int)$utility['id']; ?>" class="btn btn-sm btn-warning"><i class="fa fa-edit"></i> Sửa</a>
-                            <a href="<?php echo ADMIN_URL . 'utilities.php?action=delete&id=' . (int)$utility['id']; ?>" class="btn btn-sm btn-outline-danger" onclick="return confirm('Xóa tiện nghi này?');"><i class="fa fa-trash"></i></a>
+                            <a href="<?php echo ADMIN_URL . 'utility_detail.php?id=' . (int)$utility['id']; ?>" class="btn btn-sm btn-primary"><i class="fa fa-eye"></i></a>
+                            <a href="<?php echo ADMIN_URL . 'utility_edit.php?id=' . (int)$utility['id']; ?>" class="btn btn-sm btn-warning"><i class="fa fa-edit"></i></a>
+                            <form method="POST" class="d-inline" onsubmit="return confirm('Xóa tiện nghi này?');">
+                                <?php echo Csrf::field('admin_utility_action'); ?>
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="id" value="<?php echo (int)$utility['id']; ?>">
+                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa fa-trash"></i></button>
+                            </form>
                         </td>
                     </tr>
                 <?php endforeach; ?>

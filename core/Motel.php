@@ -84,8 +84,26 @@ class Motel {
      */
     public function approve($id) {
         $id = (int)$id;
-        $data = ['status' => STATUS_APPROVED];
+        $data = [
+            'status' => STATUS_APPROVED,
+            'rejection_reason' => null,
+            'rejected_by' => null,
+            'rejected_at' => null,
+        ];
         return $this->db->update('motels', $data, "id = $id");
+    }
+
+    public function reject($id, $reason, $adminId) {
+        $id = (int)$id;
+        $adminId = (int)$adminId;
+        $conn = $this->db->getConnection();
+        $stmt = $conn->prepare("UPDATE motels SET status = 'rejected', rejection_reason = ?, rejected_by = ?, rejected_at = NOW() WHERE id = ?");
+        if (!$stmt) {
+            return false;
+        }
+
+        $stmt->bind_param('sii', $reason, $adminId, $id);
+        return $stmt->execute();
     }
     
     /**

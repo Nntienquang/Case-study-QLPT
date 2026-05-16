@@ -48,7 +48,7 @@ class UtilityController {
     public function createUtility() {
         if (!isset($_POST['name']) || empty($_POST['name'])) {
             $_SESSION['error'] = 'Vui lòng nhập tên tiện nghi';
-            header('Location: ' . ADMIN_URL . 'utilities.php?action=add');
+            header('Location: ' . ADMIN_URL . 'utility_create.php');
             exit;
         }
         
@@ -80,7 +80,8 @@ class UtilityController {
     public function updateUtility() {
         if (!isset($_GET['id']) || !isset($_POST['name']) || empty($_POST['name'])) {
             $_SESSION['error'] = 'Dữ liệu không hợp lệ';
-            header('Location: ' . ADMIN_URL . 'utilities.php');
+            $target = isset($_GET['id']) ? 'utility_edit.php?id=' . (int)$_GET['id'] : 'utilities.php';
+            header('Location: ' . ADMIN_URL . $target);
             exit;
         }
         
@@ -112,12 +113,12 @@ class UtilityController {
      * Delete utility
      */
     public function deleteUtility() {
-        if (!isset($_GET['id'])) {
+        if (!isset($_POST['id'])) {
             header('Location: ' . ADMIN_URL . 'utilities.php');
             exit;
         }
         
-        $id = (int)$_GET['id'];
+        $id = (int)$_POST['id'];
         $utility = $this->utility->getById($id);
         
         if ($this->utility->delete($id)) {

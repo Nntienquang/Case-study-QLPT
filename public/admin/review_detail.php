@@ -21,7 +21,15 @@ admin_flash_messages();
     <div class="wb-card"><div class="wb-card-label">Đánh giá</div><div class="wb-card-value">#<?php echo (int)($review['id'] ?? 0); ?></div></div>
     <div class="wb-card"><div class="wb-card-label">Điểm</div><div class="wb-card-value"><?php echo (int)($review['rating'] ?? 0); ?>/5</div></div>
     <div class="wb-card"><div class="wb-card-label">Ngày tạo</div><div class="wb-card-value fs-4"><?php echo !empty($review['created_at']) ? date('d/m/Y', strtotime((string)$review['created_at'])) : ''; ?></div></div>
-    <div class="wb-card"><div class="wb-card-label">Thao tác</div><a href="<?php echo ADMIN_URL . 'reviews.php?action=delete&id=' . (int)($review['id'] ?? 0); ?>" class="btn btn-outline-danger mt-2" onclick="return confirm('Xóa đánh giá này?');"><i class="fa fa-trash"></i> Xóa</a></div>
+    <div class="wb-card">
+        <div class="wb-card-label">Thao tác</div>
+        <form method="POST" action="<?php echo ADMIN_URL; ?>reviews.php" onsubmit="return confirm('Xóa đánh giá này?');">
+            <?php echo Csrf::field('admin_review_action'); ?>
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="id" value="<?php echo (int)($review['id'] ?? 0); ?>">
+            <button type="submit" class="btn btn-outline-danger mt-2"><i class="fa fa-trash"></i> Xóa</button>
+        </form>
+    </div>
 </div>
 
 <div class="wb-list-card">

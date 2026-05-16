@@ -1,10 +1,11 @@
 <?php
-@require_once '../config/database.php';
-@require_once '../config/constants.php';
-@require_once '../core/Database.php';
-@require_once '../core/User.php';
-@require_once '../core/Captcha.php';
-@require_once '../app/controller/AuthController.php';
+require_once '../config/database.php';
+require_once '../config/constants.php';
+require_once '../core/Database.php';
+require_once '../core/User.php';
+require_once '../core/Captcha.php';
+require_once '../core/Csrf.php';
+require_once '../app/controller/AuthController.php';
 
 session_start();
 
@@ -24,8 +25,73 @@ function auth_redirect_for_role(string $role): string
     return './user/dashboard.php';
 }
 
+function login_client_ip(): string
+{
+    return $_SERVER['REMOTE_ADDR'] ?? 'local';
+}
+
+function login_security_key(string $email): string
+{
+    $normalizedEmail = strtolower(trim($email));
+    return hash('sha256', $normalizedEmail . '|' . login_client_ip());
+}
+
+function login_security_state(string $email): array
+{
+    $key = login_security_key($email);
+    return $_SESSION['login_security'][$key] ?? [
+        'failures' => 0,
+        'lock_until' => 0,
+        'captcha_required' => false,
+        'lock_level' => 0,
+    ];
+}
+
+function login_save_security_state(string $email, array $state): void
+{
+    $_SESSION['login_security'][login_security_key($email)] = $state;
+}
+
+function login_clear_security_state(string $email): void
+{
+    unset($_SESSION['login_security'][login_security_key($email)]);
+}
+
+function login_record_failure(mysqli $conn, string $email, string $reason): array
+{
+    $state = login_security_state($email);
+    $state['failures'] = (int)($state['failures'] ?? 0) + 1;
+    $state['captcha_required'] = $state['failures'] >= 3;
+
+    if ($state['failures'] >= 7) {
+        $levels = [60, 300, 900];
+        $level = min((int)($state['lock_level'] ?? 0), count($levels) - 1);
+        $state['lock_until'] = time() + $levels[$level];
+        $state['lock_level'] = min($level + 1, count($levels) - 1);
+    }
+
+    login_save_security_state($email, $state);
+    login_write_log($conn, 0, 'login_failed', 'user', 0, "Login failed for {$email}: {$reason}");
+
+    return $state;
+}
+
+function login_write_log(mysqli $conn, int $adminId, string $action, string $entityType, int $entityId, string $description): void
+{
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+    $ua = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 255);
+    $stmt = $conn->prepare('INSERT INTO activity_logs (admin_id, action, entity_type, entity_id, description, ip_address, user_agent, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())');
+    if (!$stmt) {
+        return;
+    }
+    $stmt->bind_param('ississs', $adminId, $action, $entityType, $entityId, $description, $ip, $ua);
+    $stmt->execute();
+    $stmt->close();
+}
+
 function set_login_session(array $user): void
 {
+    session_regenerate_id(true);
     $_SESSION['user_id'] = $user['id'];
     $_SESSION['user_email'] = $user['email'];
     $_SESSION['name'] = $user['name'];
@@ -33,18 +99,19 @@ function set_login_session(array $user): void
     $_SESSION['role'] = $user['role'];
     $_SESSION['user_role'] = $user['role'];
     $_SESSION['status'] = $user['status'];
+    $_SESSION['force_password_change'] = (int)($user['force_password_change'] ?? 0);
     $_SESSION['login_time'] = time();
 }
 
 function verify_public_credentials(mysqli $conn, string $email, string $password): array
 {
     if ($email === '' || $password === '') {
-        return ['success' => false, 'message' => 'Vui lòng nhập email và mật khẩu'];
+        return ['success' => false, 'message' => 'Vui lòng nhập email và mật khẩu', 'reason' => 'missing_credentials'];
     }
 
-    $stmt = $conn->prepare('SELECT id, name, email, password, role, status FROM users WHERE email = ?');
+    $stmt = $conn->prepare('SELECT id, name, email, password, role, status, force_password_change FROM users WHERE email = ?');
     if (!$stmt) {
-        return ['success' => false, 'message' => 'Lỗi hệ thống'];
+        return ['success' => false, 'message' => 'Lỗi hệ thống', 'reason' => 'system_error'];
     }
 
     $stmt->bind_param('s', $email);
@@ -54,15 +121,15 @@ function verify_public_credentials(mysqli $conn, string $email, string $password
     $stmt->close();
 
     if (!$user || !password_verify($password, $user['password'])) {
-        return ['success' => false, 'message' => 'Email hoặc mật khẩu không chính xác'];
+        return ['success' => false, 'message' => 'Email hoặc mật khẩu không đúng.', 'reason' => 'bad_credentials'];
     }
 
-    if ($user['status'] === 'blocked') {
-        return ['success' => false, 'message' => 'Tài khoản của bạn bị khóa'];
+    if (($user['status'] ?? '') === 'blocked') {
+        return ['success' => false, 'message' => 'Tài khoản của bạn bị khóa.', 'reason' => 'blocked'];
     }
 
-    if ($user['status'] === 'rejected' && $user['role'] === 'owner') {
-        return ['success' => false, 'message' => 'Đơn đăng ký owner của bạn bị từ chối'];
+    if (($user['status'] ?? '') === 'rejected' && ($user['role'] ?? '') === 'owner') {
+        return ['success' => false, 'message' => 'Đơn đăng ký owner của bạn bị từ chối.', 'reason' => 'owner_rejected'];
     }
 
     unset($user['password']);
@@ -71,6 +138,10 @@ function verify_public_credentials(mysqli $conn, string $email, string $password
 }
 
 if (isset($_SESSION['user_id']) && $auth->checkSessionTimeout()) {
+    if ((int)($_SESSION['force_password_change'] ?? 0) === 1) {
+        header('Location: ./change-password.php');
+        exit;
+    }
     header('Location: ' . auth_redirect_for_role($_SESSION['role'] ?? $_SESSION['user_role'] ?? 'user'));
     exit;
 }
@@ -78,66 +149,59 @@ if (isset($_SESSION['user_id']) && $auth->checkSessionTimeout()) {
 $message = '';
 $type = '';
 $email = '';
-$showSecurityOverlay = false;
-$failureKey = 'login_failures_public';
-$failureCount = Captcha::failureCount($failureKey);
-$securityThreshold = 3;
+$showCaptcha = false;
+$captchaKey = 'login_captcha';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $action = $_POST['action'] ?? 'login';
+    $email = trim((string)($_POST['email'] ?? ''));
+    $password = (string)($_POST['password'] ?? '');
+    $state = login_security_state($email);
 
-    if ($action === 'security_check') {
-        $sliderPosition = $_POST['slider_position'] ?? '';
-        $sliderToken = $_POST['slider_token'] ?? '';
-        $pendingUser = $_SESSION['pending_public_login'] ?? null;
-
-        if ($pendingUser && Captcha::validateSlider('login_slider_captcha', $sliderPosition, $sliderToken)) {
-            set_login_session($pendingUser);
-            Captcha::clearFailures($failureKey);
-            unset($_SESSION['pending_public_login'], $_SESSION['login_slider_captcha']);
-            header('Location: ' . auth_redirect_for_role($pendingUser['role']));
-            exit;
-        }
-
-        unset($_SESSION['pending_public_login'], $_SESSION['login_slider_captcha']);
-        $message = 'Xác minh không thành công. Vui lòng đăng nhập lại.';
+    if (!Csrf::validateRequest('login')) {
+        $message = 'Phiên đăng nhập không hợp lệ, vui lòng thử lại.';
         $type = 'error';
+        $showCaptcha = (bool)($state['captcha_required'] ?? false);
+    } elseif ((int)($state['lock_until'] ?? 0) > time()) {
+        $minutes = max(1, (int)ceil(((int)$state['lock_until'] - time()) / 60));
+        $message = "Bạn đăng nhập sai quá nhiều lần. Vui lòng thử lại sau {$minutes} phút.";
+        $type = 'error';
+        $showCaptcha = true;
     } else {
-        $email = trim($_POST['email'] ?? '');
-        $password = $_POST['password'] ?? '';
-        $captcha = trim($_POST['captcha'] ?? '');
-
-        if (!Captcha::validate('login_captcha', $captcha)) {
-            $message = 'Mã xác thực không đúng. Vui lòng nhập lại mã trong ảnh.';
+        $showCaptcha = (bool)($state['captcha_required'] ?? false);
+        if ($showCaptcha && !Captcha::validate($captchaKey, (string)($_POST['captcha'] ?? ''))) {
+            Captcha::generate($captchaKey);
+            $message = 'Mã xác minh không đúng.';
             $type = 'error';
         } else {
             $result = verify_public_credentials($conn, $email, $password);
-
             if ($result['success']) {
-                if (Captcha::failureCount($failureKey) >= $securityThreshold) {
-                    $_SESSION['pending_public_login'] = $result['user'];
-                    $sliderChallenge = Captcha::generateSlider('login_slider_captcha');
-                    $showSecurityOverlay = true;
-                } else {
-                    set_login_session($result['user']);
-                    Captcha::clearFailures($failureKey);
-                    unset($_SESSION['login_slider_captcha']);
-                    header('Location: ' . auth_redirect_for_role($result['user']['role']));
+                set_login_session($result['user']);
+                login_clear_security_state($email);
+                unset($_SESSION[$captchaKey]);
+                Csrf::rotate('login');
+                login_write_log($conn, (int)$result['user']['id'], 'login_success', 'user', (int)$result['user']['id'], 'Đăng nhập thành công');
+                if ((int)($result['user']['force_password_change'] ?? 0) === 1) {
+                    header('Location: ./change-password.php');
                     exit;
                 }
-            } else {
-                $message = $result['message'];
-                $type = 'error';
-                $failureCount = Captcha::recordFailure($failureKey);
+                header('Location: ' . auth_redirect_for_role($result['user']['role']));
+                exit;
             }
+
+            if (($result['reason'] ?? '') === 'bad_credentials' || ($result['reason'] ?? '') === 'missing_credentials') {
+                $state = login_record_failure($conn, $email, (string)($result['reason'] ?? 'failed'));
+                $showCaptcha = (bool)($state['captcha_required'] ?? false);
+            } else {
+                login_write_log($conn, 0, 'login_failed', 'user', 0, "Login failed for {$email}: " . ($result['reason'] ?? 'failed'));
+            }
+            $message = $result['message'];
+            $type = 'error';
         }
     }
 }
 
-$captchaChallenge = Captcha::ensure('login_captcha');
-$failureCount = Captcha::failureCount($failureKey);
-if ($showSecurityOverlay) {
-    $sliderChallenge = $sliderChallenge ?? Captcha::ensureSlider('login_slider_captcha');
+if ($showCaptcha) {
+    Captcha::ensure($captchaKey);
 }
 ?>
 <!DOCTYPE html>
@@ -179,9 +243,8 @@ if ($showSecurityOverlay) {
                     <div class="msg <?php echo htmlspecialchars($type); ?>"><?php echo htmlspecialchars($message); ?></div>
                 <?php endif; ?>
 
-                <form method="POST">
-                    <input type="hidden" name="action" value="login">
-
+                <form method="POST" autocomplete="off">
+                    <?php echo Csrf::field('login'); ?>
                     <label>Email</label>
                     <div class="input-group">
                         <i class="fa fa-envelope"></i>
@@ -194,17 +257,19 @@ if ($showSecurityOverlay) {
                         <input type="password" name="password" placeholder="Nhập mật khẩu" required>
                     </div>
 
-                    <label>Mã xác thực</label>
-                    <div class="captcha-widget">
-                        <img class="captcha-image" src="captcha.php?key=login_captcha&v=<?php echo time(); ?>" alt="Mã xác thực">
-                        <button type="button" class="captcha-refresh" aria-label="Đổi mã xác thực" onclick="refreshCaptcha(this)">
-                            <i class="fa fa-rotate-right"></i>
-                        </button>
-                        <div class="input-group captcha-input">
-                            <i class="fa fa-shield-halved"></i>
-                            <input type="text" name="captcha" autocomplete="off" placeholder="Nhập mã" required>
+                    <?php if ($showCaptcha): ?>
+                        <label>Mã xác minh</label>
+                        <div class="captcha-widget">
+                            <img class="captcha-image" src="captcha.php?key=login_captcha&v=<?php echo time(); ?>" alt="Mã xác minh">
+                            <button type="button" class="captcha-refresh" aria-label="Đổi mã xác minh" onclick="refreshCaptcha(this)">
+                                <i class="fa fa-rotate-right"></i>
+                            </button>
+                            <div class="input-group captcha-input">
+                                <i class="fa fa-shield-halved"></i>
+                                <input type="text" name="captcha" autocomplete="off" placeholder="Nhập mã" required>
+                            </div>
                         </div>
-                    </div>
+                    <?php endif; ?>
 
                     <button type="submit"><i class="fas fa-arrow-right-to-bracket"></i> Đăng nhập</button>
                 </form>
@@ -218,36 +283,6 @@ if ($showSecurityOverlay) {
         </div>
     </main>
 
-    <?php if ($showSecurityOverlay && !empty($sliderChallenge)): ?>
-        <div class="security-overlay" role="dialog" aria-modal="true">
-            <form method="POST" class="security-panel">
-                <input type="hidden" name="action" value="security_check">
-                <div class="security-mark"><i class="fa fa-shield-halved"></i></div>
-                <h2>Web nhận thấy truy cập bất thường</h2>
-                <p>Thông tin đăng nhập đã đúng, nhưng bạn cần xác minh thao tác kéo thả trước khi vào hệ thống.</p>
-
-                <div class="slider-captcha security-slider" data-target="<?php echo (int)$sliderChallenge['target']; ?>">
-                    <div class="slider-title">
-                        <span>Kéo mảnh ghép để xác minh</span>
-                        <small>Lần thử <?php echo (int)$failureCount + 1; ?></small>
-                    </div>
-                    <div class="slider-image">
-                        <div class="slider-target" style="left: <?php echo (int)$sliderChallenge['target']; ?>px;"></div>
-                        <div class="slider-piece"><i class="fa fa-house"></i></div>
-                    </div>
-                    <div class="slider-track">
-                        <button type="button" class="slider-handle" aria-label="Kéo để xác minh"><i class="fa fa-arrow-right"></i></button>
-                        <span>Kéo sang phải để khớp vùng sáng</span>
-                    </div>
-                    <input type="hidden" name="slider_position" value="">
-                    <input type="hidden" name="slider_token" value="<?php echo htmlspecialchars($sliderChallenge['token']); ?>">
-                </div>
-
-                <button type="submit" class="security-submit">Xác minh và tiếp tục</button>
-            </form>
-        </div>
-    <?php endif; ?>
-
     <script type="module" src="assets/js/three-interface.js"></script>
     <script>
         function refreshCaptcha(button) {
@@ -255,36 +290,6 @@ if ($showSecurityOverlay) {
             image.src = image.src.split('&v=')[0] + '&v=' + Date.now();
             button.parentElement.querySelector('input[name="captcha"]').value = '';
         }
-
-        document.querySelectorAll('.slider-captcha').forEach((captcha) => {
-            const handle = captcha.querySelector('.slider-handle');
-            const piece = captcha.querySelector('.slider-piece');
-            const track = captcha.querySelector('.slider-track');
-            const position = captcha.querySelector('input[name="slider_position"]');
-            const target = Number(captcha.dataset.target || 0);
-            let dragging = false;
-
-            const setPosition = (clientX) => {
-                const rect = track.getBoundingClientRect();
-                const max = rect.width - handle.offsetWidth;
-                const x = Math.max(0, Math.min(max, clientX - rect.left - handle.offsetWidth / 2));
-                handle.style.transform = `translateX(${x}px)`;
-                piece.style.transform = `translateX(${x}px)`;
-                position.value = Math.round(x);
-                captcha.classList.toggle('is-close', Math.abs(x - target) <= 8);
-            };
-
-            handle.addEventListener('pointerdown', (event) => {
-                dragging = true;
-                handle.setPointerCapture(event.pointerId);
-            });
-            handle.addEventListener('pointermove', (event) => {
-                if (dragging) setPosition(event.clientX);
-            });
-            handle.addEventListener('pointerup', () => {
-                dragging = false;
-            });
-        });
     </script>
 </body>
 </html>

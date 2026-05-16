@@ -27,6 +27,7 @@ function admin_status_label(string $status): string
         'closed' => 'Đã đóng',
         'rejected' => 'Từ chối',
         'cancelled' => 'Đã hủy',
+        'blocked' => 'Bị khóa',
         'admin' => 'Admin',
         'owner' => 'Chủ phòng',
         'user' => 'Người thuê',
@@ -50,6 +51,7 @@ function admin_pill_class(string $status): string
         'refunded' => 'danger',
         'cancelled' => 'danger',
         'closed' => 'danger',
+        'blocked' => 'danger',
     ][strtolower($status)] ?? 'warning';
 }
 

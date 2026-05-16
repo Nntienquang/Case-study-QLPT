@@ -11,12 +11,24 @@ $activityLog = new ActivityLog($db);
 $conn = $db->getConnection();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    if (!Csrf::validateRequest('admin_report_action')) {
+        $_SESSION['error'] = 'Phiên thao tác không hợp lệ, vui lòng thử lại.';
+        header('Location: reports.php');
+        exit;
+    }
+
     if ($_POST['action'] === 'update_status') {
         $id = (int)($_POST['id'] ?? 0);
         $status = $_POST['status'] ?? '';
-        $adminNote = $_POST['admin_note'] ?? '';
+        $adminNote = trim((string)($_POST['admin_note'] ?? ''));
         $adminId = (int)$_SESSION['user_id'];
         $validStatuses = ['investigating', 'resolved', 'rejected', 'closed'];
+
+        if (in_array($status, ['resolved', 'rejected', 'closed'], true) && $adminNote === '') {
+            $_SESSION['error'] = 'Vui lòng nhập ghi chú xử lý cho trạng thái này.';
+            header('Location: reports.php');
+            exit;
+        }
 
         if ($id > 0 && in_array($status, $validStatuses, true)) {
             $report = $db->getRow("SELECT * FROM reports WHERE id = {$id}");
@@ -203,6 +215,7 @@ admin_flash_messages();
     <div class="modal-dialog">
         <div class="modal-content">
             <form method="POST">
+                <?php echo Csrf::field('admin_report_action'); ?>
                 <div class="modal-header">
                     <h5 class="modal-title">Cập nhật báo cáo</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
