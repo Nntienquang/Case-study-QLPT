@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 /**
  * Authentication Controller
@@ -68,8 +68,6 @@ class AuthController
                     $errors[] = "Email này đã tồn tại";
                 }
                 $check->close();
-            } else {
-                $errors[] = "Lỗi hệ thống: không thể kiểm tra email";
             }
         }
 
@@ -103,18 +101,13 @@ class AuthController
                             ? 'Đăng ký chủ phòng thành công! Tài khoản đang chờ admin duyệt.'
                             : 'Đăng ký thành công! Vui lòng đăng nhập'
                     ];
+                } else {
+                    return [
+                        'success' => false,
+                        'message' => 'Lỗi hệ thống: ' . htmlspecialchars($stmt->error)
+                    ];
                 }
-                $err = $stmt->error;
-                $stmt->close();
-                return [
-                    'success' => false,
-                    'message' => 'Lỗi hệ thống: ' . htmlspecialchars($err)
-                ];
             }
-            return [
-                'success' => false,
-                'message' => 'Lỗi hệ thống: không thể tạo tài khoản'
-            ];
         }
 
         return [
@@ -452,16 +445,12 @@ class AuthController
         if (!isset($_SESSION['user_id'])) {
             return false;
         }
-<<<<<<< HEAD
 
-=======
-        
         if (!isset($_SESSION['login_time'])) {
             $_SESSION['login_time'] = time();
             return true;
         }
-        
->>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
+
         $timeout = SESSION_TIMEOUT * 60; // Convert to seconds
 
         if (time() - $_SESSION['login_time'] > $timeout) {

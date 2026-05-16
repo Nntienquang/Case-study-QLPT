@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../admin_init.php';
+require_once __DIR__ . '/layout.php';
 
 if (!$is_logged_in) {
     header('Location: ' . ADMIN_URL . 'login.php');
@@ -92,15 +93,12 @@ $adminName = $_SESSION['user_name'] ?? $_SESSION['name'] ?? 'Admin';
         <div class="container-fluid px-4 wb-layout">
             <aside class="wb-sidebar">
                 <div class="wb-side-title">Vận hành hệ thống</div>
-                <a class="wb-side-link active" href="<?php echo ADMIN_URL; ?>index.php"><i class="fa fa-dashboard"></i> Tổng quan</a>
-                <a class="wb-side-link" href="<?php echo ADMIN_URL; ?>user_approvals.php"><i class="fa fa-user-plus"></i> Duyệt owner</a>
-                <a class="wb-side-link" href="<?php echo ADMIN_URL; ?>motels.php"><i class="fa fa-home"></i> Phòng trọ</a>
-                <a class="wb-side-link" href="<?php echo ADMIN_URL; ?>bookings.php"><i class="fa fa-calendar"></i> Booking</a>
-                <a class="wb-side-link" href="<?php echo ADMIN_URL; ?>payments.php"><i class="fa fa-credit-card"></i> Thanh toán</a>
-                <a class="wb-side-link" href="<?php echo ADMIN_URL; ?>reports.php"><i class="fa fa-flag"></i> Báo cáo</a>
-                <a class="wb-side-link" href="<?php echo ADMIN_URL; ?>admin_revenue.php"><i class="fa fa-money"></i> Doanh thu</a>
-                <a class="wb-side-link" href="<?php echo ADMIN_URL; ?>users.php"><i class="fa fa-users"></i> Người dùng</a>
-                <a class="wb-side-link" href="<?php echo ADMIN_URL; ?>activity_logs.php"><i class="fa fa-history"></i> Nhật ký</a>
+                <?php foreach (admin_nav_items() as $key => $item): ?>
+                    <a class="wb-side-link <?php echo $key === 'index' ? 'active' : ''; ?>" href="<?php echo ADMIN_URL . $item['url']; ?>">
+                        <i class="<?php echo admin_dash_e($item['icon']); ?>"></i>
+                        <?php echo admin_dash_e($item['label']); ?>
+                    </a>
+                <?php endforeach; ?>
             </aside>
 
             <section>

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once '../config/database.php';
 require_once '../config/constants.php';
 require_once '../core/Database.php';
@@ -19,7 +19,7 @@ function auth_redirect_for_role(string $role): string
         return './admin/index.php';
     }
     if ($role === 'owner') {
-        return './owner/index.php';
+        return './owner/dashboard.php';
     }
 
     return './user/dashboard.php';
@@ -149,7 +149,6 @@ if (isset($_SESSION['user_id']) && $auth->checkSessionTimeout()) {
 $message = '';
 $type = '';
 $email = '';
-<<<<<<< HEAD
 $showCaptcha = false;
 $captchaKey = 'login_captcha';
 
@@ -204,32 +203,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if ($showCaptcha) {
     Captcha::ensure($captchaKey);
 }
-=======
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = trim($_POST['email'] ?? '');
-    $password = $_POST['password'] ?? '';
-    $captcha = trim($_POST['captcha'] ?? '');
-
-    if (!Captcha::validate('login_captcha', $captcha)) {
-        $message = 'Mã xác thực không đúng. Vui lòng nhập lại mã trong ảnh.';
-        $type = 'error';
-    } else {
-        $result = verify_public_credentials($conn, $email, $password);
-
-        if ($result['success']) {
-            set_login_session($result['user']);
-            header('Location: ' . auth_redirect_for_role($result['user']['role']));
-            exit;
-        }
-
-        $message = $result['message'];
-        $type = 'error';
-    }
-}
-
-Captcha::ensure('login_captcha');
->>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -238,7 +211,7 @@ Captcha::ensure('login_captcha');
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đăng nhập - QuanLyPhongTro</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-    <link href="assets/css/modern.css?v=auth-captcha-only-1" rel="stylesheet">
+    <link href="assets/css/modern.css?v=auth-security-overlay-1" rel="stylesheet">
 </head>
 <body class="auth-dark">
     <div class="three-stage auth-scene" data-three-scene data-scene="housing" data-accent="#2563eb" data-accent2="#14b8a6"></div>
@@ -270,12 +243,8 @@ Captcha::ensure('login_captcha');
                     <div class="msg <?php echo htmlspecialchars($type); ?>"><?php echo htmlspecialchars($message); ?></div>
                 <?php endif; ?>
 
-<<<<<<< HEAD
                 <form method="POST" autocomplete="off">
                     <?php echo Csrf::field('login'); ?>
-=======
-                <form method="POST">
->>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
                     <label>Email</label>
                     <div class="input-group">
                         <i class="fa fa-envelope"></i>
