@@ -1,6 +1,7 @@
 ﻿<?php
 @require_once '../../config/database.php';
 @require_once '../../core/Database.php';
+@require_once '../../core/NotificationHelper.php';
 
 session_start();
 
@@ -16,7 +17,7 @@ $user_name = $_SESSION['name'];
 $motel_id = (int)($_GET['id'] ?? 0);
 
 // Get motel details
-$stmt = $db->prepare("SELECT id, title, price, address FROM motels WHERE id = ? AND status = 'approved'");
+$stmt = $db->prepare("SELECT id, title, price, address, user_id FROM motels WHERE id = ? AND status = 'approved'");
 $stmt->bind_param("i", $motel_id);
 $stmt->execute();
 $motel = $stmt->get_result()->fetch_assoc();
@@ -38,10 +39,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $note = $_POST['note'] ?? '';
 
     if (empty($check_in) || empty($check_out)) {
-        $message = 'Vui lÃ²ng chá»n ngÃ y check-in vÃ  check-out!';
+        $message = 'Vui lòng chọn ngày check-in và check-out!';
         $message_type = 'danger';
     } elseif (strtotime($check_in) >= strtotime($check_out)) {
-        $message = 'NgÃ y check-out pháº£i sau check-in!';
+        $message = 'Ngày check-out phải sau check-in!';
         $message_type = 'danger';
     } else {
         $stmt = $db->prepare("
@@ -51,10 +52,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param("iissds", $user_id, $motel_id, $check_in, $check_out, $deposit, $note);
         
         if ($stmt->execute()) {
-            $message = 'Äáº·t phÃ²ng thÃ nh cÃ´ng! Chá» chá»§ nhÃ  xÃ¡c nháº­n.';
+            $message = 'Đặt phòng thành công! Chủ nhà sẽ xem và phản hồi trạng thái đơn.';
             $message_type = 'success';
+            $ownerId = (int)($motel['user_id'] ?? 0);
+            if ($ownerId > 0) {
+                $tenantLabel = htmlspecialchars((string)($user_name ?? 'Người thuê'), ENT_QUOTES, 'UTF-8');
+                $titleVi = htmlspecialchars((string)$motel['title'], ENT_QUOTES, 'UTF-8');
+                qlpt_send_notification(
+                    $db,
+                    $ownerId,
+                    'booking_request',
+                    'Có yêu cầu đặt phòng / đặt cọc mới',
+                    $tenantLabel . ' vừa gửi đơn cho phòng: ' . $titleVi . '. Hãy mở Đơn đặt phòng để duyệt hoặc từ chối.',
+                    'owner/bookings.php'
+                );
+            }
         } else {
-            $message = 'Lá»—i: ' . $stmt->error;
+            $message = 'Lỗi: ' . $stmt->error;
             $message_type = 'danger';
         }
         $stmt->close();
@@ -66,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Äáº·t PhÃ²ng - QuanLyPhongTro</title>
+    <title>Đặt phòng - QuanLyPhongTro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -105,11 +119,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <div class="container-lg main-content">
         <a href="motel-detail.php?id=<?php echo $motel_id; ?>" style="color: #667eea; text-decoration: none; margin-bottom: 20px; display: inline-block;">
-            <i class="fas fa-arrow-left"></i> Quay Láº¡i
+            <i class="fas fa-arrow-left"></i> Quay lại
         </a>
 
         <h1 style="font-size: 28px; font-weight: 700; margin-bottom: 30px;">
-            <i class="fas fa-calendar-plus"></i> Äáº·t PhÃ²ng
+            <i class="fas fa-calendar-plus"></i> Đặt phòng
         </h1>
 
         <?php if ($message): ?>
@@ -123,78 +137,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="col-lg-8">
                 <div class="form-card">
                     <form method="POST">
-                        <!-- ThÃ´ng tin phÃ²ng -->
+                        <!-- Thông tin phòng -->
                         <div class="motel-summary">
                             <h3><i class="fas fa-home"></i> <?php echo htmlspecialchars($motel['title']); ?></h3>
                             <div class="summary-item">
-                                <span class="summary-item-label"><i class="fas fa-map-marker-alt"></i> Äá»‹a chá»‰</span>
+                                <span class="summary-item-label"><i class="fas fa-map-marker-alt"></i> Địa chỉ</span>
                                 <span class="summary-item-value"><?php echo htmlspecialchars($motel['address']); ?></span>
                             </div>
                             <div class="summary-item">
-                                <span class="summary-item-label"><i class="fas fa-tag"></i> GiÃ¡/thÃ¡ng</span>
-                                <span class="summary-item-value"><?php echo number_format($motel['price']); ?> VNÄ</span>
+                                <span class="summary-item-label"><i class="fas fa-tag"></i> Giá/tháng</span>
+                                <span class="summary-item-value"><?php echo number_format($motel['price']); ?> VNĐ</span>
                             </div>
                         </div>
 
-                        <!-- NgÃ y Ä‘áº·t phÃ²ng -->
+                        <!-- Ngày đặt phòng -->
                         <div class="form-section">
-                            <h5><i class="fas fa-calendar"></i> NgÃ y Äáº·t PhÃ²ng</h5>
+                            <h5><i class="fas fa-calendar"></i> Ngày đặt phòng</h5>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">NgÃ y Check-in *</label>
+                                    <label class="form-label">Ngày check-in *</label>
                                     <input type="date" name="check_in_date" class="form-control" required min="<?php echo date('Y-m-d'); ?>">
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">NgÃ y Check-out *</label>
+                                    <label class="form-label">Ngày check-out *</label>
                                     <input type="date" name="check_out_date" class="form-control" required min="<?php echo date('Y-m-d', strtotime('+1 day')); ?>">
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Tiá»n Ä‘áº·t cá»c -->
+                        <!-- Tiền đặt cọc -->
                         <div class="form-section">
-                            <h5><i class="fas fa-money-bill-wave"></i> Tiá»n Äáº·t Cá»c</h5>
+                            <h5><i class="fas fa-money-bill-wave"></i> Tiền đặt cọc</h5>
                             <div class="mb-3">
-                                <label class="form-label">Sá»‘ Tiá»n (VNÄ)</label>
+                                <label class="form-label">Số tiền (VNĐ)</label>
                                 <input type="number" name="deposit_amount" class="form-control" value="<?php echo $motel['price']; ?>" required min="1">
                             </div>
                             <div class="price-breakdown">
                                 <div class="price-item">
-                                    <span>GiÃ¡ phÃ²ng/thÃ¡ng:</span>
-                                    <span><?php echo number_format($motel['price']); ?> VNÄ</span>
+                                    <span>Giá phòng/tháng:</span>
+                                    <span><?php echo number_format($motel['price']); ?> VNĐ</span>
                                 </div>
                                 <div class="price-item">
-                                    <span>PhÃ­ Ä‘áº·t cá»c (tÃ­nh tá»« Ä‘áº§u):</span>
-                                    <span><?php echo number_format($motel['price']); ?> VNÄ</span>
+                                    <span>Phí đặt cọc (tính từ đầu):</span>
+                                    <span><?php echo number_format($motel['price']); ?> VNĐ</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Ghi chÃº -->
+                        <!-- Ghi chú -->
                         <div class="form-section">
-                            <h5><i class="fas fa-sticky-note"></i> Ghi ChÃº</h5>
+                            <h5><i class="fas fa-sticky-note"></i> Ghi chú</h5>
                             <div class="mb-3">
-                                <label class="form-label">Tin Nháº¯n cho Chá»§ NhÃ </label>
-                                <textarea name="note" class="form-control" rows="4" placeholder="Ghi chÃº thÃªm vá» yÃªu cáº§u cá»§a báº¡n..."></textarea>
+                                <label class="form-label">Tin nhắn cho chủ nhà</label>
+                                <textarea name="note" class="form-control" rows="4" placeholder="Ghi chú thêm về yêu cầu của bạn..."></textarea>
                             </div>
                         </div>
 
                         <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-check-circle"></i> XÃ¡c Nháº­n Äáº·t PhÃ²ng
+                            <i class="fas fa-check-circle"></i> Xác nhận đặt phòng
                         </button>
                     </form>
                 </div>
             </div>
 
-            <!-- ThÃ´ng tin ngÆ°á»i Ä‘áº·t -->
+            <!-- Thông tin người đặt -->
             <div class="col-lg-4">
                 <div class="form-card">
                     <h5 style="font-weight: 700; margin-bottom: 20px; border-bottom: 2px solid #667eea; padding-bottom: 15px;">
-                        <i class="fas fa-user"></i> ThÃ´ng Tin NgÆ°á»i Äáº·t
+                        <i class="fas fa-user"></i> Thông tin người đặt
                     </h5>
                     <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
                         <div style="margin-bottom: 15px;">
-                            <div style="color: #666; font-size: 13px;">TÃªn</div>
+                            <div style="color: #666; font-size: 13px;">Tên</div>
                             <div style="font-weight: 600; color: #333;"><?php echo htmlspecialchars($user_name); ?></div>
                         </div>
                         <div>
@@ -204,21 +218,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
 
                     <h5 style="font-weight: 700; margin-bottom: 20px; margin-top: 30px; border-bottom: 2px solid #667eea; padding-bottom: 15px;">
-                        <i class="fas fa-info-circle"></i> Quy Äá»‹nh
+                        <i class="fas fa-info-circle"></i> Quy định
                     </h5>
                     <ul style="color: #666; font-size: 13px; line-height: 1.8;">
-                        <li>Chá»§ nhÃ  sáº½ xÃ¡c nháº­n Ä‘Æ¡n Ä‘áº·t trong vÃ²ng 24 giá»</li>
-                        <li>Tiá»n Ä‘áº·t cá»c cÃ³ thá»ƒ hoÃ n láº¡i náº¿u há»§y trÆ°á»›c 7 ngÃ y</li>
-                        <li>Cáº§n cÃ³ há»£p Ä‘á»“ng trÆ°á»›c khi nháº­n phÃ²ng</li>
-                        <li>TuÃ¢n thá»§ ná»™i quy chung cÆ°/nhÃ  trá»</li>
+                        <li>Chủ nhà sẽ xác nhận đơn đặt trong vòng 24 giờ</li>
+                        <li>Tiền đặt cọc có thể hoàn lại nếu hủy trước 7 ngày</li>
+                        <li>Cần có hợp đồng trước khi nhận phòng</li>
+                        <li>Tuân thủ nội quy chung cư/nhà trọ</li>
                     </ul>
 
                     <div style="background: #e3f2fd; border-left: 4px solid #1976d2; padding: 15px; border-radius: 6px; margin-top: 20px;">
                         <div style="color: #1976d2; font-weight: 600; margin-bottom: 8px;">
-                            <i class="fas fa-shield-alt"></i> An ToÃ n
+                            <i class="fas fa-shield-alt"></i> An toàn
                         </div>
                         <div style="color: #666; font-size: 13px;">
-                            CÃ¡c giao dá»‹ch Ä‘Æ°á»£c báº£o vá»‡. ChÃºng tÃ´i sáº½ giÃºp náº¿u cÃ³ tranh cháº¥p.
+                            Các giao dịch được bảo vệ. Chúng tôi sẽ giúp nếu có tranh chấp.
                         </div>
                     </div>
                 </div>

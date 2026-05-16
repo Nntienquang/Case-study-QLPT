@@ -7,7 +7,7 @@ function admin_e(?string $value): string
 
 function admin_money($value): string
 {
-    return number_format((int)$value) . ' VND';
+    return number_format((int)$value) . ' VNĐ';
 }
 
 function admin_status_label(string $status): string

@@ -29,7 +29,7 @@ function admin_dash_table_exists(mysqli $conn, string $table): bool
 
 function admin_dash_money($value): string
 {
-    return number_format((int)$value) . ' VND';
+    return number_format((int)$value) . ' VNĐ';
 }
 
 function admin_dash_status(string $status): string

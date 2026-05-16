@@ -1,6 +1,7 @@
 ﻿<?php
 @require_once '../../config/database.php';
 @require_once '../../core/Database.php';
+@require_once '../../core/NotificationHelper.php';
 
 session_start();
 
@@ -40,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['schedule_viewing'])) 
     $preferred_time = $_POST['preferred_time'] ?? '';
     $note = trim($_POST['note'] ?? '');
     if ($preferred_time === '') {
-        $message = 'Vui long chon thoi gian xem phong.';
+        $message = 'Vui lòng chọn thời gian xem phòng.';
         $message_type = 'danger';
     } else {
         $stmt = $db->prepare("
@@ -50,21 +51,113 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['schedule_viewing'])) 
         $ownerId = (int)$motel['user_id'];
         $stmt->bind_param("iiiss", $user_id, $motel_id, $ownerId, $preferred_time, $note);
         if ($stmt->execute()) {
-            $message = 'Da gui lich xem phong. Owner se xac nhan lai voi ban.';
-            $notifyTitle = 'Co lich xem phong moi';
-            $notifyBody = 'User ' . ($_SESSION['name'] ?? 'User') . ' muon xem phong: ' . $motel['title'];
-            $notifyLink = 'owner/dashboard.php';
-            $notify = $db->prepare("INSERT INTO notifications (user_id, type, title, body, link) VALUES (?, 'viewing_request', ?, ?, ?)");
-            if ($notify) {
-                $notify->bind_param("isss", $ownerId, $notifyTitle, $notifyBody, $notifyLink);
-                $notify->execute();
-                $notify->close();
-            }
+            $message = 'Đã gửi lịch xem phòng. Chủ phòng sẽ xác nhận lại với bạn.';
+            $notifyTitle = 'Có lịch xem phòng mới';
+            $notifyBody = 'Người thuê ' . ($_SESSION['name'] ?? 'User') . ' muốn xem phòng: ' . $motel['title'];
+            $notifyLink = 'owner/index.php';
+            qlpt_send_notification($db, $ownerId, 'viewing_request', $notifyTitle, $notifyBody, $notifyLink);
         } else {
-            $message = 'Khong the gui lich xem phong luc nay.';
+            $message = 'Không thể gửi lịch xem phòng lúc này.';
             $message_type = 'danger';
         }
         $stmt->close();
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_review'])) {
+    $rating = (int)($_POST['rating'] ?? 0);
+    $comment = trim((string)($_POST['review_comment'] ?? ''));
+    $stmt = $db->prepare('SELECT id FROM reviews WHERE user_id = ? AND motel_id = ?');
+    $stmt->bind_param('ii', $user_id, $motel_id);
+    $stmt->execute();
+    $dup = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    $stmt = $db->prepare("SELECT id FROM bookings WHERE user_id = ? AND motel_id = ? AND status IN ('accepted','paid','completed') LIMIT 1");
+    $stmt->bind_param('ii', $user_id, $motel_id);
+    $stmt->execute();
+    $eligible = (bool)$stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if ($dup) {
+        $message = 'Bạn đã đánh giá phòng này rồi.';
+        $message_type = 'danger';
+    } elseif (!$eligible) {
+        $message = 'Chỉ có thể đánh giá sau khi đơn đặt phòng được chấp nhận hoặc hoàn tất.';
+        $message_type = 'danger';
+    } elseif ($rating < 1 || $rating > 5) {
+        $message = 'Vui lòng chọn từ 1 đến 5 sao.';
+        $message_type = 'danger';
+    } elseif (mb_strlen($comment) < 5) {
+        $message = 'Bình luận cần ít nhất 5 ký tự.';
+        $message_type = 'danger';
+    } else {
+        $stmt = $db->prepare('INSERT INTO reviews (user_id, motel_id, rating, comment) VALUES (?, ?, ?, ?)');
+        $stmt->bind_param('iiis', $user_id, $motel_id, $rating, $comment);
+        if ($stmt->execute()) {
+            $message = 'Cảm ơn bạn đã đánh giá!';
+            $message_type = 'success';
+        } else {
+            $message = 'Không thể lưu đánh giá lúc này.';
+            $message_type = 'danger';
+        }
+        $stmt->close();
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['contact_owner'])) {
+    $body = trim((string)($_POST['contact_message'] ?? ''));
+    $ownerId = (int)($motel['user_id'] ?? 0);
+    if ($ownerId <= 0 || $ownerId === (int)$user_id) {
+        $message = 'Không thể gửi tin nhắn.';
+        $message_type = 'danger';
+    } elseif (mb_strlen($body) < 5) {
+        $message = 'Nội dung tin nhắn cần ít nhất 5 ký tự.';
+        $message_type = 'danger';
+    } else {
+        $stmt = $db->prepare('SELECT id FROM conversations WHERE user_id = ? AND owner_id = ? AND motel_id = ?');
+        $stmt->bind_param('iii', $user_id, $ownerId, $motel_id);
+        $stmt->execute();
+        $conv = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        if ($conv) {
+            $convId = (int)$conv['id'];
+        } else {
+            $stmt = $db->prepare('INSERT INTO conversations (user_id, owner_id, motel_id, last_message_at) VALUES (?, ?, ?, NOW())');
+            $stmt->bind_param('iii', $user_id, $ownerId, $motel_id);
+            if (!$stmt->execute()) {
+                $message = 'Không thể tạo cuộc trò chuyện.';
+                $message_type = 'danger';
+                $convId = 0;
+            } else {
+                $convId = (int)$db->getConnection()->insert_id;
+            }
+            $stmt->close();
+        }
+        if (!empty($convId)) {
+            $stmtMsg = $db->prepare('INSERT INTO messages (conversation_id, sender_id, body) VALUES (?, ?, ?)');
+            $stmtMsg->bind_param('iis', $convId, $user_id, $body);
+            if ($stmtMsg->execute()) {
+                $stmtMsg->close();
+                $stmtUp = $db->prepare('UPDATE conversations SET last_message_at = NOW() WHERE id = ?');
+                $stmtUp->bind_param('i', $convId);
+                $stmtUp->execute();
+                $stmtUp->close();
+                $link = 'owner/messages.php?conversation_id=' . $convId;
+                qlpt_send_notification(
+                    $db,
+                    $ownerId,
+                    'tenant_message',
+                    'Tin nhắn mới từ người thuê',
+                    'Có tin nhắn về phòng: ' . ($motel['title'] ?? '') . '.',
+                    $link
+                );
+                $message = 'Đã gửi tin nhắn cho chủ trọ.';
+                $message_type = 'success';
+            } else {
+                $message = 'Không thể gửi tin nhắn.';
+                $message_type = 'danger';
+                $stmtMsg->close();
+            }
+        }
     }
 }
 
@@ -93,6 +186,17 @@ $stmt = $db->prepare("
 $stmt->bind_param("i", $motel_id);
 $stmt->execute();
 $reviews = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
+
+$stmt = $db->prepare('SELECT id FROM reviews WHERE user_id = ? AND motel_id = ?');
+$stmt->bind_param('ii', $user_id, $motel_id);
+$stmt->execute();
+$has_user_review = (bool)$stmt->get_result()->fetch_assoc();
+$stmt->close();
+$stmt = $db->prepare("SELECT id FROM bookings WHERE user_id = ? AND motel_id = ? AND status IN ('accepted','paid','completed') LIMIT 1");
+$stmt->bind_param('ii', $user_id, $motel_id);
+$stmt->execute();
+$can_write_review = !$has_user_review && (bool)$stmt->get_result()->fetch_assoc();
 $stmt->close();
 
 $utilities_array = array_filter(explode(',', $motel['utilities']));
@@ -167,7 +271,7 @@ $move_in_total = (int)$motel['price'] + $service_fee + $deposit_amount;
         <?php endif; ?>
 
         <a href="search.php" style="color: #667eea; text-decoration: none; margin-bottom: 20px; display: inline-block;">
-            <i class="fas fa-arrow-left"></i> Quay Láº¡i
+            <i class="fas fa-arrow-left"></i> Quay lại
         </a>
 
         <div class="row">
@@ -183,46 +287,46 @@ $move_in_total = (int)$motel['price'] + $service_fee + $deposit_amount;
                             <i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($motel['address']); ?>
                         </p>
                     </div>
-                    <div class="motel-price"><?php echo number_format($motel['price']); ?> VNÄ/thÃ¡ng</div>
+                    <div class="motel-price"><?php echo number_format($motel['price']); ?> VNĐ/tháng</div>
                 </div>
 
                 <!-- Information -->
                 <div class="info-card">
-                    <h5><i class="fas fa-info-circle"></i> ThÃ´ng Tin Chi Tiáº¿t</h5>
+                    <h5><i class="fas fa-info-circle"></i> Thông tin chi tiết</h5>
                     <div class="info-grid">
                         <div class="info-item">
-                            <div class="info-item-label">Diá»‡n TÃ­ch</div>
-                            <div class="info-item-value"><?php echo $motel['area']; ?> mÂ²</div>
+                            <div class="info-item-label">Diện tích</div>
+                            <div class="info-item-value"><?php echo (int)$motel['area']; ?> m²</div>
                         </div>
                         <div class="info-item">
-                            <div class="info-item-label">PhÃ²ng Ngá»§</div>
+                            <div class="info-item-label">Phòng ngủ</div>
                             <div class="info-item-value"><?php echo $motel['bedrooms']; ?></div>
                         </div>
                         <div class="info-item">
-                            <div class="info-item-label">PhÃ²ng Táº¯m</div>
+                            <div class="info-item-label">Phòng tắm</div>
                             <div class="info-item-value"><?php echo $motel['bathrooms']; ?></div>
                         </div>
                         <div class="info-item">
-                            <div class="info-item-label">Danh Má»¥c</div>
+                            <div class="info-item-label">Danh mục</div>
                             <div class="info-item-value"><?php echo htmlspecialchars($motel['category_name']); ?></div>
                         </div>
                         <div class="info-item">
-                            <div class="info-item-label">Ngay Trong</div>
-                            <div class="info-item-value"><?php echo !empty($motel['available_from']) ? date('d/m/Y', strtotime($motel['available_from'])) : 'Lien he'; ?></div>
+                            <div class="info-item-label">Ngày có thể vào</div>
+                            <div class="info-item-value"><?php echo !empty($motel['available_from']) ? date('d/m/Y', strtotime($motel['available_from'])) : 'Liên hệ'; ?></div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Description -->
                 <div class="info-card">
-                    <h5><i class="fas fa-align-left"></i> MÃ´ Táº£</h5>
+                    <h5><i class="fas fa-align-left"></i> Mô tả</h5>
                     <p class="description"><?php echo nl2br(htmlspecialchars($motel['description'])); ?></p>
                 </div>
 
                 <!-- Utilities -->
                 <?php if (count($utilities_array) > 0): ?>
                     <div class="info-card">
-                        <h5><i class="fas fa-star"></i> Tiá»‡n Nghi</h5>
+                        <h5><i class="fas fa-star"></i> Tiện nghi</h5>
                         <div class="utilities-list">
                             <?php foreach ($utilities_array as $util): ?>
                                 <div class="utility-badge">
@@ -235,7 +339,7 @@ $move_in_total = (int)$motel['price'] + $service_fee + $deposit_amount;
 
                 <!-- Reviews -->
                 <div class="info-card">
-                    <h5><i class="fas fa-star"></i> ÄÃ¡nh GiÃ¡</h5>
+                    <h5><i class="fas fa-star"></i> Đánh giá</h5>
                     <?php if (count($reviews) > 0): ?>
                         <?php foreach ($reviews as $review): ?>
                             <div class="review-item">
@@ -254,7 +358,30 @@ $move_in_total = (int)$motel['price'] + $service_fee + $deposit_amount;
                             </div>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <p style="color: #999;">ChÆ°a cÃ³ Ä‘Ã¡nh giÃ¡ nÃ o</p>
+                        <p style="color: #999;">Chưa có đánh giá nào</p>
+                    <?php endif; ?>
+                    <?php if ($can_write_review): ?>
+                        <form method="POST" class="review-item mt-3 border-top pt-3">
+                            <h6 class="fw-bold mb-2"><i class="fas fa-pen"></i> Viết đánh giá của bạn</h6>
+                            <p class="small text-muted mb-2">Chỉ hiển thị khi bạn có đơn đặt được chấp nhận / đã cọc / hoàn tất cho phòng này.</p>
+                            <div class="mb-2">
+                                <label class="form-label">Số sao (1–5)</label>
+                                <select name="rating" class="form-select" required>
+                                    <?php for ($s = 5; $s >= 1; $s--): ?>
+                                        <option value="<?php echo $s; ?>"><?php echo $s; ?> sao</option>
+                                    <?php endfor; ?>
+                                </select>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">Bình luận</label>
+                                <textarea name="review_comment" class="form-control" rows="3" minlength="5" required placeholder="Chia sẻ trải nghiệm thực tế..."></textarea>
+                            </div>
+                            <button type="submit" name="submit_review" class="btn btn-primary">Gửi đánh giá</button>
+                        </form>
+                    <?php elseif ($has_user_review): ?>
+                        <p class="small text-success mt-2 mb-0"><i class="fas fa-check-circle"></i> Bạn đã gửi đánh giá cho phòng này.</p>
+                    <?php else: ?>
+                        <p class="small text-muted mt-2 mb-0">Khi đơn đặt phòng được chấp nhận hoặc hoàn tất, bạn có thể đánh giá tại đây.</p>
                     <?php endif; ?>
                 </div>
             </div>
@@ -262,37 +389,37 @@ $move_in_total = (int)$motel['price'] + $service_fee + $deposit_amount;
             <div class="col-lg-4">
                 <!-- Booking Card -->
                 <div class="info-card" style="position: sticky; top: 80px;">
-                    <h5 style="margin-bottom: 20px;">Äáº·t PhÃ²ng Ngay</h5>
+                    <h5 style="margin-bottom: 20px;">Đặt phòng ngay</h5>
                     <div class="mb-4">
-                        <div class="cost-row"><span>Tien thue thang dau</span><strong><?php echo number_format((int)$motel['price']); ?> VND</strong></div>
-                        <div class="cost-row"><span>Tien coc (<?php echo $deposit_months; ?> thang)</span><strong><?php echo number_format($deposit_amount); ?> VND</strong></div>
-                        <div class="cost-row"><span>Phi dich vu/thang</span><strong><?php echo number_format($service_fee); ?> VND</strong></div>
+                        <div class="cost-row"><span>Tiền thuê tháng đầu</span><strong><?php echo number_format((int)$motel['price']); ?> VNĐ</strong></div>
+                        <div class="cost-row"><span>Tiền cọc (<?php echo $deposit_months; ?> tháng)</span><strong><?php echo number_format($deposit_amount); ?> VNĐ</strong></div>
+                        <div class="cost-row"><span>Phí dịch vụ/tháng</span><strong><?php echo number_format($service_fee); ?> VNĐ</strong></div>
                         <div class="d-flex justify-content-between align-items-center pt-3">
-                            <span>Uoc tinh can chuan bi</span>
-                            <span class="cost-total"><?php echo number_format($move_in_total); ?> VND</span>
+                            <span>Ước tính cần chuẩn bị</span>
+                            <span class="cost-total"><?php echo number_format($move_in_total); ?> VNĐ</span>
                         </div>
                     </div>
                     <div class="d-grid gap-2">
                         <a href="checkout.php?id=<?php echo $motel['id']; ?>" class="btn btn-primary">
-                            <i class="fas fa-calendar-plus"></i> Äáº·t PhÃ²ng
+                            <i class="fas fa-calendar-plus"></i> Đặt phòng
                         </a>
                         <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#viewingForm">
-                            <i class="fas fa-calendar-check"></i> Dat lich xem
+                            <i class="fas fa-calendar-check"></i> Đặt lịch xem
                         </button>
                         <button class="btn btn-heart <?php echo $is_favorite ? 'active' : ''; ?>" onclick="toggleFavorite(<?php echo $motel['id']; ?>, this)">
-                            <i class="fas fa-heart"></i> YÃªu ThÃ­ch
+                            <i class="fas fa-heart"></i> Yêu thích
                         </button>
                     </div>
                     <form method="POST" class="collapse mt-3" id="viewingForm">
                         <div class="mb-2">
-                            <label class="form-label">Thoi gian muon xem</label>
+                            <label class="form-label">Thời gian muốn xem</label>
                             <input type="datetime-local" name="preferred_time" class="form-control" required>
                         </div>
                         <div class="mb-2">
-                            <label class="form-label">Ghi chu</label>
-                            <textarea name="note" class="form-control" rows="3" placeholder="VD: Minh muon xem phong sau 18h"></textarea>
+                            <label class="form-label">Ghi chú</label>
+                            <textarea name="note" class="form-control" rows="3" placeholder="Ví dụ: Mình muốn xem phòng sau 18h"></textarea>
                         </div>
-                        <button type="submit" name="schedule_viewing" class="btn btn-primary w-100">Gui lich xem</button>
+                        <button type="submit" name="schedule_viewing" class="btn btn-primary w-100">Gửi lịch xem</button>
                     </form>
                 </div>
 
@@ -302,12 +429,19 @@ $move_in_total = (int)$motel['price'] + $service_fee + $deposit_amount;
                         <i class="fas fa-user-circle" style="color: #667eea;"></i> <?php echo htmlspecialchars($motel['owner_name']); ?>
                     </div>
                     <?php if (!empty($motel['verified_at'])): ?>
-                        <div class="verified-badge mb-2"><i class="fas fa-shield-alt"></i> Owner da xac minh</div>
+                        <div class="verified-badge mb-2"><i class="fas fa-shield-alt"></i> Chủ nhà đã xác minh</div>
                     <?php endif; ?>
-                    <p style="color: #666; margin-bottom: 15px;">Chá»§ nhÃ  / NgÆ°á»i cho thuÃª</p>
-                    <button class="btn-contact w-100">
-                        <i class="fas fa-envelope"></i> LiÃªn Há»‡ Chá»§ NhÃ 
+                    <p style="color: #666; margin-bottom: 15px;">Chủ nhà / Người cho thuê</p>
+                    <button class="btn-contact w-100 mb-2" type="button" data-bs-toggle="collapse" data-bs-target="#contactOwnerForm">
+                        <i class="fas fa-envelope"></i> Nhắn tin cho chủ trọ
                     </button>
+                    <div class="collapse" id="contactOwnerForm">
+                        <form method="POST" class="mt-2">
+                            <label class="form-label small">Nội dung (tối thiểu 5 ký tự)</label>
+                            <textarea name="contact_message" class="form-control mb-2" rows="4" minlength="5" required placeholder="Ví dụ: Cho em hỏi thêm về giờ giấc, hợp đồng..."></textarea>
+                            <button type="submit" name="contact_owner" class="btn btn-primary w-100">Gửi tin nhắn</button>
+                        </form>
+                    </div>
                 </div>
 
                 <!-- Stats -->
@@ -315,11 +449,11 @@ $move_in_total = (int)$motel['price'] + $service_fee + $deposit_amount;
                     <div style="display: flex; justify-content: space-around; text-align: center;">
                         <div>
                             <div style="font-size: 24px; font-weight: 700; color: #667eea;"><?php echo $motel['count_view']; ?></div>
-                            <div style="color: #666; font-size: 13px;">LÆ°á»£t Xem</div>
+                            <div style="color: #666; font-size: 13px;">Lượt xem</div>
                         </div>
                         <div>
                             <div style="font-size: 24px; font-weight: 700; color: #667eea;">5â˜…</div>
-                            <div style="color: #666; font-size: 13px;">ÄÃ¡nh GiÃ¡</div>
+                            <div style="color: #666; font-size: 13px;">Đánh giá</div>
                         </div>
                     </div>
                 </div>

@@ -2,10 +2,21 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
+<<<<<<< HEAD
 -- Host: 127.0.0.1
 -- Generation Time: May 15, 2026 at 04:04 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
+=======
+-- Máy chủ: 127.0.0.1
+<<<<<<< HEAD
+-- Thời gian đã tạo: Th5 15, 2026 lúc 11:33 AM
+=======
+-- Thời gian đã tạo: Th5 15, 2026 lúc 11:43 AM
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
+-- Phiên bản máy phục vụ: 10.4.32-MariaDB
+-- Phiên bản PHP: 8.2.12
+>>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -42,11 +53,20 @@ CREATE TABLE `activity_logs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
+<<<<<<< HEAD
 -- Dumping data for table `activity_logs`
 --
 
 INSERT INTO `activity_logs` (`id`, `admin_id`, `action`, `entity_type`, `entity_id`, `old_values`, `new_values`, `description`, `ip_address`, `user_agent`, `created_at`) VALUES
 (2, 5, 'approve_user', 'user', 8, NULL, NULL, 'Duyệt tài khoản owner: Owner (owner123@gmail.com)', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', '2026-05-15 13:08:08');
+=======
+-- Đang đổ dữ liệu cho bảng `activity_logs`
+--
+
+INSERT INTO `activity_logs` (`id`, `admin_id`, `action`, `entity_type`, `entity_id`, `old_values`, `new_values`, `description`, `ip_address`, `user_agent`, `created_at`) VALUES
+(1, 5, 'approve_user', 'user', 6, NULL, NULL, 'Duyệt tài khoản owner: Chủ trọ 1 (owner@gmail.com)', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-05-14 06:05:10'),
+(2, 5, 'approve_user', 'user', 8, NULL, NULL, 'Duyệt tài khoản owner: Bảo Phan (admin1234@gmail.com)', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-05-14 06:07:58');
+>>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 
 -- --------------------------------------------------------
 
@@ -66,7 +86,13 @@ CREATE TABLE `admin_notes` (
 -- --------------------------------------------------------
 
 --
+<<<<<<< HEAD
 -- Table structure for table `articles`
+=======
+<<<<<<< HEAD
+=======
+-- Cấu trúc bảng cho bảng `articles`
+>>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 --
 
 CREATE TABLE `articles` (
@@ -89,7 +115,12 @@ CREATE TABLE `articles` (
 -- --------------------------------------------------------
 
 --
+<<<<<<< HEAD
 -- Table structure for table `bookings`
+=======
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
+-- Cấu trúc bảng cho bảng `bookings`
+>>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 --
 
 CREATE TABLE `bookings` (
@@ -128,7 +159,34 @@ INSERT INTO `categories` (`id`, `name`) VALUES
 -- --------------------------------------------------------
 
 --
+<<<<<<< HEAD
 -- Table structure for table `conversations`
+=======
+<<<<<<< HEAD
+-- Cấu trúc bảng cho bảng `contracts`
+--
+
+CREATE TABLE `contracts` (
+  `id` int(11) NOT NULL,
+  `motel_id` int(11) NOT NULL,
+  `owner_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `start_date` date NOT NULL,
+  `end_date` date NOT NULL,
+  `deposit_amount` int(11) NOT NULL,
+  `monthly_price` int(11) NOT NULL,
+  `document_url` varchar(255) DEFAULT NULL,
+  `status` enum('pending_signature','active','expiring_soon','expired','terminated') DEFAULT 'pending_signature',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+=======
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
+-- Cấu trúc bảng cho bảng `conversations`
+>>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 --
 
 CREATE TABLE `conversations` (
@@ -254,6 +312,7 @@ CREATE TABLE `maintenance_requests` (
   `booking_id` int(11) DEFAULT NULL,
   `title` varchar(180) NOT NULL,
   `description` text NOT NULL,
+  `image_url` varchar(255) DEFAULT NULL,
   `priority` varchar(20) NOT NULL DEFAULT 'normal',
   `status` varchar(30) NOT NULL DEFAULT 'open',
   `resolved_at` datetime DEFAULT NULL,
@@ -279,7 +338,59 @@ CREATE TABLE `messages` (
 -- --------------------------------------------------------
 
 --
+<<<<<<< HEAD
 -- Table structure for table `motels`
+=======
+<<<<<<< HEAD
+-- Cấu trúc bảng cho bảng `monthly_bills`
+--
+
+CREATE TABLE `monthly_bills` (
+  `id` int(11) NOT NULL,
+  `motel_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `billing_month` int(2) NOT NULL,
+  `billing_year` int(4) NOT NULL,
+  `elec_old` int(11) DEFAULT 0,
+  `elec_new` int(11) DEFAULT 0,
+  `elec_price` int(11) DEFAULT 3500,
+  `water_old` int(11) DEFAULT 0,
+  `water_new` int(11) DEFAULT 0,
+  `water_price` int(11) DEFAULT 20000,
+  `trash_fee` int(11) DEFAULT 50000,
+  `internet_fee` int(11) DEFAULT 100000,
+  `total_amount` int(11) NOT NULL,
+  `status` enum('unpaid','paid','overdue') DEFAULT 'unpaid',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Cấu trúc bảng cho bảng `monthly_invoices`
+--
+
+CREATE TABLE `monthly_invoices` (
+  `id` int(11) NOT NULL,
+  `owner_id` int(11) NOT NULL,
+  `tenant_user_id` int(11) NOT NULL,
+  `motel_id` int(11) NOT NULL,
+  `period_month` tinyint(4) NOT NULL,
+  `period_year` smallint(6) NOT NULL,
+  `electricity_fee` int(11) NOT NULL DEFAULT 0,
+  `water_fee` int(11) NOT NULL DEFAULT 0,
+  `other_fee` int(11) NOT NULL DEFAULT 0,
+  `note` varchar(500) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+=======
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
+-- Cấu trúc bảng cho bảng `motels`
+>>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 --
 
 CREATE TABLE `motels` (
@@ -339,7 +450,13 @@ CREATE TABLE `motel_utilities` (
 -- --------------------------------------------------------
 
 --
+<<<<<<< HEAD
 -- Table structure for table `news_categories`
+=======
+<<<<<<< HEAD
+=======
+-- Cấu trúc bảng cho bảng `news_categories`
+>>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 --
 
 CREATE TABLE `news_categories` (
@@ -362,7 +479,12 @@ INSERT INTO `news_categories` (`id`, `name`, `slug`, `description`, `created_at`
 -- --------------------------------------------------------
 
 --
+<<<<<<< HEAD
 -- Table structure for table `notifications`
+=======
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
+-- Cấu trúc bảng cho bảng `notifications`
+>>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 --
 
 CREATE TABLE `notifications` (
@@ -517,13 +639,23 @@ CREATE TABLE `users` (
   `idcard_number` varchar(50) DEFAULT NULL,
   `trust_score` int(11) NOT NULL DEFAULT 0,
   `admin_note` text DEFAULT NULL,
-  `verified_at` datetime DEFAULT NULL
+  `verified_at` datetime DEFAULT NULL,
+  `id_card_front` varchar(255) DEFAULT NULL,
+  `id_card_back` varchar(255) DEFAULT NULL,
+  `bank_name` varchar(100) DEFAULT NULL,
+  `bank_account_no` varchar(50) DEFAULT NULL,
+  `bank_account_name` varchar(100) DEFAULT NULL,
+  `notify_email` tinyint(1) DEFAULT 1,
+  `notify_booking` tinyint(1) DEFAULT 1,
+  `show_phone` tinyint(1) DEFAULT 1,
+  `dark_mode` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
 --
 
+<<<<<<< HEAD
 INSERT INTO `users` (`id`, `name`, `email`, `password`, `reset_token`, `reset_expires`, `force_password_change`, `phone`, `avatar`, `role`, `created_at`, `status`, `approved_by`, `approved_at`, `rejection_reason`, `address`, `idcard_number`, `trust_score`, `admin_note`, `verified_at`) VALUES
 (2, 'User 2', 'user2@gmail.com', '123', NULL, NULL, 0, NULL, NULL, 'user', '2026-04-23 08:39:47', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL),
 (4, 'Admin', 'admin@gmail.com', '123', NULL, NULL, 0, NULL, NULL, 'admin', '2026-04-23 08:39:47', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL),
@@ -531,6 +663,15 @@ INSERT INTO `users` (`id`, `name`, `email`, `password`, `reset_token`, `reset_ex
 (6, 'Chủ trọ 1', 'owner@gmail.com', '$2y$10$gU1LggXMYCfg4nEh8NZIv.hcB1L1kTxSJMsiMuwvy2mCzRdact4i2', NULL, NULL, 0, NULL, NULL, 'owner', '2026-04-29 09:27:23', 'approved', 5, '2026-05-13 16:15:55', NULL, NULL, NULL, 0, NULL, NULL),
 (7, 'User', 'user123@gmail.com', '$2y$10$udXXi/ARGfseLfIHPa0GE..0qplAgd75dGcDCNt1toASvuJiRJhTa', NULL, NULL, 0, '', NULL, 'user', '2026-05-15 13:07:14', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL),
 (8, 'Owner', 'owner123@gmail.com', '$2y$10$a/REVjGxzRqT3BcRRu.I5.FOtLbx2ORNEKRL.jAp4Lg31RXsvqTFC', NULL, NULL, 0, '0193839338', NULL, 'owner', '2026-05-15 13:07:39', 'approved', 5, '2026-05-15 20:08:08', NULL, NULL, NULL, 0, NULL, NULL);
+=======
+INSERT INTO `users` (`id`, `name`, `email`, `password`, `reset_token`, `reset_expires`, `phone`, `avatar`, `role`, `created_at`, `status`, `approved_by`, `approved_at`, `rejection_reason`, `address`, `idcard_number`, `trust_score`, `admin_note`, `verified_at`, `id_card_front`, `id_card_back`, `bank_name`, `bank_account_no`, `bank_account_name`, `notify_email`, `notify_booking`, `show_phone`, `dark_mode`) VALUES
+(2, 'User 2', 'user2@gmail.com', '123', NULL, NULL, NULL, NULL, 'user', '2026-04-23 08:39:47', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 1, 1, 0),
+(4, 'Admin', 'admin@gmail.com', '123', NULL, NULL, NULL, NULL, 'admin', '2026-04-23 08:39:47', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 1, 1, 0),
+(5, 'Admin', 'admin123@gmail.com', '$2y$10$o5dhV8yry9Mmv7Cgdq6ZjuWCGYRSNLrReh5G4DTh4eN/xFYhvTNCy', NULL, NULL, '', NULL, 'admin', '2026-04-25 10:29:43', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 1, 1, 0),
+(6, 'Chủ trọ 1', 'owner@gmail.com', '$2y$10$gU1LggXMYCfg4nEh8NZIv.hcB1L1kTxSJMsiMuwvy2mCzRdact4i2', NULL, NULL, NULL, NULL, 'owner', '2026-04-29 09:27:23', 'approved', 5, '2026-05-14 13:05:10', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 1, 1, 0),
+(7, 'Bảo Phan', 'baopdq1@qlpt.com', '$2y$10$KN3kCa1p67bAncjLp3AZkuvKk6P6idJdAMcMCufdZxayyFKaSkcxu', NULL, NULL, '0123456789', NULL, 'user', '2026-05-14 05:06:30', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 1, 1, 0),
+(8, 'Bảo Phan', 'admin1234@gmail.com', '$2y$10$I6QhngehzijRnpltd0cdXeRE0Zq5Ne2hsCYWRXpyEqFwDT.PewGTW', NULL, NULL, '0123456789', NULL, 'owner', '2026-05-14 06:06:46', 'approved', 5, '2026-05-14 13:07:58', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 1, 1, 0);
+>>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 
 -- --------------------------------------------------------
 
@@ -627,7 +768,13 @@ ALTER TABLE `admin_notes`
   ADD KEY `idx_entity` (`entity_type`,`entity_id`);
 
 --
+<<<<<<< HEAD
 -- Indexes for table `articles`
+=======
+<<<<<<< HEAD
+=======
+-- Chỉ mục cho bảng `articles`
+>>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 --
 ALTER TABLE `articles`
   ADD PRIMARY KEY (`id`),
@@ -636,7 +783,12 @@ ALTER TABLE `articles`
   ADD KEY `author_id` (`author_id`);
 
 --
+<<<<<<< HEAD
 -- Indexes for table `bookings`
+=======
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
+-- Chỉ mục cho bảng `bookings`
+>>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 --
 ALTER TABLE `bookings`
   ADD PRIMARY KEY (`id`),
@@ -650,7 +802,23 @@ ALTER TABLE `categories`
   ADD PRIMARY KEY (`id`);
 
 --
+<<<<<<< HEAD
 -- Indexes for table `conversations`
+=======
+<<<<<<< HEAD
+-- Chỉ mục cho bảng `contracts`
+--
+ALTER TABLE `contracts`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `motel_id` (`motel_id`),
+  ADD KEY `owner_id` (`owner_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+=======
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
+-- Chỉ mục cho bảng `conversations`
+>>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 --
 ALTER TABLE `conversations`
   ADD PRIMARY KEY (`id`),
@@ -728,7 +896,32 @@ ALTER TABLE `messages`
   ADD KEY `idx_created_at` (`created_at`);
 
 --
+<<<<<<< HEAD
 -- Indexes for table `motels`
+=======
+<<<<<<< HEAD
+-- Chỉ mục cho bảng `monthly_bills`
+--
+ALTER TABLE `monthly_bills`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `motel_id` (`motel_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Chỉ mục cho bảng `monthly_invoices`
+--
+ALTER TABLE `monthly_invoices`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_period` (`owner_id`,`tenant_user_id`,`motel_id`,`period_year`,`period_month`),
+  ADD KEY `idx_tenant` (`tenant_user_id`),
+  ADD KEY `idx_owner` (`owner_id`),
+  ADD KEY `idx_motel` (`motel_id`);
+
+--
+=======
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
+-- Chỉ mục cho bảng `motels`
+>>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 --
 ALTER TABLE `motels`
   ADD PRIMARY KEY (`id`),
@@ -751,14 +944,25 @@ ALTER TABLE `motel_utilities`
   ADD KEY `utility_id` (`utility_id`);
 
 --
+<<<<<<< HEAD
 -- Indexes for table `news_categories`
+=======
+<<<<<<< HEAD
+=======
+-- Chỉ mục cho bảng `news_categories`
+>>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 --
 ALTER TABLE `news_categories`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `slug` (`slug`);
 
 --
+<<<<<<< HEAD
 -- Indexes for table `notifications`
+=======
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
+-- Chỉ mục cho bảng `notifications`
+>>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 --
 ALTER TABLE `notifications`
   ADD PRIMARY KEY (`id`),
@@ -880,13 +1084,24 @@ ALTER TABLE `admin_notes`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+<<<<<<< HEAD
 -- AUTO_INCREMENT for table `articles`
+=======
+<<<<<<< HEAD
+=======
+-- AUTO_INCREMENT cho bảng `articles`
+>>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 --
 ALTER TABLE `articles`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+<<<<<<< HEAD
 -- AUTO_INCREMENT for table `bookings`
+=======
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
+-- AUTO_INCREMENT cho bảng `bookings`
+>>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 --
 ALTER TABLE `bookings`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
@@ -898,7 +1113,20 @@ ALTER TABLE `categories`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
+<<<<<<< HEAD
 -- AUTO_INCREMENT for table `conversations`
+=======
+<<<<<<< HEAD
+-- AUTO_INCREMENT cho bảng `contracts`
+--
+ALTER TABLE `contracts`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+=======
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
+-- AUTO_INCREMENT cho bảng `conversations`
+>>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 --
 ALTER TABLE `conversations`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
@@ -952,7 +1180,26 @@ ALTER TABLE `messages`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+<<<<<<< HEAD
 -- AUTO_INCREMENT for table `motels`
+=======
+<<<<<<< HEAD
+-- AUTO_INCREMENT cho bảng `monthly_bills`
+--
+ALTER TABLE `monthly_bills`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT cho bảng `monthly_invoices`
+--
+ALTER TABLE `monthly_invoices`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+=======
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
+-- AUTO_INCREMENT cho bảng `motels`
+>>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 --
 ALTER TABLE `motels`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
@@ -964,13 +1211,24 @@ ALTER TABLE `motel_images`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
+<<<<<<< HEAD
 -- AUTO_INCREMENT for table `news_categories`
+=======
+<<<<<<< HEAD
+=======
+-- AUTO_INCREMENT cho bảng `news_categories`
+>>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 --
 ALTER TABLE `news_categories`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
+<<<<<<< HEAD
 -- AUTO_INCREMENT for table `notifications`
+=======
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
+-- AUTO_INCREMENT cho bảng `notifications`
+>>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 --
 ALTER TABLE `notifications`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
@@ -1046,28 +1304,68 @@ ALTER TABLE `withdraw_requests`
 --
 
 --
+<<<<<<< HEAD
 -- Constraints for table `articles`
+=======
+<<<<<<< HEAD
+=======
+-- Các ràng buộc cho bảng `articles`
+>>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 --
 ALTER TABLE `articles`
   ADD CONSTRAINT `articles_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `news_categories` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `articles_ibfk_2` FOREIGN KEY (`author_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
+<<<<<<< HEAD
 -- Constraints for table `bookings`
+=======
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
+-- Các ràng buộc cho bảng `bookings`
+>>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 --
 ALTER TABLE `bookings`
   ADD CONSTRAINT `bookings_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `bookings_ibfk_2` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE;
 
 --
+<<<<<<< HEAD
 -- Constraints for table `favorites`
+=======
+<<<<<<< HEAD
+-- Các ràng buộc cho bảng `contracts`
+--
+ALTER TABLE `contracts`
+  ADD CONSTRAINT `contracts_ibfk_1` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `contracts_ibfk_2` FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `contracts_ibfk_3` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+=======
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
+-- Các ràng buộc cho bảng `favorites`
+>>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 --
 ALTER TABLE `favorites`
   ADD CONSTRAINT `favorites_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `favorites_ibfk_2` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE;
 
 --
+<<<<<<< HEAD
 -- Constraints for table `motels`
+=======
+<<<<<<< HEAD
+-- Các ràng buộc cho bảng `monthly_bills`
+--
+ALTER TABLE `monthly_bills`
+  ADD CONSTRAINT `monthly_bills_ibfk_1` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `monthly_bills_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+=======
+>>>>>>> f2bc8b2589e58240d3ef382c248c93db5bcc39e6
+-- Các ràng buộc cho bảng `motels`
+>>>>>>> 86bd390fd85842e98e5636e226783ec4c03994b8
 --
 ALTER TABLE `motels`
   ADD CONSTRAINT `motels_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,

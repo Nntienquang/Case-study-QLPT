@@ -13,7 +13,14 @@ if (isset($_SESSION['user_id'])) {
     $db = new Database($conn);
     $auth = new AuthController($db->getConnection());
     if ($auth->checkSessionTimeout()) {
-        header('Location: ./dashboard.php');
+        $role = $_SESSION['role'] ?? $_SESSION['user_role'] ?? 'user';
+        if ($role === 'admin') {
+            header('Location: ./admin/index.php');
+        } elseif ($role === 'owner') {
+            header('Location: ./owner/index.php');
+        } else {
+            header('Location: ./user/dashboard.php');
+        }
         exit;
     }
 }
@@ -35,7 +42,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $message = $result['message'];
     $type = $result['success'] ? 'success' : 'error';
     
-    // TODO: Gá»­i email reset náº¿u token tá»“n táº¡i
+    // TODO: Gửi email reset nếu token tồn tại
     // if ($result['success'] && isset($result['token'])) {
     //     $reset_url = $result['reset_url'];
     //     // require_once 'core/EmailNotification.php';
@@ -48,7 +55,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QuÃªn Máº­t Kháº©u - QuanLyPhongTro</title>
+<title>Quên mật khẩu - QuanLyPhongTro</title>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 <style>
 * { box-sizing: border-box; }
@@ -198,11 +205,11 @@ button:hover {
 <body>
 
 <div class="container">
-    <h2>ðŸ”‘ QuÃªn Máº­t Kháº©u?</h2>
-    <p class="subtitle">Nháº­p email cá»§a báº¡n Ä‘á»ƒ nháº­n liÃªn káº¿t Ä‘áº·t láº¡i</p>
+    <h2>Quên mật khẩu?</h2>
+    <p class="subtitle">Nhập email của bạn để nhận liên kết đặt lại</p>
 
     <div class="info-box">
-        <i class="fas fa-info-circle"></i> Nháº­p email liÃªn káº¿t vá»›i tÃ i khoáº£n cá»§a báº¡n, chÃºng tÃ´i sáº½ gá»­i cho báº¡n liÃªn káº¿t Ä‘á»ƒ Ä‘áº·t láº¡i máº­t kháº©u.
+        <i class="fas fa-info-circle"></i> Nhập email liên kết với tài khoản của bạn, chúng tôi sẽ gửi cho bạn liên kết để đặt lại mật khẩu.
     </div>
 
     <?php if($message != ""): ?>
@@ -215,15 +222,15 @@ button:hover {
         <div class="input-group">
             <label for="email">Email</label>
             <i class="fa fa-envelope"></i>
-            <input type="email" id="email" name="email" placeholder="Nháº­p email cá»§a báº¡n" required>
+            <input type="email" id="email" name="email" placeholder="Nhập email của bạn" required>
         </div>
 
-        <button type="submit">ðŸ“§ Gá»­i LiÃªn Káº¿t Äáº·t Láº¡i</button>
+        <button type="submit">Gửi liên kết đặt lại</button>
     </form>
 
     <div class="links">
-        â† <a href="login.php">Quay láº¡i Ä‘Äƒng nháº­p</a><br style="margin: 10px 0;">
-        ChÆ°a cÃ³ tÃ i khoáº£n? <a href="register.php">ÄÄƒng kÃ½ ngay</a>
+        &larr; <a href="login.php">Quay lại đăng nhập</a><br style="margin: 10px 0;">
+        Chưa có tài khoản? <a href="register.php">Đăng ký ngay</a>
     </div>
 </div>
 

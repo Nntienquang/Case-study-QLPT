@@ -107,15 +107,27 @@ body.workbench {
     gap: 10px;
     padding: 10px 12px;
     border-radius: 10px;
-    color: #475467;
+    color: var(--wb-muted);
     text-decoration: none;
     font-weight: 750;
 }
 
+.wb-side-link:visited {
+    color: var(--wb-muted);
+}
+
 .wb-side-link:hover,
-.wb-side-link.active {
+.wb-side-link:hover:visited,
+.wb-side-link.active,
+.wb-side-link.active:visited {
     background: #eef4ff;
     color: var(--wb-primary);
+}
+
+.wb-side-link i {
+    color: inherit;
+    width: 1.25em;
+    text-align: center;
 }
 
 .wb-hero {
@@ -401,3 +413,48 @@ body.workbench {
         overflow-x: auto;
     }
 }
+/* --- DARK MODE GLOBAL TUNING --- */
+[data-bs-theme="dark"] body.workbench { 
+    background-color: #0f172a !important; 
+    color: #e2e8f0; 
+}
+
+/* Sửa lỗi Header quá tối - dùng màu Deep Navy để nổi bật text */
+[data-bs-theme="dark"] .wb-topbar { 
+    background: #1e293b !important; 
+    border-bottom: 1px solid #334155; 
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+}
+
+[data-bs-theme="dark"] .wb-brand, 
+[data-bs-theme="dark"] .wb-user span { 
+    color: #f1f5f9 !important; 
+}
+
+[data-bs-theme="dark"] .wb-sidebar { 
+    background: #1e293b !important; 
+    border: 1px solid #334155; 
+}
+
+[data-bs-theme="dark"] .wb-sidebar .wb-side-link { color: #94a3b8; }
+[data-bs-theme="dark"] .wb-sidebar .wb-side-link:hover, 
+[data-bs-theme="dark"] .wb-sidebar .wb-side-link.active { 
+    background: #334155; color: #38bdf8; 
+}
+
+[data-bs-theme="dark"] .wb-card { 
+    background: #1e293b !important; 
+    border: 1px solid #334155; 
+    color: #f1f5f9;
+}
+
+[data-bs-theme="dark"] .form-control, 
+[data-bs-theme="dark"] .form-select {
+    background-color: #0f172a; 
+    border-color: #334155; 
+    color: #f1f5f9;
+}
+
+/* Các bảng (Table) trong dark mode */
+[data-bs-theme="dark"] .table { color: #f1f5f9; }
+[data-bs-theme="dark"] .table-light { --bs-table-bg: #334155; --bs-table-color: #f1f5f9; }
