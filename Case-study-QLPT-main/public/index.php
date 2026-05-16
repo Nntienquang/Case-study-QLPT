@@ -1,0 +1,670 @@
+<?php
+@require_once '../config/database.php';
+@require_once '../config/constants.php';
+@require_once '../core/Database.php';
+
+session_start();
+
+if (isset($_SESSION['user_id'])) {
+    $role = $_SESSION['role'] ?? $_SESSION['user_role'] ?? 'user';
+
+    if ($role === 'admin') {
+        header('Location: ./admin/index.php');
+    } elseif ($role === 'owner') {
+        header('Location: ./owner/dashboard.php');
+    } else {
+        header('Location: ./user/dashboard.php');
+    }
+    exit;
+}
+
+/** @var mysqli $conn */
+$db = new Database($conn);
+
+$districts = [];
+$categories = [];
+$rooms = [];
+$stats = ['rooms' => 0, 'owners' => 0, 'bookings' => 0, 'districts' => 0];
+
+try {
+    $districts = $db->getRows("SELECT id, name FROM districts ORDER BY name LIMIT 8");
+    $categories = $db->getRows("SELECT id, name FROM categories ORDER BY name LIMIT 6");
+    $rooms = $db->getRows("
+        SELECT m.id, m.title, m.price, m.address, m.area, m.count_view, m.health_score, m.service_fee, m.deposit_months,
+               d.name AS district_name, c.name AS category_name
+        FROM motels m
+        LEFT JOIN districts d ON m.district_id = d.id
+        LEFT JOIN categories c ON m.category_id = c.id
+        WHERE m.status = 'approved'
+        ORDER BY m.is_featured DESC, m.health_score DESC, m.created_at DESC
+        LIMIT 6
+    ");
+    $stats['rooms'] = (int)($db->getRow("SELECT COUNT(*) AS total FROM motels WHERE status = 'approved'")['total'] ?? 0);
+    $stats['owners'] = (int)($db->getRow("SELECT COUNT(*) AS total FROM users WHERE role = 'owner' AND status = 'approved'")['total'] ?? 0);
+    $stats['bookings'] = (int)($db->getRow("SELECT COUNT(*) AS total FROM bookings")['total'] ?? 0);
+    $stats['districts'] = (int)($db->getRow("SELECT COUNT(*) AS total FROM districts")['total'] ?? 0);
+} catch (Throwable $e) {
+    $districts = [];
+    $categories = [];
+    $rooms = [];
+}
+?>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuanLyPhongTro - Tìm phòng trọ sạch đẹp, quản lý dễ dàng</title>
+    <link rel="preconnect" href="https://images.unsplash.com">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="assets/css/modern.css" rel="stylesheet">
+    <style>
+        body {
+            background: #f6f8fb !important;
+            color: #172033;
+            overflow-x: hidden;
+        }
+        .home-nav {
+            position: fixed;
+            inset: 18px 0 auto;
+            z-index: 30;
+        }
+        .nav-frame {
+            height: 66px;
+            padding: 0 16px 0 20px;
+            border-radius: 18px;
+            background: rgba(255,255,255,.82);
+            border: 1px solid rgba(255,255,255,.78);
+            box-shadow: 0 18px 50px rgba(15,23,42,.12);
+            backdrop-filter: blur(18px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            color: #101828;
+            text-decoration: none;
+            font-weight: 900;
+        }
+        .brand-mark {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            background: #101828;
+            color: #fff;
+        }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .nav-links a {
+            color: #475467;
+            text-decoration: none;
+            font-weight: 750;
+            padding: 10px 12px;
+            border-radius: 12px;
+        }
+        .nav-links a:hover {
+            color: #101828;
+            background: rgba(16,24,40,.06);
+        }
+        .nav-cta {
+            color: #fff !important;
+            background: #101828 !important;
+        }
+        .hero {
+            position: relative;
+            min-height: 100vh;
+            padding: 128px 0 58px;
+            display: grid;
+            align-items: center;
+            overflow: hidden;
+        }
+        .hero-media {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+            background: #dbe7f0;
+        }
+        .hero-media span {
+            position: absolute;
+            inset: -7%;
+            background-size: cover;
+            background-position: center;
+            opacity: 0;
+            transform: scale(1.08);
+            animation: roomFilm 24s infinite;
+        }
+        .hero-media span:nth-child(1) {
+            background-image: url('https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=2200&q=88');
+            animation-delay: 0s;
+        }
+        .hero-media span:nth-child(2) {
+            background-image: url('https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=2200&q=88');
+            animation-delay: 8s;
+        }
+        .hero-media span:nth-child(3) {
+            background-image: url('https://images.unsplash.com/photo-1560448204-603b3fc33ddc?auto=format&fit=crop&w=2200&q=88');
+            animation-delay: 16s;
+        }
+        .hero::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            background:
+                linear-gradient(90deg, rgba(246,248,251,.98) 0%, rgba(246,248,251,.86) 42%, rgba(246,248,251,.22) 76%),
+                linear-gradient(0deg, #f6f8fb 0%, rgba(246,248,251,0) 34%);
+        }
+        @keyframes roomFilm {
+            0% { opacity: 0; transform: scale(1.08) translateX(0); }
+            8% { opacity: 1; }
+            34% { opacity: 1; transform: scale(1.02) translateX(-1.5%); }
+            42% { opacity: 0; transform: scale(1.02) translateX(-1.5%); }
+            100% { opacity: 0; }
+        }
+        .hero-content {
+            position: relative;
+            z-index: 2;
+        }
+        .hero-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 430px;
+            gap: 46px;
+            align-items: center;
+        }
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: rgba(255,255,255,.76);
+            border: 1px solid rgba(16,24,40,.08);
+            color: #344054;
+            font-weight: 850;
+            box-shadow: 0 12px 36px rgba(15,23,42,.08);
+            margin-bottom: 18px;
+        }
+        .hero h1 {
+            max-width: 780px;
+            font-size: clamp(46px, 7.6vw, 92px);
+            line-height: .95;
+            font-weight: 950;
+            letter-spacing: 0;
+            margin-bottom: 22px;
+        }
+        .hero h1 span {
+            color: #0e7490;
+        }
+        .hero-copy {
+            max-width: 650px;
+            color: #475467;
+            font-size: 18px;
+            line-height: 1.75;
+            margin-bottom: 26px;
+        }
+        .hero-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+        .btn-home {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            min-height: 52px;
+            padding: 0 18px;
+            border-radius: 14px;
+            text-decoration: none;
+            font-weight: 900;
+        }
+        .btn-home.primary {
+            color: #fff;
+            background: #101828;
+            box-shadow: 0 18px 45px rgba(16,24,40,.22);
+        }
+        .btn-home.secondary {
+            color: #101828;
+            background: rgba(255,255,255,.74);
+            border: 1px solid rgba(16,24,40,.1);
+        }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+            max-width: 770px;
+        }
+        .metric {
+            background: rgba(255,255,255,.72);
+            border: 1px solid rgba(16,24,40,.08);
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 14px 40px rgba(15,23,42,.08);
+            backdrop-filter: blur(12px);
+        }
+        .metric strong {
+            display: block;
+            font-size: 28px;
+            line-height: 1;
+        }
+        .metric span {
+            color: #667085;
+            font-size: 13px;
+        }
+        .search-card {
+            border-radius: 24px;
+            padding: 24px;
+            background: rgba(255,255,255,.86);
+            border: 1px solid rgba(255,255,255,.88);
+            box-shadow: 0 30px 80px rgba(15,23,42,.18);
+            backdrop-filter: blur(18px);
+        }
+        .search-card h2 {
+            font-weight: 950;
+            font-size: 26px;
+            margin-bottom: 8px;
+        }
+        .search-card p {
+            color: #667085;
+            margin-bottom: 20px;
+        }
+        .search-card label {
+            color: #344054;
+            font-size: 13px;
+            font-weight: 850;
+            margin-bottom: 7px;
+        }
+        .search-card .form-control,
+        .search-card .form-select {
+            min-height: 48px;
+            background: #fff !important;
+        }
+        .section {
+            padding: 78px 0;
+        }
+        .section-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: end;
+            gap: 22px;
+            margin-bottom: 28px;
+        }
+        .kicker {
+            color: #0e7490;
+            font-weight: 950;
+            margin-bottom: 8px;
+        }
+        .section-title {
+            font-size: clamp(32px, 4vw, 52px);
+            line-height: 1.04;
+            font-weight: 950;
+            margin: 0;
+        }
+        .section-desc {
+            max-width: 660px;
+            color: #667085;
+            line-height: 1.7;
+            margin: 12px 0 0;
+        }
+        .feature-grid,
+        .room-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 18px;
+        }
+        .feature-card,
+        .room-card,
+        .area-card {
+            background: #fff;
+            border: 1px solid #e5eaf2;
+            border-radius: 18px;
+            box-shadow: 0 18px 50px rgba(15,23,42,.08);
+        }
+        .feature-card {
+            padding: 24px;
+        }
+        .feature-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
+            display: grid;
+            place-items: center;
+            color: #fff;
+            background: #101828;
+            margin-bottom: 18px;
+        }
+        .feature-card h3 {
+            font-weight: 950;
+            font-size: 21px;
+        }
+        .feature-card p {
+            color: #667085;
+            line-height: 1.65;
+            margin: 0;
+        }
+        .area-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+        }
+        .area-card {
+            min-height: 92px;
+            padding: 18px;
+            color: #101828;
+            text-decoration: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 950;
+        }
+        .area-card small {
+            display: block;
+            color: #667085;
+            font-weight: 650;
+            margin-top: 4px;
+        }
+        .room-card {
+            overflow: hidden;
+        }
+        .room-photo {
+            height: 190px;
+            background:
+                linear-gradient(135deg, rgba(16,24,40,.08), rgba(14,116,144,.16)),
+                url('https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=900&q=82') center/cover;
+        }
+        .room-body {
+            padding: 20px;
+        }
+        .room-body h3 {
+            min-height: 48px;
+            font-size: 19px;
+            font-weight: 950;
+            line-height: 1.32;
+        }
+        .room-price {
+            color: #0e7490;
+            font-size: 22px;
+            font-weight: 950;
+            margin-bottom: 10px;
+        }
+        .room-meta {
+            color: #667085;
+            min-height: 44px;
+            line-height: 1.55;
+        }
+        .room-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 16px 0;
+        }
+        .room-tag {
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: #ecfeff;
+            color: #0e7490;
+            font-weight: 850;
+            font-size: 12px;
+        }
+        .empty-market {
+            padding: 32px;
+            background: #fff;
+            border: 1px solid #e5eaf2;
+            border-radius: 18px;
+            box-shadow: 0 18px 50px rgba(15,23,42,.08);
+        }
+        .footer {
+            padding: 34px 0;
+            border-top: 1px solid #e5eaf2;
+            color: #667085;
+        }
+        .footer a {
+            color: #475467;
+            text-decoration: none;
+            margin-left: 18px;
+            font-weight: 750;
+        }
+        @media (max-width: 991px) {
+            .home-nav {
+                inset: 10px 0 auto;
+            }
+            .nav-links {
+                display: none;
+            }
+            .hero-grid,
+            .metrics,
+            .feature-grid,
+            .area-grid,
+            .room-grid {
+                grid-template-columns: 1fr;
+            }
+            .hero {
+                padding-top: 110px;
+            }
+            .hero::after {
+                background: linear-gradient(0deg, rgba(246,248,251,.95), rgba(246,248,251,.76));
+            }
+            .section-head {
+                align-items: start;
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="home-nav">
+        <div class="container-lg">
+            <div class="nav-frame">
+                <a href="index.php" class="brand">
+                    <span class="brand-mark"><i class="fas fa-house-chimney"></i></span>
+                    <span>QuanLyPhongTro</span>
+                </a>
+                <div class="nav-links">
+                    <a href="#rooms">Phòng đang thuê</a>
+                    <a href="#areas">Khu vực</a>
+                    <a href="#system">Chức năng</a>
+                    <a href="login.php">Đăng nhập</a>
+                    <a href="owner-register.php" class="nav-cta">Đăng phòng</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="hero-media" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+
+        <div class="container-lg hero-content">
+            <div class="hero-grid">
+                <section>
+                    <div class="eyebrow"><i class="fas fa-sparkles"></i> Phòng trọ sạch, tin rõ, quản lý gọn</div>
+                    <h1>Tìm phòng sáng sạch. <span>Quản lý thuê trọ</span> dễ hơn.</h1>
+                    <p class="hero-copy">
+                        Tìm phòng theo nhu cầu, xem trước chi phí vào ở, đặt lịch xem nhanh
+                        và theo dõi các yêu cầu thuê trong một nơi.
+                    </p>
+                    <div class="hero-actions">
+                        <a href="user/search.php" class="btn-home primary"><i class="fas fa-magnifying-glass"></i> Tìm phòng ngay</a>
+                        <a href="owner-register.php" class="btn-home secondary"><i class="fas fa-house-user"></i> Đăng phòng cho thuê</a>
+                    </div>
+                    <div class="metrics">
+                        <div class="metric"><strong><?php echo number_format($stats['rooms']); ?></strong><span>phòng đã duyệt</span></div>
+                        <div class="metric"><strong><?php echo number_format($stats['owners']); ?></strong><span>chủ phòng</span></div>
+                        <div class="metric"><strong><?php echo number_format($stats['bookings']); ?></strong><span>booking</span></div>
+                        <div class="metric"><strong><?php echo number_format($stats['districts']); ?></strong><span>khu vực</span></div>
+                    </div>
+                </section>
+
+                <aside class="search-card">
+                    <h2>Tìm phòng phù hợp</h2>
+                    <p>Lọc nhanh theo khu vực, loại phòng, ngân sách và diện tích.</p>
+                    <form method="GET" action="user/search.php">
+                        <div class="mb-3">
+                            <label for="keyword">Từ khóa</label>
+                            <input id="keyword" class="form-control" name="keyword" placeholder="Gần trường, full nội thất, ban công">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="district">Khu vực</label>
+                                <select id="district" name="district_id" class="form-select">
+                                    <option value="">Tất cả</option>
+                                    <?php foreach ($districts as $district): ?>
+                                        <option value="<?php echo (int)$district['id']; ?>"><?php echo htmlspecialchars($district['name']); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="category">Loại phòng</label>
+                                <select id="category" name="category_id" class="form-select">
+                                    <option value="">Tất cả</option>
+                                    <?php foreach ($categories as $category): ?>
+                                        <option value="<?php echo (int)$category['id']; ?>"><?php echo htmlspecialchars($category['name']); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="max_price">Giá tối đa</label>
+                                <input id="max_price" class="form-control" type="number" name="max_price" placeholder="4000000">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="area_min">Diện tích từ</label>
+                                <input id="area_min" class="form-control" type="number" name="area_min" placeholder="20">
+                            </div>
+                        </div>
+                        <button class="btn-home primary w-100" type="submit"><i class="fas fa-arrow-right"></i> Xem kết quả</button>
+                    </form>
+                </aside>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="section" id="system">
+            <div class="container-lg">
+                <div class="section-head">
+                    <div>
+                        <div class="kicker">Trải nghiệm thuê trọ hiện đại</div>
+                        <h2 class="section-title">Từ lúc tìm phòng đến khi vào ở đều rõ ràng.</h2>
+                        <p class="section-desc">Người thuê có thông tin cần thiết trước khi quyết định, còn chủ phòng có nơi quản lý tin đăng, lịch xem và booking gọn gàng.</p>
+                    </div>
+                </div>
+                <div class="feature-grid">
+                    <article class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-user"></i></div>
+                        <h3>Người thuê</h3>
+                        <p>Tìm phòng theo khu vực, ngân sách và diện tích; lưu phòng yêu thích, xem chi phí vào ở và đặt lịch xem.</p>
+                    </article>
+                    <article class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-building-user"></i></div>
+                        <h3>Chủ phòng</h3>
+                        <p>Đăng phòng, nhận lịch xem, theo dõi booking, chỉnh sửa tin và quản lý doanh thu trong một nơi.</p>
+                    </article>
+                    <article class="feature-card">
+                        <div class="feature-icon"><i class="fas fa-shield-halved"></i></div>
+                        <h3>Độ tin cậy</h3>
+                        <p>Tin đăng được kiểm duyệt, có điểm chất lượng và hỗ trợ báo cáo khi phát hiện thông tin không phù hợp.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="areas">
+            <div class="container-lg">
+                <div class="section-head">
+                    <div>
+                        <div class="kicker">Khu vực</div>
+                        <h2 class="section-title">Tìm nhanh theo nơi muốn thuê.</h2>
+                    </div>
+                    <a href="user/search.php" class="btn-home secondary">Tìm nâng cao</a>
+                </div>
+                <div class="area-grid">
+                    <?php foreach ($districts as $district): ?>
+                        <a class="area-card" href="user/search.php?district_id=<?php echo (int)$district['id']; ?>">
+                            <span><?php echo htmlspecialchars($district['name']); ?><small>Xem phòng trong khu vực</small></span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    <?php endforeach; ?>
+                    <?php if (!$districts): ?>
+                        <div class="empty-market">Chưa có dữ liệu khu vực.</div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="rooms">
+            <div class="container-lg">
+                <div class="section-head">
+                    <div>
+                        <div class="kicker">Phòng đã duyệt</div>
+                        <h2 class="section-title">Phòng mới, thông tin rõ ràng.</h2>
+                    </div>
+                    <a href="user/search.php" class="btn-home primary">Xem tất cả</a>
+                </div>
+
+                <?php if ($rooms): ?>
+                    <div class="room-grid">
+                        <?php foreach ($rooms as $room): ?>
+                            <?php
+                                $moveInCost = (int)$room['price'] + (int)($room['service_fee'] ?? 0) + (int)round((int)$room['price'] * (float)($room['deposit_months'] ?? 1));
+                            ?>
+                            <article class="room-card">
+                                <div class="room-photo"></div>
+                                <div class="room-body">
+                                    <h3><?php echo htmlspecialchars($room['title']); ?></h3>
+                                    <div class="room-price"><?php echo number_format((int)$room['price']); ?> VND/tháng</div>
+                                    <div class="room-meta"><i class="fas fa-location-dot"></i> <?php echo htmlspecialchars($room['address'] ?: 'Chưa cập nhật địa chỉ'); ?></div>
+                                    <div class="room-tags">
+                                        <?php if (!empty($room['district_name'])): ?><span class="room-tag"><?php echo htmlspecialchars($room['district_name']); ?></span><?php endif; ?>
+                                        <?php if (!empty($room['category_name'])): ?><span class="room-tag"><?php echo htmlspecialchars($room['category_name']); ?></span><?php endif; ?>
+                                        <?php if (!empty($room['area'])): ?><span class="room-tag"><?php echo (float)$room['area']; ?> m2</span><?php endif; ?>
+                                        <span class="room-tag"><?php echo (int)$room['health_score']; ?>/100</span>
+                                    </div>
+                                    <div class="room-meta mb-3"><i class="fas fa-wallet"></i> Vào ở dự kiến: <?php echo number_format($moveInCost); ?> VND</div>
+                                    <a href="user/motel-detail.php?id=<?php echo (int)$room['id']; ?>" class="btn-home primary w-100">Xem chi tiết</a>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <div class="empty-market">
+                        <h3 class="fw-bold">Chưa có phòng đang hiển thị</h3>
+                        <p class="text-muted mb-3">Khi owner đăng tin và admin duyệt, phòng sẽ xuất hiện tại đây.</p>
+                        <a href="owner-register.php" class="btn-home primary">Đăng phòng đầu tiên</a>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container-lg d-flex flex-wrap justify-content-between gap-3">
+            <div><strong>QuanLyPhongTro</strong> · Tìm phòng sạch đẹp, quản lý thuê trọ dễ dàng.</div>
+            <div>
+                <a href="login.php">Đăng nhập</a>
+                <a href="register.php">Người thuê</a>
+                <a href="owner-register.php">Chủ phòng</a>
+                <a href="admin/login.php">Admin</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

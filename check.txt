@@ -1,0 +1,415 @@
+Bạn là senior PHP developer. Hãy rà soát, hoàn thiện và chuẩn hóa project website quản lý/cho thuê phòng trọ để có thể demo/ra mắt case study với 2 nhóm actor chính: Người dùng hệ thống và Admin.
+
+PHẠM VI ACTOR
+
+Actor 1: Người dùng hệ thống
+Bao gồm user/khách thuê và owner/chủ trọ nếu project đã có owner.
+
+Actor 2: Admin
+Quản trị toàn bộ hệ thống, kiểm duyệt dữ liệu, xử lý tài khoản, xử lý báo cáo và theo dõi vận hành.
+
+MỤC TIÊU TỔNG THỂ
+
+Hoàn thiện đầy đủ các chức năng cần thiết cho:
+- Đăng ký
+- Đăng nhập
+- Đăng xuất
+- Bảo mật login bằng captcha thực tế
+- Phân quyền theo vai trò
+- Quản trị admin
+- Kiểm duyệt phòng trọ
+- Quản lý tài khoản
+- Quản lý tin đăng
+- Quản lý báo cáo
+- Quản lý booking/thanh toán nếu project đã có
+- Dashboard thống kê
+- Ghi log hoạt động
+
+Không làm hỏng cấu trúc project hiện tại. Ưu tiên sửa và bổ sung trên code đang có.
+
+YÊU CẦU LOGIN/LOGOUT CHUNG
+
+1. Login dùng chung cho admin, owner, user tại public/login.php.
+2. Sau khi đăng nhập thành công phải redirect đúng vai trò:
+   - admin -> public/admin/index.php
+   - owner -> public/owner/dashboard.php
+   - user -> public/user/dashboard.php
+3. Session phải set thống nhất:
+   - $_SESSION['user_id']
+   - $_SESSION['role']
+   - $_SESSION['user_role']
+   - $_SESSION['user_name']
+4. public/admin/login.php nếu còn tồn tại thì chỉ redirect về login chung.
+5. Logout phải xóa session an toàn:
+   - public/logout.php cho user/owner/admin chung
+   - public/admin/logout.php nếu còn dùng thì redirect về login chung
+6. Sau logout không được quay lại trang admin bằng nút Back của trình duyệt.
+7. Tất cả route admin phải bắt buộc qua middleware/init kiểm tra:
+   - đã login
+   - user_role === admin
+   - tài khoản chưa bị blocked
+8. Nếu chưa login hoặc không phải admin thì redirect về login hoặc trang báo lỗi phù hợp.
+
+YÊU CẦU CAPTCHA VÀ BẢO MẬT LOGIN THỰC TẾ
+
+1. Bình thường không hiển thị captcha ngay từ đầu.
+2. Theo dõi số lần đăng nhập sai theo cả email và IP.
+3. Sai lần 1 và lần 2:
+   - Chỉ báo lỗi chung: “Email hoặc mật khẩu không đúng.”
+   - Không tiết lộ email có tồn tại hay không.
+4. Sai lần 3:
+   - Vẫn báo lỗi chung.
+   - Từ lần đăng nhập tiếp theo bắt buộc hiển thị captcha.
+5. Từ lần thứ 4 trở đi:
+   - Bắt buộc nhập captcha.
+   - Captcha phải validate server-side.
+   - Không được chỉ validate bằng JavaScript.
+6. Nếu captcha sai:
+   - Báo “Mã xác minh không đúng.”
+   - Tạo captcha mới.
+   - Không cho kiểm tra tiếp mật khẩu.
+7. Nếu captcha đúng nhưng mật khẩu sai:
+   - Tăng số lần đăng nhập sai.
+8. Nếu sai quá nhiều lần sau khi đã hiện captcha:
+   - Khóa tạm thời theo cấp độ: 1 phút, 5 phút, 15 phút.
+   - Hiển thị: “Bạn đăng nhập sai quá nhiều lần. Vui lòng thử lại sau X phút.”
+9. Khi đăng nhập thành công:
+   - Reset số lần sai.
+   - Tắt trạng thái yêu cầu captcha.
+   - Xóa trạng thái khóa tạm.
+   - Ghi log đăng nhập thành công.
+10. Khi đăng nhập thất bại:
+   - Ghi log thất bại gồm email nhập vào, IP, user agent, thời gian, lý do.
+11. Captcha ưu tiên dùng Cloudflare Turnstile hoặc Google reCAPTCHA.
+12. Vì project có thể chạy local bằng XAMPP, phải có fallback captcha nội bộ:
+   - Captcha ảnh hoặc phép tính đơn giản.
+   - Đáp án lưu trong session.
+   - Có thời hạn, ví dụ 5 phút.
+   - Sau mỗi lần sai phải sinh captcha mới.
+13. Thêm CSRF token cho form login/logout/reset password.
+14. Mật khẩu phải dùng password_hash và password_verify.
+15. Không so sánh mật khẩu plain text.
+16. Input phải trim/validate.
+17. Output phải escape HTML.
+
+YÊU CẦU ĐĂNG KÝ
+
+1. User có thể đăng ký tài khoản thuê phòng.
+2. Owner có thể đăng ký tài khoản chủ trọ nếu project hỗ trợ owner.
+3. Validate đầy đủ:
+   - Họ tên bắt buộc.
+   - Email đúng định dạng và không trùng.
+   - Số điện thoại đúng định dạng.
+   - Mật khẩu đủ mạnh.
+   - Xác nhận mật khẩu trùng khớp.
+4. Sau đăng ký:
+   - user có thể active ngay hoặc theo logic hiện tại.
+   - owner nên ở trạng thái pending để admin duyệt.
+5. Ghi log đăng ký tài khoản.
+6. Không cho đăng ký role admin từ giao diện public.
+
+YÊU CẦU QUÊN MẬT KHẨU / RESET PASSWORD
+
+1. Thêm chức năng quên mật khẩu.
+2. Tạo token reset an toàn, có thời hạn.
+3. Không thông báo email có tồn tại hay không.
+4. Admin có thể reset mật khẩu user/owner.
+5. Sau khi admin reset, tài khoản đó phải bị bắt đổi mật khẩu ở lần đăng nhập tiếp theo.
+6. Token reset chỉ dùng được một lần.
+7. Ghi log reset password.
+
+YÊU CẦU ADMIN DASHBOARD
+
+1. Dashboard admin phải có các thẻ thống kê:
+   - Tổng người dùng.
+   - Tổng owner.
+   - Owner chờ duyệt.
+   - Tổng phòng trọ.
+   - Tin phòng chờ duyệt.
+   - Tin đang hiển thị.
+   - Tin bị ẩn.
+   - Báo cáo chưa xử lý.
+   - Booking chờ xử lý nếu có module booking.
+   - Thanh toán cần theo dõi nếu có module payment.
+   - Doanh thu tháng này nếu có module revenue.
+   - Tổng commission nếu có.
+2. Thêm biểu đồ:
+   - Doanh thu theo tháng.
+   - Số lượng booking theo trạng thái.
+   - Số lượng phòng theo trạng thái.
+3. Có khu vực thao tác nhanh:
+   - Duyệt owner.
+   - Duyệt phòng.
+   - Xem báo cáo mới.
+   - Quản lý người dùng.
+4. Không hardcode số liệu. Tất cả phải lấy từ database.
+5. Nếu bảng chưa có dữ liệu thì hiển thị trạng thái trống đẹp, không báo lỗi.
+
+YÊU CẦU ADMIN QUẢN LÝ TÀI KHOẢN
+
+1. Admin xem danh sách tài khoản.
+2. Có tìm kiếm theo:
+   - tên
+   - email
+   - số điện thoại
+3. Có lọc theo:
+   - vai trò
+   - trạng thái
+4. Admin có thể:
+   - thêm tài khoản
+   - sửa tài khoản
+   - khóa/mở khóa tài khoản
+   - reset mật khẩu
+   - xóa tài khoản nếu không phải tài khoản đang đăng nhập
+   - xem chi tiết tài khoản
+5. Không cho admin tự xóa chính mình.
+6. Không cho admin thường hạ quyền admin cuối cùng nếu hệ thống chỉ còn một admin.
+7. Mọi thao tác phải ghi activity log.
+8. Các form admin phải có CSRF token.
+
+YÊU CẦU ADMIN DUYỆT OWNER
+
+1. Admin xem danh sách owner.
+2. Lọc theo trạng thái:
+   - pending
+   - approved
+   - rejected
+   - blocked
+3. Admin có thể:
+   - duyệt owner
+   - từ chối owner kèm lý do
+   - khóa/mở khóa owner
+   - xem chi tiết owner
+4. Khi owner bị rejected, login phải hiển thị thông báo phù hợp sau khi xác thực.
+5. Ghi log duyệt/từ chối/khóa owner.
+
+YÊU CẦU ADMIN QUẢN LÝ PHÒNG TRỌ / TIN ĐĂNG
+
+1. Admin không tự thêm hoặc sửa nội dung phòng trọ của owner.
+2. Owner là người tạo và sửa tin phòng.
+3. Admin có thể:
+   - xem danh sách phòng
+   - tìm kiếm phòng
+   - lọc theo trạng thái
+   - xem chi tiết phòng
+   - duyệt tin
+   - từ chối tin kèm lý do
+   - ẩn tin
+   - phục hồi tin
+   - xóa tin
+4. Chi tiết phòng phải hiển thị:
+   - tiêu đề
+   - mô tả
+   - địa chỉ
+   - giá
+   - diện tích
+   - danh mục
+   - khu vực/quận
+   - tiện nghi
+   - hình ảnh
+   - chủ phòng
+   - số lượt xem
+   - trạng thái
+5. Mỗi lần duyệt/từ chối/ẩn/xóa phải ghi activity log.
+6. Nếu từ chối tin, owner phải xem được lý do.
+
+YÊU CẦU ADMIN QUẢN LÝ BOOKING NẾU PROJECT CÓ
+
+1. Admin xem danh sách booking.
+2. Lọc theo trạng thái:
+   - pending
+   - paid
+   - accepted
+   - completed
+   - rejected
+   - cancelled
+3. Admin xem chi tiết booking.
+4. Admin có thể cập nhật trạng thái booking nếu nghiệp vụ cho phép.
+5. Admin có thể xóa booking lỗi hoặc booking test.
+6. Ghi log mọi thay đổi.
+
+YÊU CẦU ADMIN QUẢN LÝ THANH TOÁN NẾU PROJECT CÓ
+
+1. Admin xem danh sách thanh toán.
+2. Lọc theo trạng thái:
+   - pending
+   - held
+   - released
+   - refunded
+3. Admin xem chi tiết thanh toán.
+4. Admin có thể:
+   - chuyển pending sang held
+   - giải ngân held sang released
+   - hoàn tiền pending/held sang refunded
+5. Không cho cập nhật trạng thái sai luồng.
+6. Ghi log mọi thay đổi.
+
+YÊU CẦU ADMIN QUẢN LÝ BÁO CÁO
+
+1. Admin xem danh sách báo cáo.
+2. Lọc theo:
+   - trạng thái
+   - loại báo cáo
+   - ngày tạo
+3. Admin xem chi tiết báo cáo.
+4. Admin có thể cập nhật trạng thái:
+   - pending
+   - investigating
+   - resolved
+   - rejected
+   - closed
+5. Admin phải nhập ghi chú xử lý khi resolved/rejected/closed.
+6. Ghi lại admin xử lý và thời gian xử lý.
+7. Ghi activity log.
+
+YÊU CẦU ADMIN QUẢN LÝ ĐÁNH GIÁ
+
+1. Admin xem danh sách đánh giá.
+2. Admin xem chi tiết đánh giá.
+3. Admin có thể ẩn hoặc xóa đánh giá vi phạm.
+4. Nên ưu tiên ẩn thay vì xóa cứng.
+5. Ghi log thao tác.
+
+YÊU CẦU ADMIN QUẢN LÝ DANH MỤC / KHU VỰC / TIỆN NGHI
+
+1. Admin có CRUD danh mục phòng.
+2. Admin có CRUD khu vực/quận.
+3. Admin có CRUD tiện nghi.
+4. Không cho xóa dữ liệu đang được phòng trọ sử dụng, hoặc phải cảnh báo rõ.
+5. Validate không trùng tên.
+6. Ghi activity log.
+
+YÊU CẦU ADMIN QUẢN LÝ LIÊN HỆ / THÔNG TIN TRANG
+
+1. Thêm module quản lý thông tin liên hệ nếu chưa có:
+   - số điện thoại
+   - email
+   - địa chỉ
+   - Facebook/Zalo nếu có
+2. Thêm module quản lý tin nhắn liên hệ từ người dùng nếu project có form liên hệ.
+3. Admin có thể đánh dấu đã đọc/đã xử lý.
+4. Ghi log thao tác.
+
+YÊU CẦU ACTIVITY LOG
+
+1. Tạo hoặc hoàn thiện bảng activity_logs.
+2. Ghi log cho các hành động quan trọng:
+   - login success
+   - login failed
+   - logout
+   - create/update/delete user
+   - reset password
+   - approve/reject owner
+   - approve/reject/hide/delete motel
+   - update booking
+   - update payment
+   - process report
+   - delete/hide review
+   - CRUD category/district/utility
+3. Log nên gồm:
+   - id
+   - admin_id hoặc user_id
+   - action
+   - entity_type
+   - entity_id
+   - description
+   - old_data JSON
+   - new_data JSON
+   - ip_address
+   - user_agent
+   - created_at
+4. Admin có trang xem activity log.
+5. Có filter theo:
+   - người thực hiện
+   - hành động
+   - loại đối tượng
+   - ngày
+
+YÊU CẦU UI/UX
+
+1. Không redesign toàn bộ nếu không cần.
+2. Chỉ làm giao diện rõ ràng, sạch, dễ demo.
+3. Login phải có giao diện chuyên nghiệp:
+   - thông báo lỗi rõ
+   - captcha chỉ hiện khi cần
+   - có link quên mật khẩu
+   - có nút quay về trang chủ
+4. Admin layout phải thống nhất:
+   - sidebar
+   - header
+   - breadcrumb nếu có
+   - flash message success/error/warning
+   - bảng dữ liệu có phân trang
+   - trạng thái có badge màu
+5. Các trang danh sách phải có:
+   - tìm kiếm
+   - lọc
+   - phân trang
+   - empty state khi chưa có dữ liệu
+6. Các thao tác nguy hiểm như xóa/khóa phải có confirm.
+
+YÊU CẦU DATABASE
+
+1. Rà soát database hiện có.
+2. Nếu thiếu bảng/cột thì tạo SQL bổ sung.
+3. Cần ưu tiên các bảng/cột:
+   - login_attempts
+   - login_security_state
+   - password_resets
+   - activity_logs
+   - force_password_change trong users
+   - rejection_reason cho owner/motel nếu chưa có
+   - processed_by, processed_at cho reports nếu chưa có
+4. Không xóa dữ liệu cũ.
+5. Không đổi tên bảng/cột cũ nếu không cần.
+6. Nếu bắt buộc đổi cấu trúc, phải viết SQL migrate an toàn.
+
+YÊU CẦU BẢO MẬT CHUNG
+
+1. Tất cả form POST phải có CSRF token.
+2. Tất cả query database phải dùng prepared statement.
+3. Escape output HTML.
+4. Validate input server-side.
+5. Kiểm tra phân quyền ở server-side, không chỉ ẩn nút trên giao diện.
+6. Không để user truy cập URL admin trực tiếp.
+7. Không hiển thị lỗi SQL ra giao diện public.
+8. Không commit secret key thật.
+9. File config phải tách rõ biến môi trường nếu có thể.
+10. Session phải chống fixation:
+   - session_regenerate_id(true) sau login thành công.
+
+YÊU CẦU KIỂM THỬ LUỒNG DEMO
+
+Sau khi sửa xong, hãy kiểm tra các luồng:
+
+1. User đăng ký -> đăng nhập -> logout.
+2. Owner đăng ký -> trạng thái pending -> admin duyệt -> owner đăng nhập.
+3. Admin đăng nhập -> vào dashboard.
+4. Sai mật khẩu 3 lần -> lần tiếp theo hiện captcha.
+5. Nhập sai captcha -> không cho login.
+6. Nhập đúng captcha nhưng sai mật khẩu -> tăng failed count.
+7. Sai quá nhiều lần -> khóa tạm thời.
+8. Login đúng -> reset captcha/failed count.
+9. Admin khóa user -> user không đăng nhập được.
+10. Admin reset mật khẩu -> user đăng nhập phải đổi mật khẩu.
+11. Owner đăng tin -> admin duyệt/từ chối/ẩn.
+12. User gửi báo cáo -> admin xử lý báo cáo.
+13. Admin xem activity log.
+
+KẾT QUẢ CẦN TRẢ VỀ
+
+Sau khi hoàn thiện, hãy báo cáo rõ:
+1. Những file đã sửa.
+2. Những file mới đã tạo.
+3. SQL cần chạy.
+4. Luồng login/captcha mới.
+5. Các tài khoản demo nên tạo.
+6. Những chức năng admin đã hoàn thiện.
+7. Những điểm chưa làm được nếu có.
+
+Lưu ý:
+- Code phải tương thích PHP/XAMPP hiện tại.
+- Không dùng framework mới nếu project hiện tại không dùng.
+- Không phá giao diện và route đang chạy.
+- Không hardcode dữ liệu thống kê.
+- Ưu tiên code rõ ràng, dễ bảo vệ khi báo cáo case study.
