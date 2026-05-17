@@ -1,5 +1,5 @@
 <?php
-
+/** @var mysqli $conn */
 require_once __DIR__ . '/../../core/OwnerStatusMiddleware.php';
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
