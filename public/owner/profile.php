@@ -21,11 +21,13 @@ $userTheme = $userQuery->get_result()->fetch_assoc();
 $is_dark = $userTheme['dark_mode'] ?? 0;
 
 $db = new Database($conn);
+$allowUnverifiedOwner = true;
+require_once __DIR__ . '/_owner_guard.php';
 $message = '';
 $message_type = '';
 
 // Lấy thông tin user hiện tại
-$stmt = $db->prepare("SELECT id, name, email, phone, address, idcard_number, id_card_front, id_card_back, bank_name, bank_account_no, bank_account_name, status, created_at FROM users WHERE id = ?");
+$stmt = $db->prepare("SELECT id, name, email, phone, address, idcard_number, id_card_front, id_card_back, selfie_image, bank_name, bank_account_no, bank_account_name, status, owner_verification_status, verification_rejection_reason, verification_submitted_at, verification_reviewed_at, created_at FROM users WHERE id = ?");
 $stmt->bind_param("i", $owner_id);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
@@ -34,7 +36,8 @@ $stmt->close();
 // Xử lý cập nhật hồ sơ
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim($_POST['name'] ?? '');
-    $phone = trim($_POST['phone'] ?? '');
+    $phone = preg_replace('/\s+/', '', trim((string)($_POST['phone'] ?? '')));
+    $phone = $phone === '' ? null : $phone;
     $address = trim($_POST['address'] ?? '');
     $idcard_number = trim($_POST['idcard_number'] ?? '');
     
@@ -46,12 +49,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($name)) {
         $message = 'Vui lòng nhập tên đầy đủ!';
         $message_type = 'danger';
+    } elseif ($phone !== null && !preg_match('/^[0-9]{9,11}$/', $phone)) {
+        $message = 'Số điện thoại không hợp lệ!';
+        $message_type = 'danger';
     } else {
+        if ($phone !== null) {
+            $dup = $db->prepare("SELECT id FROM users WHERE phone = ? AND id <> ?");
+            $dup->bind_param("si", $phone, $owner_id);
+            $dup->execute();
+            $phoneExists = (bool)$dup->get_result()->fetch_assoc();
+            $dup->close();
+            if ($phoneExists) {
+                $message = 'Số điện thoại này đã được tài khoản khác sử dụng!';
+                $message_type = 'danger';
+            }
+        }
+
+        if ($message_type !== 'danger') {
         $upload_dir = '../../public/uploads/kyc/';
         if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
 
         $id_card_front = $user['id_card_front'];
         $id_card_back = $user['id_card_back'];
+        $selfie_image = $user['selfie_image'] ?? null;
 
         // Upload mặt trước
         if (!empty($_FILES['id_card_front']['name'])) {
@@ -71,13 +91,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        if (!empty($_FILES['selfie_image']['name'])) {
+            $ext = strtolower(pathinfo($_FILES['selfie_image']['name'], PATHINFO_EXTENSION));
+            if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+                $new_name = 'selfie_' . $owner_id . '_' . time() . '.' . $ext;
+                if (move_uploaded_file($_FILES['selfie_image']['tmp_name'], $upload_dir . $new_name)) {
+                    $selfie_image = 'uploads/kyc/' . $new_name;
+                }
+            }
+        }
+
+        $hasFullVerification = $phone !== null && $address !== '' && $idcard_number !== '' && $id_card_front !== '' && $id_card_back !== '' && $bank_name !== '' && $bank_account_no !== '' && $bank_account_name !== '';
+        $nextVerificationStatus = $hasFullVerification ? 'submitted' : 'pending_verification';
+
         // Cập nhật Database
-        $stmt = $db->prepare("UPDATE users SET name = ?, phone = ?, address = ?, idcard_number = ?, id_card_front = ?, id_card_back = ?, bank_name = ?, bank_account_no = ?, bank_account_name = ? WHERE id = ?");
-        $stmt->bind_param("sssssssssi", $name, $phone, $address, $idcard_number, $id_card_front, $id_card_back, $bank_name, $bank_account_no, $bank_account_name, $owner_id);
+        $stmt = $db->prepare("UPDATE users SET name = ?, phone = ?, address = ?, idcard_number = ?, id_card_front = ?, id_card_back = ?, selfie_image = ?, bank_name = ?, bank_account_no = ?, bank_account_name = ?, owner_verification_status = ?, verification_submitted_at = CASE WHEN ? = 'submitted' THEN NOW() ELSE verification_submitted_at END, verification_rejection_reason = CASE WHEN ? = 'submitted' THEN NULL ELSE verification_rejection_reason END WHERE id = ?");
+        $stmt->bind_param("sssssssssssssi", $name, $phone, $address, $idcard_number, $id_card_front, $id_card_back, $selfie_image, $bank_name, $bank_account_no, $bank_account_name, $nextVerificationStatus, $nextVerificationStatus, $nextVerificationStatus, $owner_id);
 
         if ($stmt->execute()) {
             $_SESSION['name'] = $name;
-            $message = 'Hồ sơ và thông tin thanh toán đã được cập nhật thành công!';
+            $message = $hasFullVerification
+                ? 'Hồ sơ xác minh đã được gửi. Admin sẽ duyệt trước khi bạn sử dụng khu vực owner.'
+                : 'Hồ sơ đã lưu. Bạn cần bổ sung đủ CCCD, số điện thoại, địa chỉ và ngân hàng để gửi xác minh.';
             $message_type = 'success';
 
             // Refresh lại dữ liệu hiển thị
@@ -89,6 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $message = 'Lỗi cập nhật cơ sở dữ liệu!';
             $message_type = 'danger';
+        }
         }
     }
 }
@@ -185,20 +221,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
                 <?php endif; ?>
 
-                <?php if (empty($user['idcard_number'])): ?>
+                <?php
+                $verificationStatus = (string)($user['owner_verification_status'] ?? 'pending_verification');
+                $isApprovedOwner = $verificationStatus === 'approved';
+                ?>
+                <?php if (!$isApprovedOwner): ?>
                 <div class="verification-status status-unverified">
                     <i class="fas fa-exclamation-triangle fa-2x"></i>
                     <div>
-                        <strong>Tài khoản chưa định danh!</strong><br>
-                        Bạn cần cập nhật số CCCD và ảnh chụp để có thể đăng tin cho thuê phòng.
+                        <strong><?php echo htmlspecialchars(OwnerStatusMiddleware::verificationLabel($verificationStatus)); ?></strong><br>
+                        <?php echo htmlspecialchars(OwnerStatusMiddleware::verificationMessage($verificationStatus, $user)); ?>
                     </div>
                 </div>
                 <?php else: ?>
                 <div class="verification-status status-verified">
                     <i class="fas fa-check-circle fa-2x"></i>
                     <div>
-                        <strong>Đã cập nhật thông tin định danh!</strong><br>
-                        Hệ thống đã lưu trữ thông tin của bạn. Bạn có thể cập nhật lại nếu cần thiết.
+                        <strong>Owner đã được xác minh!</strong><br>
+                        Bạn có thể đăng phòng, quản lý booking và theo dõi thanh toán.
                     </div>
                 </div>
                 <?php endif; ?>
@@ -297,6 +337,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             id="preview_back" class="kyc-img-preview">
                                         <?php else: ?>
                                         <div id="preview_back_placeholder"
+                                            class="kyc-img-preview d-flex align-items-center justify-content-center bg-light text-muted small">
+                                            Chưa có ảnh</div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold small">Ảnh chân dung / selfie</label>
+                                    <input type="file" name="selfie_image" class="form-control form-control-sm"
+                                        accept="image/*" onchange="previewImage(this, 'preview_selfie')">
+                                    <div id="container_selfie">
+                                        <?php if (!empty($user['selfie_image'])): ?>
+                                        <img src="../<?php echo htmlspecialchars($user['selfie_image']); ?>"
+                                            id="preview_selfie" class="kyc-img-preview">
+                                        <?php else: ?>
+                                        <div id="preview_selfie_placeholder"
                                             class="kyc-img-preview d-flex align-items-center justify-content-center bg-light text-muted small">
                                             Chưa có ảnh</div>
                                         <?php endif; ?>

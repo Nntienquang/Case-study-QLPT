@@ -1,8 +1,9 @@
 <?php
 require_once __DIR__ . '/../admin_init.php';
 require_once __DIR__ . '/layout.php';
+require_once __DIR__ . '/../../core/PathHelper.php';
 
-if (!$is_logged_in) {
+if (!$is_logged_in || ($_SESSION['user_role'] ?? '') !== 'admin') {
     header('Location: ' . ADMIN_URL . 'login.php');
     exit;
 }
@@ -68,7 +69,7 @@ admin_flash_messages();
         <div class="row g-3">
             <?php foreach ($data['images'] as $image): ?>
                 <div class="col-md-3">
-                    <img src="<?php echo UPLOAD_URL . admin_e($image['image_url'] ?? ''); ?>" alt="Hình ảnh phòng" class="img-fluid rounded">
+                    <img src="<?php echo admin_e(qlpt_public_asset_url($image['image_url'] ?? '')); ?>" alt="Hình ảnh phòng" class="img-fluid rounded">
                 </div>
             <?php endforeach; ?>
         </div>

@@ -11,6 +11,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'owner') {
 }
 
 $db = new Database($conn);
+require_once __DIR__ . '/_owner_guard.php';
 $owner_id = (int)$_SESSION['user_id'];
 $ownerName = $_SESSION['name'] ?? 'Chủ phòng';
 $message = '';
@@ -24,6 +25,10 @@ function get_booking_status_ui($status)
             return ['label' => 'Chờ phản hồi', 'class' => 'bg-warning text-dark'];
         case 'paid':
             return ['label' => 'Đã đặt cọc', 'class' => 'bg-info text-dark'];
+        case 'waiting_payment':
+            return ['label' => 'Chờ thanh toán', 'class' => 'bg-warning text-dark'];
+        case 'confirmed':
+            return ['label' => 'Đã xác nhận', 'class' => 'bg-primary'];
         case 'accepted':
             return ['label' => 'Đã chấp nhận', 'class' => 'bg-primary'];
         case 'completed':
@@ -41,12 +46,12 @@ function get_booking_status_ui($status)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST['status'])) {
     $booking_id = (int)$_POST['booking_id'];
     $status = $_POST['status'];
-    $allowed_statuses = ['pending', 'paid', 'accepted', 'completed', 'cancelled', 'rejected'];
+    $allowed_statuses = ['accepted', 'completed', 'rejected'];
 
     if (in_array($status, $allowed_statuses, true)) {
         // Lấy thông tin chi tiết
         $stmt = $conn->prepare('
-            SELECT b.user_id as tenant_id, b.motel_id, b.deposit_amount, b.status as current_status, m.title, m.user_id as owner_id
+            SELECT b.user_id as tenant_id, b.motel_id, b.deposit_amount, b.status as current_status, b.payment_status, b.booking_status, m.title, m.user_id as owner_id
             FROM bookings b 
             JOIN motels m ON b.motel_id = m.id 
             WHERE b.id = ? AND m.user_id = ?
@@ -59,23 +64,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST[
         if ($booking) {
             $conn->begin_transaction();
             try {
-                // 1. Cập nhật trạng thái mới
-                $up_stmt = $conn->prepare('UPDATE bookings SET status = ? WHERE id = ?');
-                $up_stmt->bind_param('si', $status, $booking_id);
+                if ($status === 'accepted' && ($booking['payment_status'] ?? '') !== 'paid') {
+                    throw new RuntimeException('Chỉ được chấp nhận booking sau khi thanh toán đã được admin xác nhận.');
+                }
+
+                $newBookingStatus = match ($status) {
+                    'accepted' => 'confirmed',
+                    'completed' => 'completed',
+                    'rejected' => 'rejected',
+                    default => 'pending',
+                };
+                $up_stmt = $conn->prepare('UPDATE bookings SET status = ?, booking_status = ?, updated_at = NOW() WHERE id = ?');
+                $up_stmt->bind_param('ssi', $status, $newBookingStatus, $booking_id);
                 $up_stmt->execute();
 
                 // 2. Xử lý nghiệp vụ theo trạng thái
                 if ($status === 'accepted') {
                     // Tự động hủy các khách khác đang tranh phòng này
-                    $rejectOthers = $conn->prepare("UPDATE bookings SET status = 'rejected' WHERE motel_id = ? AND id != ? AND status IN ('pending', 'paid')");
+                    $rejectOthers = $conn->prepare("UPDATE bookings SET status = 'rejected', booking_status = 'rejected', updated_at = NOW() WHERE motel_id = ? AND id != ? AND booking_status IN ('pending','waiting_payment','paid')");
                     $rejectOthers->bind_param('ii', $booking['motel_id'], $booking_id);
                     $rejectOthers->execute();
+                    $room = $conn->prepare("UPDATE motels SET room_status = 'reserved' WHERE id = ?");
+                    $room->bind_param('i', $booking['motel_id']);
+                    $room->execute();
+                    $room->close();
                     $_SESSION['message'] = 'Đã chấp nhận giữ phòng! Vui lòng chờ khách dọn đến để hoàn tất.';
                 } elseif ($status === 'completed') {
                     // Hoàn tất -> Cộng tiền cọc vào ví chủ trọ (chỉ khi trước đó là accepted)
                     if ($booking['current_status'] === 'accepted' && $booking['deposit_amount'] > 0) {
                         $conn->query("UPDATE wallets SET balance = balance + {$booking['deposit_amount']} WHERE user_id = $owner_id");
                         $conn->query("INSERT INTO transactions (from_user, to_user, amount, type, booking_id, created_at) VALUES ({$booking['tenant_id']}, $owner_id, {$booking['deposit_amount']}, 'release', $booking_id, NOW())");
+                        $conn->query("UPDATE motels SET room_status = 'rented' WHERE id = {$booking['motel_id']}");
                         $_SESSION['message'] = 'Giao dịch hoàn tất! Tiền cọc đã được cộng vào ví của bạn.';
                     } else {
                         $_SESSION['message'] = 'Đã đánh dấu hoàn tất nhận phòng.';
@@ -366,7 +385,7 @@ foreach ($counts as $c) {
                             </div>
 
                             <div class="col-md-3 d-flex flex-column justify-content-center gap-2 border-start ps-md-4">
-                                <?php if (in_array($b['status'], ['pending', 'paid'])): ?>
+                                <?php if ($b['status'] === 'paid'): ?>
                                 <form method="POST" class="d-grid gap-2">
                                     <input type="hidden" name="booking_id" value="<?php echo $b['id']; ?>">
                                     <button type="submit" name="status" value="accepted"
@@ -378,6 +397,8 @@ foreach ($counts as $c) {
                                         <i class="fas fa-times-circle me-1"></i> Từ chối
                                     </button>
                                 </form>
+                                <?php elseif ($b['status'] === 'pending'): ?>
+                                <div class="text-center text-muted"><i class="fas fa-credit-card fa-2x mb-2"></i><br><strong>Chờ khách thanh toán</strong></div>
                                 <?php elseif ($b['status'] === 'accepted'): ?>
                                 <form method="POST" class="d-grid gap-2">
                                     <input type="hidden" name="booking_id" value="<?php echo $b['id']; ?>">

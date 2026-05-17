@@ -1,180 +1,95 @@
 <?php
-/**
- * Owner Status Middleware
- * 
- * Kiểm tra xem chủ trọ có được duyệt hay không trước khi posting phòng
- */
 
-class OwnerStatusMiddleware {
-    private $db;
-    
-    public function __construct($db) {
+class OwnerStatusMiddleware
+{
+    private Database $db;
+
+    public function __construct(Database $db)
+    {
         $this->db = $db;
     }
-    
-    /**
-     * Kiểm tra xem owner có thể posting phòng không
-     * 
-     * @param int $user_id - ID của owner
-     * @return array - ['allowed' => bool, 'status' => string, 'message' => string]
-     */
-    public function canPostMotel($user_id) {
-        $user_sql = "SELECT id, status, role FROM users WHERE id = " . (int)$user_id;
-        $user = $this->db->getRow($user_sql);
-        
-        if (!$user) {
-            return [
-                'allowed' => false,
-                'status' => 'not_found',
-                'message' => 'Người dùng không tồn tại'
-            ];
-        }
-        
-        // Kiểm tra role
-        if ($user['role'] !== 'owner') {
-            return [
-                'allowed' => false,
-                'status' => 'invalid_role',
-                'message' => 'Chỉ chủ trọ mới có thể đăng tin phòng'
-            ];
-        }
-        
-        // Kiểm tra status
-        switch ($user['status']) {
-            case 'pending':
-                return [
-                    'allowed' => false,
-                    'status' => 'pending_approval',
-                    'message' => 'Tài khoản của bạn đang chờ duyệt. Vui lòng quay lại sau.'
-                ];
-            
-            case 'rejected':
-                return [
-                    'allowed' => false,
-                    'status' => 'rejected',
-                    'message' => 'Tài khoản của bạn bị từ chối. Vui lòng liên hệ quản trị viên để biết thêm thông tin.'
-                ];
-            
-            case 'blocked':
-                return [
-                    'allowed' => false,
-                    'status' => 'blocked',
-                    'message' => 'Tài khoản của bạn bị khóa. Vui lòng liên hệ hỗ trợ khách hàng.'
-                ];
-            
-            case 'approved':
-                return [
-                    'allowed' => true,
-                    'status' => 'approved',
-                    'message' => 'Bạn có quyền đăng tin phòng'
-                ];
-            
-            default:
-                return [
-                    'allowed' => false,
-                    'status' => 'unknown',
-                    'message' => 'Trạng thái tài khoản không xác định'
-                ];
-        }
+
+    public function getOwnerApprovalInfo(int $userId): ?array
+    {
+        $stmt = $this->db->prepare('
+            SELECT id, role, status, owner_verification_status, verification_submitted_at,
+                   verification_reviewed_by, verification_reviewed_at, verification_rejection_reason,
+                   rejection_reason, approved_by, approved_at, phone, address, idcard_number,
+                   id_card_front, id_card_back, selfie_image, bank_name, bank_account_no, bank_account_name
+            FROM users
+            WHERE id = ?
+            LIMIT 1
+        ');
+        $stmt->bind_param('i', $userId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        return $row ?: null;
     }
-    
-    /**
-     * Middleware check - redirect nếu không được phép
-     * Gọi ở đầu trang owner
-     */
-    public function checkOwnerAccess($user_id, $redirect_url = null) {
-        $check = $this->canPostMotel($user_id);
-        
+
+    public function canUseOwnerWorkspace(int $userId): array
+    {
+        $owner = $this->getOwnerApprovalInfo($userId);
+        if (!$owner) {
+            return ['allowed' => false, 'status' => 'not_found', 'message' => 'Tài khoản không tồn tại.'];
+        }
+
+        if (($owner['role'] ?? '') !== 'owner') {
+            return ['allowed' => false, 'status' => 'invalid_role', 'message' => 'Chỉ chủ phòng mới được truy cập khu vực này.'];
+        }
+
+        if (($owner['status'] ?? '') === 'blocked') {
+            return ['allowed' => false, 'status' => 'blocked', 'message' => 'Tài khoản của bạn đang bị khóa.'];
+        }
+
+        $verification = (string)($owner['owner_verification_status'] ?? 'pending_verification');
+        if ($verification !== 'approved') {
+            return [
+                'allowed' => false,
+                'status' => $verification,
+                'message' => $this->verificationMessage($verification, $owner),
+            ];
+        }
+
+        return ['allowed' => true, 'status' => 'approved', 'message' => 'Owner đã được xác minh.'];
+    }
+
+    public function canPostMotel($userId): array
+    {
+        return $this->canUseOwnerWorkspace((int)$userId);
+    }
+
+    public function checkOwnerAccess(int $userId, string $redirectUrl = 'profile.php?verify=1'): array
+    {
+        $check = $this->canUseOwnerWorkspace($userId);
         if (!$check['allowed']) {
             $_SESSION['warning'] = $check['message'];
-            
-            if ($redirect_url) {
-                header('Location: ' . $redirect_url);
-                exit;
-            }
+            header('Location: ' . $redirectUrl);
+            exit;
         }
-        
+
         return $check;
     }
-    
-    /**
-     * Lấy thông tin trạng thái duyệt của owner
-     */
-    public function getOwnerApprovalInfo($user_id) {
-        $sql = "SELECT 
-                    id, 
-                    status, 
-                    approved_by, 
-                    approved_at, 
-                    rejection_reason,
-                    created_at
-                FROM users 
-                WHERE id = " . (int)$user_id;
-        
-        return $this->db->getRow($sql);
+
+    public static function verificationMessage(string $status, array $owner = []): string
+    {
+        return match ($status) {
+            'pending_verification' => 'Bạn cần hoàn tất hồ sơ xác minh chủ phòng trước khi sử dụng khu vực owner.',
+            'submitted' => 'Hồ sơ xác minh của bạn đang chờ admin duyệt.',
+            'rejected' => 'Hồ sơ xác minh bị từ chối: ' . (($owner['verification_rejection_reason'] ?? $owner['rejection_reason'] ?? '') ?: 'Vui lòng cập nhật lại hồ sơ.'),
+            default => 'Tài khoản owner chưa đủ điều kiện sử dụng chức năng này.',
+        };
     }
-    
-    /**
-     * Lấy danh sách owner cần duyệt
-     */
-    public function getPendingOwners($page = 1, $limit = 10) {
-        $offset = ($page - 1) * $limit;
-        
-        $sql = "SELECT 
-                    id, 
-                    name, 
-                    email, 
-                    phone, 
-                    idcard_number,
-                    status, 
-                    created_at 
-                FROM users 
-                WHERE role = 'owner' AND status = 'pending'
-                ORDER BY created_at DESC
-                LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
-        
-        return $this->db->getRows($sql);
-    }
-    
-    /**
-     * Lấy số lượng owner chờ duyệt
-     */
-    public function getPendingOwnersCount() {
-        $sql = "SELECT COUNT(*) as total FROM users WHERE role = 'owner' AND status = 'pending'";
-        $result = $this->db->getRow($sql);
-        return $result['total'] ?? 0;
-    }
-    
-    /**
-     * Kiểm tra owner đã được duyệt bao lâu
-     * @return string - Relative time (e.g., "3 days ago")
-     */
-    public function getApprovalDuration($user_id) {
-        $user = $this->getOwnerApprovalInfo($user_id);
-        
-        if (!$user || !$user['approved_at']) {
-            return 'Chưa được duyệt';
-        }
-        
-        $approved_time = strtotime($user['approved_at']);
-        $now = time();
-        $diff = $now - $approved_time;
-        
-        if ($diff < 60) {
-            return 'Vừa mới duyệt';
-        } elseif ($diff < 3600) {
-            $minutes = floor($diff / 60);
-            return "{$minutes} phút trước";
-        } elseif ($diff < 86400) {
-            $hours = floor($diff / 3600);
-            return "{$hours} giờ trước";
-        } elseif ($diff < 604800) {
-            $days = floor($diff / 86400);
-            return "{$days} ngày trước";
-        } else {
-            $weeks = floor($diff / 604800);
-            return "{$weeks} tuần trước";
-        }
+
+    public static function verificationLabel(string $status): string
+    {
+        return [
+            'not_required' => 'Không yêu cầu',
+            'pending_verification' => 'Chưa gửi hồ sơ',
+            'submitted' => 'Chờ admin duyệt',
+            'approved' => 'Đã xác minh',
+            'rejected' => 'Bị từ chối',
+        ][$status] ?? $status;
     }
 }
-?>

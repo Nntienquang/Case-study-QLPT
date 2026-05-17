@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $user = $db->getRow("SELECT * FROM users WHERE id = {$id}");
             if ($user && $user['role'] === 'owner') {
                 $adminId = (int)$_SESSION['user_id'];
-                if ($db->query("UPDATE users SET status = 'approved', approved_by = {$adminId}, approved_at = NOW() WHERE id = {$id}")) {
+                if ($db->query("UPDATE users SET status = 'approved', owner_verification_status = 'approved', approved_by = {$adminId}, approved_at = NOW(), verified_at = NOW(), verification_reviewed_by = {$adminId}, verification_reviewed_at = NOW(), verification_rejection_reason = NULL WHERE id = {$id}")) {
                     $activityLog->log($adminId, 'approve_user', 'user', $id, [], "Duyệt tài khoản owner: {$user['name']} ({$user['email']})");
                     $_SESSION['success'] = "Đã duyệt tài khoản {$user['name']}";
                 }
@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             if ($user && $user['role'] === 'owner') {
                 $adminId = (int)$_SESSION['user_id'];
                 $reasonEsc = $db->getConnection()->real_escape_string($reason);
-                if ($db->query("UPDATE users SET status = 'rejected', approved_by = {$adminId}, approved_at = NOW(), rejection_reason = '{$reasonEsc}' WHERE id = {$id}")) {
+                if ($db->query("UPDATE users SET status = 'approved', owner_verification_status = 'rejected', approved_by = {$adminId}, approved_at = NOW(), verification_reviewed_by = {$adminId}, verification_reviewed_at = NOW(), verification_rejection_reason = '{$reasonEsc}', rejection_reason = '{$reasonEsc}' WHERE id = {$id}")) {
                     $activityLog->log($adminId, 'reject_user', 'user', $id, [], "Từ chối tài khoản owner: {$user['name']}. Lý do: {$reason}");
                     $_SESSION['success'] = "Đã từ chối tài khoản {$user['name']}";
                 }
@@ -55,8 +55,8 @@ $conn = $db->getConnection();
 
 $where = "role = 'owner'";
 if (in_array($tab, ['pending', 'approved', 'rejected'], true)) {
-    $tabEsc = $conn->real_escape_string($tab);
-    $where .= " AND status = '{$tabEsc}'";
+    $tabEsc = $tab === 'pending' ? 'submitted' : $conn->real_escape_string($tab);
+    $where .= " AND owner_verification_status = '{$tabEsc}'";
 }
 if ($search !== '') {
     $searchEsc = $conn->real_escape_string($search);
@@ -69,9 +69,9 @@ $users = $db->getRows("SELECT * FROM users WHERE {$where} ORDER BY created_at DE
 
 $stats = [
     'total' => $db->count('users', "role = 'owner'"),
-    'pending' => $db->count('users', "role = 'owner' AND status = 'pending'"),
-    'approved' => $db->count('users', "role = 'owner' AND status = 'approved'"),
-    'rejected' => $db->count('users', "role = 'owner' AND status = 'rejected'"),
+    'pending' => $db->count('users', "role = 'owner' AND owner_verification_status = 'submitted'"),
+    'approved' => $db->count('users', "role = 'owner' AND owner_verification_status = 'approved'"),
+    'rejected' => $db->count('users', "role = 'owner' AND owner_verification_status = 'rejected'"),
 ];
 
 $tabUrl = static fn(string $name): string => '?tab=' . urlencode($name) . ($search !== '' ? '&search=' . urlencode($search) : '');
@@ -126,7 +126,7 @@ admin_flash_messages();
             </thead>
             <tbody>
                 <?php foreach ($users as $user): ?>
-                    <?php $status = (string)($user['status'] ?? 'pending'); ?>
+                    <?php $status = (string)($user['owner_verification_status'] ?? 'pending_verification'); ?>
                     <tr>
                         <td>#<?php echo (int)$user['id']; ?></td>
                         <td class="wb-title"><?php echo admin_e($user['name'] ?? 'N/A'); ?></td>
@@ -136,7 +136,7 @@ admin_flash_messages();
                         <td><span class="wb-pill <?php echo admin_pill_class($status); ?>"><?php echo admin_status_label($status); ?></span></td>
                         <td class="text-end">
                             <a href="user_detail.php?id=<?php echo (int)$user['id']; ?>" class="btn btn-sm btn-primary"><i class="fa fa-eye"></i> Xem</a>
-                            <?php if ($status === 'pending'): ?>
+                            <?php if ($status === 'submitted'): ?>
                                 <button type="button" class="btn btn-sm btn-success" onclick="approveUser(<?php echo (int)$user['id']; ?>)"><i class="fa fa-check"></i> Duyệt</button>
                                 <button type="button" class="btn btn-sm btn-outline-danger" onclick='openRejectModal(<?php echo (int)$user['id']; ?>, <?php echo json_encode((string)($user['name'] ?? 'Owner')); ?>)'><i class="fa fa-times"></i> Từ chối</button>
                             <?php endif; ?>

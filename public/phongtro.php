@@ -4,8 +4,10 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 ?>
 <?php
-
-require_once '../config/database.php'; 
+/** @var mysqli $conn */
+require_once '../config/database.php';
+require_once '../config/constants.php';
+require_once '../core/PathHelper.php';
 
 $current_user_id = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
 
@@ -106,7 +108,7 @@ if (isset($_POST['ajax_action']) && $_POST['ajax_action'] === 'load_rooms') {
             foreach ($rooms as $room) {
                 $price_format = number_format($room['price'], 0, ',', '.');
                 $raw_img = $room['thumbnail'];
-                $image_src = empty($raw_img) ? 'assets/images/default-room.jpg' : (filter_var($raw_img, FILTER_VALIDATE_URL) ? $raw_img : 'uploads/' . htmlspecialchars($raw_img));
+                $image_src = qlpt_relative_public_asset_url($raw_img);
                 $is_saved = $room['is_favorited'] == 1;
                 $heart_class = $is_saved ? "fas" : "far";
                 $saved_class = $is_saved ? "saved" : "";
@@ -676,6 +678,8 @@ a {
     color: white;
 }
     </style>
+</head>
+<body>
 <nav class="home-nav">
     <div class="nav-container">
         
@@ -702,15 +706,38 @@ a {
 
         
             <div class="nav-actions">
-                <a href="login.php" class="nav-item login-text">Đăng nhập</a>
-                <a href="owner-register.php" class="btn-post">Đăng phòng</a>
+                <?php if (isset($_SESSION['user_id'])): ?>
+                    <div class="user-dropdown">
+                        <button class="user-btn" type="button" onclick="togglePublicDropdown(event)">
+                            <i class="fas fa-user-circle"></i>
+                            <span><?php echo htmlspecialchars($_SESSION['name'] ?? $_SESSION['user_name'] ?? 'User'); ?></span>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div class="dropdown-menu" id="public-user-dropdown">
+                            <?php if (($_SESSION['role'] ?? $_SESSION['user_role'] ?? '') === 'owner'): ?>
+                                <a href="owner/dashboard.php" class="dropdown-item"><i class="fas fa-chart-line"></i> Dashboard</a>
+                                <a href="owner/listings.php" class="dropdown-item"><i class="fas fa-home"></i> Phòng của tôi</a>
+                                <a href="owner/bookings.php" class="dropdown-item"><i class="fas fa-calendar"></i> Booking</a>
+                                <a href="owner/profile.php" class="dropdown-item"><i class="fas fa-user"></i> Hồ sơ</a>
+                            <?php else: ?>
+                                <a href="user/dashboard.php" class="dropdown-item"><i class="fas fa-chart-line"></i> Dashboard</a>
+                                <a href="user/my-bookings.php" class="dropdown-item"><i class="fas fa-calendar"></i> Booking của tôi</a>
+                                <a href="user/saved-motels.php" class="dropdown-item"><i class="fas fa-heart"></i> Yêu thích</a>
+                                <a href="user/profile.php" class="dropdown-item"><i class="fas fa-user"></i> Hồ sơ</a>
+                            <?php endif; ?>
+                            <hr class="dropdown-divider">
+                            <a href="logout.php" class="dropdown-item logout"><i class="fas fa-sign-out-alt"></i> Đăng xuất</a>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <a href="login.php" class="nav-item login-text">Đăng nhập</a>
+                    <a href="owner-register.php" class="btn-post">Đăng phòng</a>
+                <?php endif; ?>
             </div>
         </div>
 
     </div>
 </nav>
-</head>
-<body>
 <!-- Khu vực Danh sách phòng trọ -->
 <section class="rooms-section py-5 bg-light-gray">
     <div class="container-lg">
@@ -791,13 +818,7 @@ a {
                         $price_format = number_format($room['price'], 0, ',', '.');
                         $raw_img = $room['thumbnail'];
                         
-                        if (empty($raw_img)) {
-                            $image_src = 'assets/images/default-room.jpg';
-                        } elseif (filter_var($raw_img, FILTER_VALIDATE_URL)) {
-                            $image_src = $raw_img;
-                        } else {
-                            $image_src = 'uploads/' . htmlspecialchars($raw_img);
-                        }
+                        $image_src = qlpt_relative_public_asset_url($raw_img);
 
                         $is_saved = $room['is_favorited'] == 1;
                         $heart_class = $is_saved ? "fas" : "far";
@@ -947,6 +968,14 @@ a {
     </div>
 </footer>
 <script>
+function togglePublicDropdown(event) {
+    event.stopPropagation();
+    const dropdown = document.getElementById('public-user-dropdown');
+    if (dropdown) {
+        dropdown.classList.toggle('active');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const container = document.getElementById('real-rooms-container');
     const skeletonContainer = document.getElementById('skeleton-container');
@@ -955,6 +984,26 @@ document.addEventListener('DOMContentLoaded', function() {
   
     const loadMoreBtn = loadMoreContainer ? loadMoreContainer.querySelector('.btn-load-more') : null;
     const urlParams = new URLSearchParams(window.location.search);
+    const menuBtn = document.getElementById('mobile-menu-btn');
+    const menuContent = document.getElementById('mobile-menu');
+
+    if (menuBtn && menuContent) {
+        menuBtn.addEventListener('click', function() {
+            menuContent.classList.toggle('show');
+            const icon = menuBtn.querySelector('i');
+            if (icon) {
+                icon.classList.toggle('fa-bars');
+                icon.classList.toggle('fa-times');
+            }
+        });
+    }
+
+    document.addEventListener('click', function(e) {
+        const dropdown = document.getElementById('public-user-dropdown');
+        if (dropdown && !e.target.closest('.user-dropdown')) {
+            dropdown.classList.remove('active');
+        }
+    });
 
     let currentPage = 1;
     let currentSort = urlParams.get('sort') || (sortSelect ? sortSelect.value : 'newest');

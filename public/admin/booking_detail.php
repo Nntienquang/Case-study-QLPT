@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../admin_init.php';
 require_once __DIR__ . '/layout.php';
 
-if (!$is_logged_in) {
+if (!$is_logged_in || ($_SESSION['user_role'] ?? '') !== 'admin') {
     header('Location: ' . ADMIN_URL . 'login.php');
     exit;
 }

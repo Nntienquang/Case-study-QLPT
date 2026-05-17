@@ -10,8 +10,8 @@ class AdminRevenue
     private $db;
     private $table = 'transactions';
     
-    // Commission rate (1%)
-    private $commission_rate = 0.01;
+    // Commission rate (5% platform fee)
+    private $commission_rate = 0.05;
     
     public function __construct($database)
     {

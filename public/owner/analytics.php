@@ -26,6 +26,7 @@ $userTheme = $userQuery->get_result()->fetch_assoc();
 $is_dark = $userTheme['dark_mode'] ?? 0;
 
 $db = new Database($conn);
+require_once __DIR__ . '/_owner_guard.php';
 
 // Helper functions
 function owner_dash_e(?string $value): string

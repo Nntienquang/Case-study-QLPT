@@ -1,6 +1,7 @@
 ﻿<?php
 @require_once '../../config/database.php';
 @require_once '../../core/Database.php';
+@require_once '../components/PublicNav.php';
 
 session_start();
 
@@ -27,9 +28,10 @@ $stmt->close();
 
 // Get bookings
 $stmt = $db->prepare("
-    SELECT b.*, m.title, m.price, m.address
+    SELECT b.*, p.id AS payment_id, p.payment_code, p.payment_status AS current_payment_status, m.title, m.price, m.address
     FROM bookings b
     JOIN motels m ON b.motel_id = m.id
+    LEFT JOIN payments p ON p.booking_id = b.id
     WHERE b.user_id = ?
     ORDER BY b.created_at DESC
     LIMIT ? OFFSET ?
@@ -44,7 +46,12 @@ function tenant_booking_status_label(string $status): string
 {
     return [
         'pending' => 'Đang chờ duyệt',
+        'waiting_payment' => 'Chờ thanh toán',
         'paid' => 'Đã đặt cọc',
+        'confirmed' => 'Đã xác nhận',
+        'processing' => 'Chờ admin xác nhận',
+        'failed' => 'Thanh toán thất bại',
+        'refunded' => 'Đã hoàn tiền',
         'accepted' => 'Đã được chấp nhận',
         'completed' => 'Hoàn tất',
         'rejected' => 'Bị từ chối',
@@ -79,6 +86,8 @@ function tenant_booking_status_label(string $status): string
     <link href="../assets/css/modern.css" rel="stylesheet">
 </head>
 <body>
+    <?php qlpt_render_public_nav(['base' => '../', 'active' => 'rooms']); ?>
+    <?php /*
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
         <div class="container-lg">
             <a class="navbar-brand" href="../index.php">
@@ -86,6 +95,7 @@ function tenant_booking_status_label(string $status): string
             </a>
         </div>
     </nav>
+    */ ?>
 
     <div class="container-lg" style="padding: 30px 0;">
         <div class="row">
@@ -111,7 +121,7 @@ function tenant_booking_status_label(string $status): string
                                             <?php echo htmlspecialchars($booking['title']); ?>
                                         </a>
                                     </div>
-                                    <span class="badge bg-secondary"><?php echo htmlspecialchars(tenant_booking_status_label((string)$booking['status'])); ?></span>
+                                    <span class="badge bg-secondary"><?php echo htmlspecialchars(tenant_booking_status_label((string)($booking['booking_status'] ?? $booking['status']))); ?></span>
                                 </div>
                                 <div class="booking-info">
                                     <div class="booking-info-item">
@@ -125,6 +135,12 @@ function tenant_booking_status_label(string $status): string
                                     </div>
                                     <div class="booking-info-item">
                                         <strong>Đặt cọc:</strong><br><span style="color: #667eea; font-weight: 700;"><?php echo number_format($booking['deposit_amount']); ?> VNĐ</span>
+                                    </div>
+                                    <div class="booking-info-item">
+                                        <strong>Thanh toán:</strong><br><?php echo htmlspecialchars(tenant_booking_status_label((string)($booking['current_payment_status'] ?? $booking['payment_status'] ?? 'pending'))); ?>
+                                        <?php if (in_array((string)($booking['current_payment_status'] ?? ''), ['pending','processing'], true)): ?>
+                                            <br><a href="payment.php?booking_id=<?php echo (int)$booking['id']; ?>" class="btn btn-sm btn-primary mt-2">Xem thanh toán</a>
+                                        <?php endif; ?>
                                     </div>
                                     <div class="booking-info-item">
                                         <strong>Ngày đặt:</strong><br><?php echo date('d/m/Y H:i', strtotime($booking['created_at'])); ?>

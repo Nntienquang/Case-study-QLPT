@@ -23,6 +23,7 @@ $userTheme = $userQuery->get_result()->fetch_assoc();
 $is_dark = $userTheme['dark_mode'] ?? 0;
 
 $db = new Database($conn);
+require_once __DIR__ . '/_owner_guard.php';
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $limit = 10;
 $offset = ($page - 1) * $limit;

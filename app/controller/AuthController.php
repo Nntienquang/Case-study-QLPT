@@ -30,7 +30,7 @@ class AuthController
         $email = trim($email ?? "");
         $password = $password ?? "";
         $confirm = $confirm ?? "";
-        $phone = trim($phone ?? "");
+        $phone = $this->normalizePhone($phone ?? "");
         $allowed_roles = ['user', 'owner'];
         if (!in_array($role, $allowed_roles, true)) {
             $role = 'user';
@@ -46,6 +46,10 @@ class AuthController
             $errors[] = "Email không được để trống";
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $errors[] = "Email không hợp lệ";
+        }
+
+        if ($phone !== null && !$this->isValidPhone($phone)) {
+            $errors[] = "Số điện thoại không hợp lệ";
         }
 
         if (empty($password)) {
@@ -71,14 +75,29 @@ class AuthController
             }
         }
 
+        if (empty($errors) && $phone !== null) {
+            $check = $this->db->prepare("SELECT id FROM users WHERE phone = ?");
+            if ($check) {
+                $check->bind_param("s", $phone);
+                $check->execute();
+                $check->store_result();
+
+                if ($check->num_rows > 0) {
+                    $errors[] = "Số điện thoại này đã tồn tại";
+                }
+                $check->close();
+            }
+        }
+
         // Register if no errors
         if (empty($errors)) {
             $hashed_password = password_hash($password, PASSWORD_BCRYPT);
-            $status = $role === 'owner' ? 'pending' : 'approved';
+            $status = 'approved';
+            $ownerVerificationStatus = $role === 'owner' ? 'pending_verification' : 'not_required';
 
-            $stmt = $this->db->prepare("INSERT INTO users (name, email, password, phone, role, status, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
+            $stmt = $this->db->prepare("INSERT INTO users (name, email, password, phone, role, status, owner_verification_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
             if ($stmt) {
-                $stmt->bind_param("ssssss", $name, $email, $hashed_password, $phone, $role, $status);
+                $stmt->bind_param("sssssss", $name, $email, $hashed_password, $phone, $role, $status, $ownerVerificationStatus);
 
                 if ($stmt->execute()) {
                     $stmt->close();
@@ -98,7 +117,7 @@ class AuthController
                     return [
                         'success' => true,
                         'message' => $role === 'owner'
-                            ? 'Đăng ký chủ phòng thành công! Tài khoản đang chờ admin duyệt.'
+                            ? 'Đăng ký chủ phòng thành công! Vui lòng đăng nhập và hoàn tất hồ sơ xác minh.'
                             : 'Đăng ký thành công! Vui lòng đăng nhập'
                     ];
                 } else {
@@ -138,7 +157,7 @@ class AuthController
         }
 
         // Get user
-        $stmt = $this->db->prepare("SELECT id, name, email, password, role, status FROM users WHERE email = ?");
+        $stmt = $this->db->prepare("SELECT id, name, email, password, role, status, owner_verification_status FROM users WHERE email = ?");
         if (!$stmt) {
             return [
                 'success' => false,
@@ -180,13 +199,6 @@ class AuthController
             ];
         }
 
-        if ($user['status'] === 'rejected' && $user['role'] === 'owner') {
-            return [
-                'success' => false,
-                'message' => 'Đơn đăng ký owner của bạn bị từ chối'
-            ];
-        }
-
         // Verify password
         if (!password_verify($password, $user['password'])) {
             // Log failed login attempt
@@ -218,6 +230,7 @@ class AuthController
         $_SESSION['role'] = $user['role'];
         $_SESSION['user_role'] = $user['role'];
         $_SESSION['status'] = $user['status'];
+        $_SESSION['owner_verification_status'] = $user['owner_verification_status'] ?? 'not_required';
         $_SESSION['login_time'] = time();
 
         // Log successful login
@@ -461,5 +474,16 @@ class AuthController
         // Update login time
         $_SESSION['login_time'] = time();
         return true;
+    }
+
+    private function normalizePhone(string $phone): ?string
+    {
+        $phone = preg_replace('/\s+/', '', trim($phone));
+        return $phone === '' ? null : $phone;
+    }
+
+    private function isValidPhone(string $phone): bool
+    {
+        return (bool)preg_match('/^[0-9]{9,11}$/', $phone);
     }
 }

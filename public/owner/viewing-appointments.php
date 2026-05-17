@@ -21,6 +21,7 @@ $userTheme = $userQuery->get_result()->fetch_assoc();
 $is_dark = $userTheme['dark_mode'] ?? 0;
 
 $db = new Database($conn);
+require_once __DIR__ . '/_owner_guard.php';
 $allowed_statuses = ['accepted', 'rejected', 'completed'];
 
 // Nhận filter trạng thái từ URL để lúc redirect giữ nguyên bộ lọc

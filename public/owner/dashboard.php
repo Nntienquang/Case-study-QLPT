@@ -17,6 +17,8 @@ if (($_SESSION['role'] ?? '') !== 'owner') {
     exit;
 }
 
+require_once __DIR__ . '/_owner_guard.php';
+
 $owner_id = (int)$_SESSION['user_id'];
 
 $userQuery = $conn->prepare("SELECT dark_mode FROM users WHERE id = ?");

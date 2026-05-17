@@ -16,6 +16,15 @@ $auth = new AuthController($db->getConnection());
 
 function auth_redirect_for_role(string $role): string
 {
+    if ($role === 'admin') {
+        return './admin/index.php';
+    }
+    if ($role === 'owner') {
+        return ($_SESSION['owner_verification_status'] ?? 'pending_verification') === 'approved'
+            ? './owner/dashboard.php'
+            : './owner/profile.php?verify=1';
+    }
+
     return './index.php';
 }
 
@@ -93,6 +102,7 @@ function set_login_session(array $user): void
     $_SESSION['role'] = $user['role'];
     $_SESSION['user_role'] = $user['role'];
     $_SESSION['status'] = $user['status'];
+    $_SESSION['owner_verification_status'] = $user['owner_verification_status'] ?? 'not_required';
     $_SESSION['force_password_change'] = (int)($user['force_password_change'] ?? 0);
     $_SESSION['login_time'] = time();
 }
@@ -103,7 +113,7 @@ function verify_public_credentials(mysqli $conn, string $email, string $password
         return ['success' => false, 'message' => 'Vui lòng nhập email và mật khẩu', 'reason' => 'missing_credentials'];
     }
 
-    $stmt = $conn->prepare('SELECT id, name, email, password, role, status, force_password_change FROM users WHERE email = ?');
+    $stmt = $conn->prepare('SELECT id, name, email, password, role, status, owner_verification_status, force_password_change FROM users WHERE email = ?');
     if (!$stmt) {
         return ['success' => false, 'message' => 'Lỗi hệ thống', 'reason' => 'system_error'];
     }
@@ -120,10 +130,6 @@ function verify_public_credentials(mysqli $conn, string $email, string $password
 
     if (($user['status'] ?? '') === 'blocked') {
         return ['success' => false, 'message' => 'Tài khoản của bạn bị khóa.', 'reason' => 'blocked'];
-    }
-
-    if (($user['status'] ?? '') === 'rejected' && ($user['role'] ?? '') === 'owner') {
-        return ['success' => false, 'message' => 'Đơn đăng ký owner của bạn bị từ chối.', 'reason' => 'owner_rejected'];
     }
 
     unset($user['password']);

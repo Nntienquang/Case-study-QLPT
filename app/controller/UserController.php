@@ -72,7 +72,7 @@ class UserController
         $conn = $this->db->getConnection();
         $name = trim((string)($_POST['name'] ?? ''));
         $email = trim((string)($_POST['email'] ?? ''));
-        $phone = trim((string)($_POST['phone'] ?? ''));
+        $phone = $this->normalizePhone((string)($_POST['phone'] ?? ''));
         $password = (string)($_POST['password'] ?? '');
         $role = $this->safeRole($_POST['role'] ?? 'user');
         $status = $this->safeStatus($_POST['status'] ?? 'approved');
@@ -84,6 +84,16 @@ class UserController
 
         if ($this->emailExists($email)) {
             $_SESSION['error'] = 'Email này đã tồn tại.';
+            return;
+        }
+
+        if ($phone !== null && !$this->isValidPhone($phone)) {
+            $_SESSION['error'] = 'Số điện thoại không hợp lệ.';
+            return;
+        }
+
+        if ($phone !== null && $this->phoneExists($phone)) {
+            $_SESSION['error'] = 'Số điện thoại này đã tồn tại.';
             return;
         }
 
@@ -118,7 +128,7 @@ class UserController
 
         $name = trim((string)($_POST['name'] ?? ''));
         $email = trim((string)($_POST['email'] ?? ''));
-        $phone = trim((string)($_POST['phone'] ?? ''));
+        $phone = $this->normalizePhone((string)($_POST['phone'] ?? ''));
         $role = $this->safeRole($_POST['role'] ?? 'user');
         $status = $this->safeStatus($_POST['status'] ?? 'approved');
 
@@ -134,6 +144,16 @@ class UserController
 
         if ($this->emailExists($email, $id)) {
             $_SESSION['error'] = 'Email này đã được tài khoản khác sử dụng.';
+            return;
+        }
+
+        if ($phone !== null && !$this->isValidPhone($phone)) {
+            $_SESSION['error'] = 'Số điện thoại không hợp lệ.';
+            return;
+        }
+
+        if ($phone !== null && $this->phoneExists($phone, $id)) {
+            $_SESSION['error'] = 'Số điện thoại này đã được tài khoản khác sử dụng.';
             return;
         }
 
@@ -246,6 +266,43 @@ class UserController
         $exists = $stmt->num_rows > 0;
         $stmt->close();
         return $exists;
+    }
+
+    private function phoneExists(string $phone, int $exceptId = 0): bool
+    {
+        $conn = $this->db->getConnection();
+        $sql = 'SELECT id FROM users WHERE phone = ?';
+        if ($exceptId > 0) {
+            $sql .= ' AND id <> ?';
+        }
+
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            return true;
+        }
+
+        if ($exceptId > 0) {
+            $stmt->bind_param('si', $phone, $exceptId);
+        } else {
+            $stmt->bind_param('s', $phone);
+        }
+
+        $stmt->execute();
+        $stmt->store_result();
+        $exists = $stmt->num_rows > 0;
+        $stmt->close();
+        return $exists;
+    }
+
+    private function normalizePhone(string $phone): ?string
+    {
+        $phone = preg_replace('/\s+/', '', trim($phone));
+        return $phone === '' ? null : $phone;
+    }
+
+    private function isValidPhone(string $phone): bool
+    {
+        return (bool)preg_match('/^[0-9]{9,11}$/', $phone);
     }
 
     private function safeRole(string $role): string

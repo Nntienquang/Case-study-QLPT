@@ -1,6 +1,7 @@
 ﻿<?php
 @require_once '../../config/database.php';
 @require_once '../../core/Database.php';
+@require_once '../components/PublicNav.php';
 
 session_start();
 
@@ -67,6 +68,8 @@ $stmt->close();
     <link href="../assets/css/modern.css" rel="stylesheet">
 </head>
 <body>
+    <?php qlpt_render_public_nav(['base' => '../', 'active' => 'rooms']); ?>
+    <?php /*
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
         <div class="container-lg">
             <a class="navbar-brand" href="../index.php">
@@ -74,6 +77,7 @@ $stmt->close();
             </a>
         </div>
     </nav>
+    */ ?>
 
     <div class="container-lg" style="padding: 30px 0;">
         <div class="row">

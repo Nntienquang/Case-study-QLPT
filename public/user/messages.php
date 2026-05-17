@@ -1,6 +1,7 @@
 <?php
 @require_once '../../config/database.php';
 @require_once '../../core/Database.php';
+@require_once '../components/PublicNav.php';
 @require_once '../../core/NotificationHelper.php';
 
 session_start();
@@ -110,11 +111,14 @@ if ($convId > 0) {
     </style>
 </head>
 <body>
+    <?php qlpt_render_public_nav(['base' => '../', 'active' => 'rooms']); ?>
+    <?php /*
     <nav class="navbar navbar-dark sticky-top">
         <div class="container-lg">
             <a class="navbar-brand" href="../index.php"><i class="fas fa-home"></i> QuanLyPhongTro</a>
         </div>
     </nav>
+    */ ?>
     <div class="container-lg py-4">
         <div class="row">
             <div class="col-lg-3 mb-3">

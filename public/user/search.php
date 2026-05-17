@@ -1,17 +1,16 @@
 <?php
 @require_once '../../config/database.php';
 @require_once '../../core/Database.php';
+@require_once '../../core/PathHelper.php';
+@require_once '../components/PublicNav.php';
 
 session_start();
 
 /** @var mysqli $conn */
-if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'user') {
-    header('Location: ../login.php');
-    exit;
-}
+$isLoggedUser = isset($_SESSION['user_id']) && ($_SESSION['role'] ?? '') === 'user';
 
 $db = new Database($conn);
-$user_id = (int)$_SESSION['user_id'];
+$user_id = $isLoggedUser ? (int)$_SESSION['user_id'] : 0;
 $user_name = $_SESSION['name'] ?? $_SESSION['user_name'] ?? 'User';
 
 $keyword = trim($_GET['keyword'] ?? '');
@@ -37,7 +36,12 @@ $stmt->execute();
 $categories_list = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-if (isset($_GET['save_search'])) {
+if (isset($_GET['save_search']) && !$isLoggedUser) {
+    header('Location: ../login.php');
+    exit;
+}
+
+if (isset($_GET['save_search']) && $isLoggedUser) {
     $hasFilter = $keyword !== '' || $district_id !== '' || $category_id !== '' || $min_price !== '' || $max_price !== '' || $area_min !== '';
     if ($hasFilter) {
         $searchName = $keyword !== '' ? $keyword : 'Bộ lọc phòng trọ';
@@ -124,7 +128,8 @@ if ($sort === 'price_asc') {
 }
 
 $query = '
-    SELECT m.*, d.name as district_name, c.name as category_name, u.name as owner_name, u.verified_at, u.trust_score
+    SELECT m.*, d.name as district_name, c.name as category_name, u.name as owner_name, u.verified_at, u.trust_score,
+           (SELECT mi.image_url FROM motel_images mi WHERE mi.motel_id = m.id ORDER BY mi.id ASC LIMIT 1) AS image_url
     ' . $fromSql . $where . '
     ORDER BY ' . $orderBy . '
     LIMIT ? OFFSET ?
@@ -141,7 +146,7 @@ $motels = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
 $favorite_ids = [];
-if ($motels) {
+if ($motels && $isLoggedUser) {
     $motel_ids = implode(',', array_map(fn($m) => (int)$m['id'], $motels));
     $fav_stmt = $db->prepare("SELECT motel_id FROM favorites WHERE user_id = ? AND motel_id IN ($motel_ids)");
     $fav_stmt->bind_param('i', $user_id);
@@ -201,15 +206,15 @@ unset($baseQuery['page'], $baseQuery['save_search']);
     <link href="../assets/css/modern.css" rel="stylesheet">
     <style>
         body { background: #f4f7fb; font-family: 'Segoe UI', sans-serif; color: #111827; }
-        .navbar { background: #0f172a; }
         .search-shell { padding: 28px 0 44px; }
         .filter-card, .result-toolbar, .motel-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; box-shadow: 0 16px 45px rgba(15, 23, 42, .07); }
         .filter-card { padding: 22px; position: sticky; top: 84px; }
         .result-toolbar { padding: 18px 20px; margin-bottom: 18px; display: flex; justify-content: space-between; gap: 14px; align-items: center; flex-wrap: wrap; }
         .motel-card { overflow: hidden; height: 100%; display: flex; flex-direction: column; }
-        .motel-image { height: 190px; background: linear-gradient(135deg, #1d4ed8, #14b8a6); color: white; position: relative; display: flex; align-items: center; justify-content: center; }
+        .motel-image { height: 190px; background: linear-gradient(135deg, #1d4ed8, #14b8a6) center/cover no-repeat; color: white; position: relative; display: flex; align-items: center; justify-content: center; }
+        .motel-image::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(15,23,42,0) 40%, rgba(15,23,42,.38)); }
         .motel-image i { font-size: 46px; opacity: .82; }
-        .favorite-btn { position: absolute; top: 12px; right: 12px; border: 0; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.95); color: #64748b; box-shadow: 0 12px 30px rgba(15,23,42,.18); }
+        .favorite-btn { position: absolute; top: 12px; right: 12px; z-index: 1; border: 0; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.95); color: #64748b; box-shadow: 0 12px 30px rgba(15,23,42,.18); }
         .favorite-btn.active { color: #dc2626; }
         .motel-body { padding: 18px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
         .motel-title { font-size: 17px; font-weight: 800; color: #0f172a; line-height: 1.35; min-height: 46px; }
@@ -224,6 +229,8 @@ unset($baseQuery['page'], $baseQuery['save_search']);
     </style>
 </head>
 <body>
+    <?php qlpt_render_public_nav(['base' => '../', 'active' => 'rooms']); ?>
+    <?php /*
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
         <div class="container-lg">
             <a class="navbar-brand fw-bold" href="../index.php"><i class="fas fa-home"></i> QuanLyPhongTro</a>
@@ -243,6 +250,7 @@ unset($baseQuery['page'], $baseQuery['save_search']);
             </div>
         </div>
     </nav>
+    */ ?>
 
     <main class="search-shell">
         <div class="container-lg">
@@ -340,12 +348,17 @@ unset($baseQuery['page'], $baseQuery['save_search']);
                             <?php foreach ($motels as $motel): ?>
                                 <?php
                                     $moveInCost = (int)$motel['price'] + (int)($motel['service_fee'] ?? 0) + (int)round((int)$motel['price'] * (float)($motel['deposit_months'] ?? 1));
+                                    $motelImage = function_exists('qlpt_relative_public_asset_url')
+                                        ? qlpt_relative_public_asset_url($motel['image_url'] ?? null, '../uploads/motels/motel_6a096b186de22.jpeg')
+                                        : ($motel['image_url'] ?: '../uploads/motels/motel_6a096b186de22.jpeg');
+                                    if (!filter_var($motelImage, FILTER_VALIDATE_URL) && strpos($motelImage, '../') !== 0) {
+                                        $motelImage = '../' . ltrim($motelImage, '/');
+                                    }
                                 ?>
                                 <div class="col-md-6 col-xl-4">
                                     <article class="motel-card">
-                                        <div class="motel-image">
-                                            <i class="fas fa-building"></i>
-                                            <button class="favorite-btn <?php echo in_array((int)$motel['id'], $favorite_ids, true) ? 'active' : ''; ?>" onclick="toggleFavorite(<?php echo (int)$motel['id']; ?>, this)" type="button" aria-label="Yêu thích">
+                                        <div class="motel-image" style="background-image: url('<?php echo htmlspecialchars($motelImage); ?>');">
+                                            <button class="favorite-btn <?php echo in_array((int)$motel['id'], $favorite_ids, true) ? 'active' : ''; ?>" onclick="<?php echo $isLoggedUser ? 'toggleFavorite(' . (int)$motel['id'] . ', this)' : "window.location.href='../login.php'"; ?>" type="button" aria-label="Yêu thích">
                                                 <i class="fas fa-heart"></i>
                                             </button>
                                         </div>

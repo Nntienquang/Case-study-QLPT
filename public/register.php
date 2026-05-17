@@ -18,7 +18,7 @@ if (isset($_SESSION['user_id'])) {
         if ($role === 'admin') {
             header('Location: ./admin/index.php');
         } elseif ($role === 'owner') {
-            header('Location: ./owner/index.php');
+            header('Location: ./owner/dashboard.php');
         } else {
             header('Location: ./user/dashboard.php');
         }

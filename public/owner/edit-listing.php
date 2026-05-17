@@ -104,9 +104,7 @@ $userTheme = $userQuery->get_result()->fetch_assoc();
 $is_dark = $userTheme['dark_mode'] ?? 0;
 
 $db = new Database($conn);
-
-$ownerStatus = new OwnerStatusMiddleware($db);
-$ownerStatus->checkOwnerAccess($owner_id, 'edit-listing.php');
+require_once __DIR__ . '/_owner_guard.php';
 
 $motel_id = (int)($_GET['id'] ?? 0);
 $message = '';

@@ -1,6 +1,7 @@
 ﻿<?php
 @require_once '../../config/database.php';
 @require_once '../../core/Database.php';
+@require_once '../components/PublicNav.php';
 
 session_start();
 
@@ -25,13 +26,30 @@ $stmt->close();
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = $_POST['name'] ?? '';
-    $phone = $_POST['phone'] ?? '';
+    $phone = preg_replace('/\s+/', '', trim((string)($_POST['phone'] ?? '')));
+    $phone = $phone === '' ? null : $phone;
     $address = $_POST['address'] ?? '';
 
     if (empty($name)) {
         $message = 'Vui lòng nhập tên!';
         $message_type = 'danger';
+    } elseif ($phone !== null && !preg_match('/^[0-9]{9,11}$/', $phone)) {
+        $message = 'Số điện thoại không hợp lệ!';
+        $message_type = 'danger';
     } else {
+        if ($phone !== null) {
+            $dup = $db->prepare("SELECT id FROM users WHERE phone = ? AND id <> ?");
+            $dup->bind_param("si", $phone, $user_id);
+            $dup->execute();
+            $phoneExists = (bool)$dup->get_result()->fetch_assoc();
+            $dup->close();
+            if ($phoneExists) {
+                $message = 'Số điện thoại này đã được tài khoản khác sử dụng!';
+                $message_type = 'danger';
+            }
+        }
+
+        if ($message_type !== 'danger') {
         $stmt = $db->prepare("UPDATE users SET name = ?, phone = ?, address = ? WHERE id = ?");
         $stmt->bind_param("sssi", $name, $phone, $address, $user_id);
         
@@ -50,6 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message_type = 'danger';
         }
         $stmt->close();
+        }
     }
 }
 ?>
@@ -78,6 +97,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="../assets/css/modern.css" rel="stylesheet">
 </head>
 <body>
+    <?php qlpt_render_public_nav(['base' => '../', 'active' => 'rooms']); ?>
+    <?php /*
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
         <div class="container-lg">
             <a class="navbar-brand" href="../index.php">
@@ -85,6 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </a>
         </div>
     </nav>
+    */ ?>
 
     <div class="container-lg" style="padding: 30px 0;">
         <div class="row">

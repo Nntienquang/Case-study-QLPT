@@ -46,7 +46,9 @@ define('STATUS_HIDDEN', 'hidden');
 
 // Booking status
 define('BOOKING_PENDING', 'pending');
+define('BOOKING_WAITING_PAYMENT', 'waiting_payment');
 define('BOOKING_PAID', 'paid');
+define('BOOKING_CONFIRMED', 'confirmed');
 define('BOOKING_ACCEPTED', 'accepted');
 define('BOOKING_COMPLETED', 'completed');
 define('BOOKING_REJECTED', 'rejected');
@@ -54,8 +56,10 @@ define('BOOKING_CANCELLED', 'cancelled');
 
 // Payment status
 define('PAYMENT_PENDING', 'pending');
-define('PAYMENT_HELD', 'held');
-define('PAYMENT_RELEASED', 'released');
+define('PAYMENT_PROCESSING', 'processing');
+define('PAYMENT_PAID', 'paid');
+define('PAYMENT_FAILED', 'failed');
+define('PAYMENT_CANCELLED', 'cancelled');
 define('PAYMENT_REFUNDED', 'refunded');
 
 ?>

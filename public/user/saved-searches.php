@@ -1,6 +1,7 @@
 <?php
 @require_once '../../config/database.php';
 @require_once '../../core/Database.php';
+@require_once '../components/PublicNav.php';
 
 session_start();
 
@@ -94,6 +95,8 @@ function search_url(array $search): string
     </style>
 </head>
 <body>
+    <?php qlpt_render_public_nav(['base' => '../', 'active' => 'rooms']); ?>
+    <?php /*
     <nav class="navbar app-nav navbar-expand-lg sticky-top">
         <div class="container-lg">
             <a class="navbar-brand fw-bold" href="../index.php"><i class="fas fa-house-chimney"></i> QuanLyPhongTro</a>
@@ -103,6 +106,7 @@ function search_url(array $search): string
             </div>
         </div>
     </nav>
+    */ ?>
 
     <main class="app-shell">
         <div class="container-lg">

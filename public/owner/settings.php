@@ -11,6 +11,8 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'owner') {
 }
 
 $db = new Database($conn);
+$allowUnverifiedOwner = true;
+require_once __DIR__ . '/_owner_guard.php';
 $owner_id = (int)$_SESSION['user_id'];
 $ownerName = $_SESSION['name'] ?? 'Chủ phòng';
 $message = '';

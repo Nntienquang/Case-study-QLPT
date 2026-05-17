@@ -2,6 +2,7 @@
 @require_once '../../config/database.php';
 @require_once '../../core/Database.php';
 @require_once '../../core/NotificationHelper.php';
+@require_once '../components/PublicNav.php';
 
 session_start();
 
@@ -12,12 +13,12 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'user') {
 }
 
 $db = new Database($conn);
-$user_id = $_SESSION['user_id'];
+$user_id = (int)$_SESSION['user_id'];
 $user_name = $_SESSION['name'];
 $motel_id = (int)($_GET['id'] ?? 0);
 
 // Get motel details
-$stmt = $db->prepare("SELECT id, title, price, address, user_id FROM motels WHERE id = ? AND status = 'approved'");
+$stmt = $db->prepare("SELECT id, title, price, deposit_amount, service_fee, electricity_unit_price, water_fee_per_person, internet_fee, parking_fee, other_fee, address, user_id, room_status FROM motels WHERE id = ? AND status = 'approved'");
 $stmt->bind_param("i", $motel_id);
 $stmt->execute();
 $motel = $stmt->get_result()->fetch_assoc();
@@ -28,33 +29,138 @@ if (!$motel) {
     exit;
 }
 
+$stmt = $db->prepare("SELECT name, email, phone FROM users WHERE id = ?");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$currentUser = $stmt->get_result()->fetch_assoc() ?: [];
+$stmt->close();
+
 $message = '';
 $message_type = '';
 
 // Handle booking
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $check_in = $_POST['check_in_date'] ?? '';
-    $check_out = $_POST['check_out_date'] ?? '';
-    $deposit = (int)($_POST['deposit_amount'] ?? $motel['price']);
-    $note = $_POST['note'] ?? '';
+    $check_out = $_POST['check_out_date'] !== '' ? $_POST['check_out_date'] : null;
+    $durationMonths = max(1, (int)($_POST['rental_duration_months'] ?? 1));
+    $deposit = max(1, (int)($_POST['deposit_amount'] ?? ($motel['deposit_amount'] ?: $motel['price'])));
+    $note = trim((string)($_POST['note'] ?? ''));
+    $contactName = trim((string)($_POST['contact_name'] ?? ($currentUser['name'] ?? $user_name)));
+    $contactPhone = preg_replace('/\s+/', '', trim((string)($_POST['contact_phone'] ?? ($currentUser['phone'] ?? ''))));
+    $contactEmail = trim((string)($_POST['contact_email'] ?? ($currentUser['email'] ?? '')));
+    $ownerId = (int)($motel['user_id'] ?? 0);
 
-    if (empty($check_in) || empty($check_out)) {
-        $message = 'Vui lòng chọn ngày check-in và check-out!';
+    if ($check_in === '') {
+        $message = 'Vui lòng chọn ngày dự kiến vào ở!';
         $message_type = 'danger';
-    } elseif (strtotime($check_in) >= strtotime($check_out)) {
-        $message = 'Ngày check-out phải sau check-in!';
+    } elseif ($check_out !== null && strtotime($check_in) >= strtotime($check_out)) {
+        $message = 'Ngày kết thúc phải sau ngày vào ở!';
+        $message_type = 'danger';
+    } elseif ($contactName === '' || $contactPhone === '' || $contactEmail === '') {
+        $message = 'Vui lòng nhập đủ thông tin liên hệ.';
+        $message_type = 'danger';
+    } elseif (!preg_match('/^[0-9]{9,11}$/', $contactPhone)) {
+        $message = 'Số điện thoại liên hệ không hợp lệ.';
         $message_type = 'danger';
     } else {
-        $stmt = $db->prepare("
-            INSERT INTO bookings (user_id, motel_id, check_in_date, check_out_date, deposit_amount, note, status)
-            VALUES (?, ?, ?, ?, ?, ?, 'pending')
-        ");
-        $stmt->bind_param("iissds", $user_id, $motel_id, $check_in, $check_out, $deposit, $note);
-        
-        if ($stmt->execute()) {
-            $message = 'Đặt phòng thành công! Chủ nhà sẽ xem và phản hồi trạng thái đơn.';
-            $message_type = 'success';
-            $ownerId = (int)($motel['user_id'] ?? 0);
+        $conn->begin_transaction();
+        try {
+            $lock = $conn->prepare("
+                SELECT id FROM booking_room_holds
+                WHERE motel_id = ? AND hold_status = 'active' AND expires_at > NOW()
+                LIMIT 1
+                FOR UPDATE
+            ");
+            $lock->bind_param('i', $motel_id);
+            $lock->execute();
+            $activeHold = $lock->get_result()->fetch_assoc();
+            $lock->close();
+
+            $reserved = $conn->prepare("
+                SELECT id FROM bookings
+                WHERE motel_id = ? AND booking_status IN ('waiting_payment','paid','confirmed','completed')
+                  AND payment_status IN ('pending','processing','paid')
+                LIMIT 1
+                FOR UPDATE
+            ");
+            $reserved->bind_param('i', $motel_id);
+            $reserved->execute();
+            $activeBooking = $reserved->get_result()->fetch_assoc();
+            $reserved->close();
+
+            if ($activeHold || $activeBooking || ($motel['room_status'] ?? 'available') !== 'available') {
+                throw new RuntimeException('Phòng này đang được giữ chỗ hoặc không còn khả dụng. Vui lòng chọn phòng khác.');
+            }
+
+            $bookingCode = 'BK' . date('ymdHis') . random_int(10, 99);
+            $expiresAt = date('Y-m-d H:i:s', strtotime('+30 minutes'));
+            $legacyStatus = 'pending';
+            $paymentStatus = 'pending';
+            $bookingStatus = 'waiting_payment';
+
+            $stmt = $conn->prepare("
+                INSERT INTO bookings
+                    (booking_code, user_id, owner_id, motel_id, check_in_date, check_out_date, expected_move_in_date,
+                     rental_duration_months, deposit_amount, total_amount, payment_status, booking_status,
+                     note, contact_name, contact_phone, contact_email, checkin_date, status, expires_at, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            ");
+            $stmt->bind_param(
+                "siiisssiiisssssssss",
+                $bookingCode,
+                $user_id,
+                $ownerId,
+                $motel_id,
+                $check_in,
+                $check_out,
+                $check_in,
+                $durationMonths,
+                $deposit,
+                $deposit,
+                $paymentStatus,
+                $bookingStatus,
+                $note,
+                $contactName,
+                $contactPhone,
+                $contactEmail,
+                $check_in,
+                $legacyStatus,
+                $expiresAt
+            );
+            if (!$stmt->execute()) {
+                throw new RuntimeException($stmt->error);
+            }
+            $bookingId = (int)$stmt->insert_id;
+            $stmt->close();
+
+            $paymentCode = 'PAY' . date('ymdHis') . random_int(10, 99);
+            $method = 'bank_transfer';
+            $paymentStatus = 'pending';
+            $legacyPaymentStatus = 'pending';
+            $stmt = $conn->prepare("
+                INSERT INTO payments
+                    (payment_code, booking_id, amount, fee, payment_method, payment_status, method, status, created_at)
+                VALUES (?, ?, ?, 0, ?, ?, ?, ?, NOW())
+            ");
+            $stmt->bind_param("siissss", $paymentCode, $bookingId, $deposit, $method, $paymentStatus, $method, $legacyPaymentStatus);
+            if (!$stmt->execute()) {
+                throw new RuntimeException($stmt->error);
+            }
+            $stmt->close();
+
+            $holdStatus = 'active';
+            $stmt = $conn->prepare("INSERT INTO booking_room_holds (booking_id, motel_id, user_id, hold_status, expires_at) VALUES (?, ?, ?, ?, ?)");
+            $stmt->bind_param("iiiss", $bookingId, $motel_id, $user_id, $holdStatus, $expiresAt);
+            if (!$stmt->execute()) {
+                throw new RuntimeException($stmt->error);
+            }
+            $stmt->close();
+
+            $stmt = $conn->prepare("UPDATE motels SET room_status = 'reserved' WHERE id = ?");
+            $stmt->bind_param('i', $motel_id);
+            $stmt->execute();
+            $stmt->close();
+
             if ($ownerId > 0) {
                 $tenantLabel = htmlspecialchars((string)($user_name ?? 'Người thuê'), ENT_QUOTES, 'UTF-8');
                 $titleVi = htmlspecialchars((string)$motel['title'], ENT_QUOTES, 'UTF-8');
@@ -67,11 +173,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'owner/bookings.php'
                 );
             }
-        } else {
-            $message = 'Lỗi: ' . $stmt->error;
+
+            $conn->commit();
+            header('Location: payment.php?booking_id=' . $bookingId);
+            exit;
+        } catch (Throwable $e) {
+            $conn->rollback();
+            $message = $e->getMessage();
             $message_type = 'danger';
         }
-        $stmt->close();
     }
 }
 ?>
@@ -109,6 +219,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="../assets/css/modern.css" rel="stylesheet">
 </head>
 <body>
+    <?php qlpt_render_public_nav(['base' => '../', 'active' => 'rooms']); ?>
+    <?php /*
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
         <div class="container-lg">
             <a class="navbar-brand" href="../index.php">
@@ -116,6 +228,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </a>
         </div>
     </nav>
+    */ ?>
 
     <div class="container-lg main-content">
         <a href="motel-detail.php?id=<?php echo $motel_id; ?>" style="color: #667eea; text-decoration: none; margin-bottom: 20px; display: inline-block;">
@@ -146,7 +259,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                             <div class="summary-item">
                                 <span class="summary-item-label"><i class="fas fa-tag"></i> Giá/tháng</span>
-                                <span class="summary-item-value"><?php echo number_format($motel['price']); ?> VNĐ</span>
+                                <span class="summary-item-value"><?php echo number_format((int)$motel['price']); ?> VNĐ</span>
                             </div>
                         </div>
 
@@ -155,13 +268,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <h5><i class="fas fa-calendar"></i> Ngày đặt phòng</h5>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Ngày check-in *</label>
+                                    <label class="form-label">Ngày dự kiến vào ở *</label>
                                     <input type="date" name="check_in_date" class="form-control" required min="<?php echo date('Y-m-d'); ?>">
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Ngày check-out *</label>
-                                    <input type="date" name="check_out_date" class="form-control" required min="<?php echo date('Y-m-d', strtotime('+1 day')); ?>">
+                                    <label class="form-label">Ngày kết thúc nếu có</label>
+                                    <input type="date" name="check_out_date" class="form-control" min="<?php echo date('Y-m-d', strtotime('+1 day')); ?>">
                                 </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Thời hạn thuê dự kiến</label>
+                                <select name="rental_duration_months" class="form-select">
+                                    <option value="1">1 tháng</option>
+                                    <option value="3">3 tháng</option>
+                                    <option value="6">6 tháng</option>
+                                    <option value="12">12 tháng</option>
+                                </select>
                             </div>
                         </div>
 
@@ -170,16 +292,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <h5><i class="fas fa-money-bill-wave"></i> Tiền đặt cọc</h5>
                             <div class="mb-3">
                                 <label class="form-label">Số tiền (VNĐ)</label>
-                                <input type="number" name="deposit_amount" class="form-control" value="<?php echo $motel['price']; ?>" required min="1">
+                                <input type="number" name="deposit_amount" class="form-control" value="<?php echo (int)($motel['deposit_amount'] ?: $motel['price']); ?>" required min="1">
                             </div>
                             <div class="price-breakdown">
                                 <div class="price-item">
                                     <span>Giá phòng/tháng:</span>
-                                    <span><?php echo number_format($motel['price']); ?> VNĐ</span>
+                                    <span><?php echo number_format((int)$motel['price']); ?> VNĐ</span>
                                 </div>
                                 <div class="price-item">
-                                    <span>Phí đặt cọc (tính từ đầu):</span>
-                                    <span><?php echo number_format($motel['price']); ?> VNĐ</span>
+                                    <span>Điện:</span>
+                                    <span><?php echo number_format((int)$motel['electricity_unit_price']); ?> VNĐ/kWh</span>
+                                </div>
+                                <div class="price-item">
+                                    <span>Nước:</span>
+                                    <span><?php echo number_format((int)$motel['water_fee_per_person']); ?> VNĐ/người</span>
+                                </div>
+                                <div class="price-item">
+                                    <span>Internet / giữ xe / khác:</span>
+                                    <span><?php echo number_format((int)$motel['internet_fee'] + (int)$motel['parking_fee'] + (int)$motel['other_fee']); ?> VNĐ</span>
+                                </div>
+                                <div class="price-item">
+                                    <span>Tiền giữ chỗ/cọc:</span>
+                                    <span><?php echo number_format((int)($motel['deposit_amount'] ?: $motel['price'])); ?> VNĐ</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h5><i class="fas fa-address-card"></i> Thông tin liên hệ</h5>
+                            <div class="mb-3">
+                                <label class="form-label">Họ tên *</label>
+                                <input type="text" name="contact_name" class="form-control" value="<?php echo htmlspecialchars($currentUser['name'] ?? $user_name); ?>" required>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Số điện thoại *</label>
+                                    <input type="tel" name="contact_phone" class="form-control" value="<?php echo htmlspecialchars($currentUser['phone'] ?? ''); ?>" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Email *</label>
+                                    <input type="email" name="contact_email" class="form-control" value="<?php echo htmlspecialchars($currentUser['email'] ?? ''); ?>" required>
                                 </div>
                             </div>
                         </div>
@@ -194,7 +346,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
 
                         <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-check-circle"></i> Xác nhận đặt phòng
+                            <i class="fas fa-credit-card"></i> Tạo booking và thanh toán cọc
                         </button>
                     </form>
                 </div>

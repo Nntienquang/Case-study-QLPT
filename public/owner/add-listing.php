@@ -14,6 +14,8 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'owner') {
 }
 
 $db = new Database($conn);
+$allowUnverifiedOwner = false;
+require_once __DIR__ . '/_owner_guard.php';
 $owner_id = $_SESSION['user_id'];
 $ownerName = $_SESSION['name'] ?? 'Chủ phòng';
 
@@ -97,19 +99,14 @@ function owner_update_standard_address(mysqli $conn, int $motelId, array $data):
     $stmt->close();
 }
 
-// --- BƯỚC MỚI: KIỂM TRA ĐỊNH DANH (KYC) ---
-$userCheck = $conn->prepare("SELECT idcard_number, status FROM users WHERE id = ?");
+$userCheck = $conn->prepare("SELECT idcard_number, status, owner_verification_status FROM users WHERE id = ?");
 $userCheck->bind_param("i", $owner_id);
 $userCheck->execute();
 $userData = $userCheck->get_result()->fetch_assoc();
 $userCheck->close();
 
-$is_verified = !empty($userData['idcard_number']);
-$is_approved = ($userData['status'] === 'approved');
-
-// Kiểm tra trạng thái truy cập của chủ phòng
-$ownerStatus = new OwnerStatusMiddleware($db);
-$ownerStatus->checkOwnerAccess($owner_id, 'add-listing.php');
+$is_verified = (($userData['owner_verification_status'] ?? '') === 'approved');
+$is_approved = $is_verified;
 
 $message = '';
 $message_type = '';

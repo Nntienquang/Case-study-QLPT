@@ -2,28 +2,25 @@
 require_once __DIR__ . '/../admin_init.php';
 require_once __DIR__ . '/layout.php';
 
-if (!$is_logged_in) {
+if (!$is_logged_in || ($_SESSION['user_role'] ?? '') !== 'admin') {
     header('Location: ' . ADMIN_URL . 'login.php');
     exit;
 }
 
-$activityLog = new ActivityLog($db);
-$controller = new PaymentController($db, $activityLog);
-$action = $_POST['action'] ?? '';
+$controller = new PaymentController($db, new ActivityLog($db));
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'update_status') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_status') {
     if (!Csrf::validateRequest('admin_payment_action')) {
         $_SESSION['error'] = 'Phiên thao tác không hợp lệ, vui lòng thử lại.';
         header('Location: ' . ADMIN_URL . 'payments.php');
         exit;
     }
-
     $controller->updateStatus();
 }
 
 $data = $controller->listPayments();
 
-admin_layout_start('Quản lý thanh toán', 'Theo dõi trạng thái giao dịch, tiền cọc, phí và các khoản đang giữ trong hệ thống.', 'payments');
+admin_layout_start('Quản lý thanh toán', 'Theo dõi giao dịch đặt cọc và xác nhận thanh toán trước khi owner xử lý booking.', 'payments');
 admin_flash_messages();
 ?>
 
@@ -33,10 +30,9 @@ admin_flash_messages();
             <label class="form-label fw-semibold">Trạng thái</label>
             <select name="status" class="form-select">
                 <option value="">Tất cả</option>
-                <option value="pending" <?php echo ($data['status'] ?? '') === 'pending' ? 'selected' : ''; ?>>Chờ xử lý</option>
-                <option value="held" <?php echo ($data['status'] ?? '') === 'held' ? 'selected' : ''; ?>>Đang giữ</option>
-                <option value="released" <?php echo ($data['status'] ?? '') === 'released' ? 'selected' : ''; ?>>Đã giải ngân</option>
-                <option value="refunded" <?php echo ($data['status'] ?? '') === 'refunded' ? 'selected' : ''; ?>>Hoàn tiền</option>
+                <?php foreach (['pending' => 'Chờ thanh toán', 'processing' => 'Chờ xác nhận', 'paid' => 'Đã thanh toán', 'failed' => 'Thất bại', 'cancelled' => 'Đã hủy', 'refunded' => 'Hoàn tiền'] as $value => $label): ?>
+                    <option value="<?php echo admin_e($value); ?>" <?php echo ($data['status'] ?? '') === $value ? 'selected' : ''; ?>><?php echo admin_e($label); ?></option>
+                <?php endforeach; ?>
             </select>
         </div>
         <div class="col-md-8">
@@ -56,11 +52,11 @@ admin_flash_messages();
         <table class="wb-table">
             <thead>
                 <tr>
-                    <th>ID</th>
+                    <th>Mã</th>
+                    <th>Booking</th>
                     <th>Người thuê</th>
                     <th>Phòng trọ</th>
                     <th>Số tiền</th>
-                    <th>Phí</th>
                     <th>Phương thức</th>
                     <th>Trạng thái</th>
                     <th></th>
@@ -68,36 +64,34 @@ admin_flash_messages();
             </thead>
             <tbody>
                 <?php foreach ($data['payments'] as $payment): ?>
-                    <?php $status = (string)($payment['status'] ?? 'pending'); ?>
+                    <?php $status = (string)($payment['payment_status'] ?? 'pending'); ?>
                     <tr>
-                        <td>#<?php echo (int)$payment['id']; ?></td>
+                        <td class="wb-title"><?php echo admin_e($payment['payment_code'] ?? ('#' . (int)$payment['id'])); ?></td>
+                        <td><?php echo admin_e($payment['booking_code'] ?? ('#' . (int)($payment['booking_id'] ?? 0))); ?></td>
                         <td><?php echo admin_e($payment['user_name'] ?? 'N/A'); ?></td>
                         <td class="wb-title"><?php echo admin_e(substr((string)($payment['motel_title'] ?? 'N/A'), 0, 50)); ?></td>
                         <td class="wb-price"><?php echo admin_money($payment['amount'] ?? 0); ?></td>
-                        <td><?php echo admin_money($payment['fee'] ?? 0); ?></td>
-                        <td><?php echo admin_e($payment['method'] ?? 'N/A'); ?></td>
+                        <td><?php echo admin_e($payment['payment_method'] ?? $payment['method'] ?? 'N/A'); ?></td>
                         <td><span class="wb-pill <?php echo admin_pill_class($status); ?>"><?php echo admin_status_label($status); ?></span></td>
                         <td class="text-end">
                             <a href="<?php echo ADMIN_URL . 'payment_detail.php?id=' . (int)$payment['id']; ?>" class="btn btn-sm btn-primary"><i class="fa fa-eye"></i> Xem</a>
-                            <?php if ($status === 'pending'): ?>
-                                <form method="POST" class="d-inline" onsubmit="return confirm('Xác nhận giữ khoản thanh toán này?');">
+                            <?php if (in_array($status, ['pending', 'processing'], true)): ?>
+                                <form method="POST" class="d-inline" onsubmit="return confirm('Xác nhận thanh toán này đã thành công?');">
                                     <?php echo Csrf::field('admin_payment_action'); ?>
                                     <input type="hidden" name="action" value="update_status">
-                                    <input type="hidden" name="status" value="held">
-                                    <input type="hidden" name="id" value="<?php echo (int)$payment['id']; ?>">
-                                    <button type="submit" class="btn btn-sm btn-warning"><i class="fa fa-pause"></i></button>
-                                </form>
-                            <?php endif; ?>
-                            <?php if ($status === 'held'): ?>
-                                <form method="POST" class="d-inline" onsubmit="return confirm('Giải ngân khoản thanh toán này?');">
-                                    <?php echo Csrf::field('admin_payment_action'); ?>
-                                    <input type="hidden" name="action" value="update_status">
-                                    <input type="hidden" name="status" value="released">
+                                    <input type="hidden" name="status" value="paid">
                                     <input type="hidden" name="id" value="<?php echo (int)$payment['id']; ?>">
                                     <button type="submit" class="btn btn-sm btn-success"><i class="fa fa-check"></i></button>
                                 </form>
+                                <form method="POST" class="d-inline" onsubmit="return confirm('Đánh dấu giao dịch thất bại?');">
+                                    <?php echo Csrf::field('admin_payment_action'); ?>
+                                    <input type="hidden" name="action" value="update_status">
+                                    <input type="hidden" name="status" value="failed">
+                                    <input type="hidden" name="id" value="<?php echo (int)$payment['id']; ?>">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa fa-times"></i></button>
+                                </form>
                             <?php endif; ?>
-                            <?php if (in_array($status, ['pending', 'held'], true)): ?>
+                            <?php if ($status === 'paid'): ?>
                                 <form method="POST" class="d-inline" onsubmit="return confirm('Hoàn tiền khoản thanh toán này?');">
                                     <?php echo Csrf::field('admin_payment_action'); ?>
                                     <input type="hidden" name="action" value="update_status">

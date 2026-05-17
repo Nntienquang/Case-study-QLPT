@@ -104,6 +104,70 @@ admin_flash_messages();
     </div>
 <?php endif; ?>
 
+<div class="wb-section-head"><h2>Hồ sơ xác minh</h2></div>
+<div class="wb-table-card mb-3">
+    <table class="wb-table">
+        <tbody>
+            <tr>
+                <td class="fw-bold">Số CCCD:</td>
+                <td><?php echo admin_e($user['idcard_number'] ?? 'Chưa cập nhật'); ?></td>
+            </tr>
+            <tr>
+                <td class="fw-bold">Ngân hàng:</td>
+                <td><?php echo admin_e($user['bank_name'] ?? 'Chưa cập nhật'); ?></td>
+            </tr>
+            <tr>
+                <td class="fw-bold">Số tài khoản:</td>
+                <td><?php echo admin_e($user['bank_account_no'] ?? 'Chưa cập nhật'); ?></td>
+            </tr>
+            <tr>
+                <td class="fw-bold">Chủ tài khoản:</td>
+                <td><?php echo admin_e($user['bank_account_name'] ?? 'Chưa cập nhật'); ?></td>
+            </tr>
+            <tr>
+                <td class="fw-bold">Địa chỉ:</td>
+                <td><?php echo admin_e($user['address'] ?? 'Chưa cập nhật'); ?></td>
+            </tr>
+            <tr>
+                <td class="fw-bold">Số điện thoại:</td>
+                <td><?php echo admin_e($user['phone'] ?? 'Chưa cập nhật'); ?></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<?php if (!empty($user['id_card_front']) || !empty($user['id_card_back'])): ?>
+<div class="wb-section-head"><h2>Ảnh tài liệu CCCD</h2></div>
+<div class="row g-3 mb-3">
+    <?php if (!empty($user['id_card_front'])): ?>
+    <div class="col-md-6">
+        <div class="wb-card">
+            <div class="p-2 text-center border-bottom"><small class="text-muted">Mặt trước CCCD</small></div>
+            <div class="p-3">
+                <img src="../<?php echo htmlspecialchars($user['id_card_front']); ?>" alt="Mặt trước CCCD" class="img-fluid border rounded" style="max-height: 300px; object-fit: contain;">
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+    <?php if (!empty($user['id_card_back'])): ?>
+    <div class="col-md-6">
+        <div class="wb-card">
+            <div class="p-2 text-center border-bottom"><small class="text-muted">Mặt sau CCCD</small></div>
+            <div class="p-3">
+                <img src="../<?php echo htmlspecialchars($user['id_card_back']); ?>" alt="Mặt sau CCCD" class="img-fluid border rounded" style="max-height: 300px; object-fit: contain;">
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+</div>
+<?php else: ?>
+<div class="wb-card mb-3">
+    <div class="p-3 text-center text-muted">
+        <i class="fa fa-info-circle me-2"></i> Owner chưa upload ảnh CCCD
+    </div>
+</div>
+<?php endif; ?>
+
 <div class="wb-section-head"><h2>Phòng liên quan</h2><span class="wb-pill"><?php echo count($motels); ?> phòng</span></div>
 <div class="wb-table-card mb-3">
     <?php if ($motels): ?>

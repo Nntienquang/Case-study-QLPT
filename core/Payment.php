@@ -16,7 +16,7 @@ class Payment {
     public function getAll($page = 1, $limit = ITEMS_PER_PAGE, $status = '') {
         $offset = ($page - 1) * $limit;
         
-        $sql = "SELECT p.*, b.user_id, u.name as user_name, b.motel_id, m.title as motel_title
+        $sql = "SELECT p.*, b.user_id, b.booking_code, b.payment_status AS booking_payment_status, b.booking_status, u.name as user_name, b.motel_id, m.title as motel_title
                 FROM payments p
                 LEFT JOIN bookings b ON p.booking_id = b.id
                 LEFT JOIN users u ON b.user_id = u.id
@@ -24,7 +24,7 @@ class Payment {
         
         if ($status) {
             $status = $this->db->getConnection()->real_escape_string($status);
-            $sql .= " WHERE p.status = '$status'";
+            $sql .= " WHERE p.payment_status = '$status'";
         }
         
         $sql .= " ORDER BY p.created_at DESC LIMIT $offset, $limit";
@@ -39,7 +39,7 @@ class Payment {
         $where = '';
         if ($status) {
             $status = $this->db->getConnection()->real_escape_string($status);
-            $where = "WHERE status = '$status'";
+            $where = "payment_status = '$status'";
         }
         return $this->db->count('payments', $where);
     }
@@ -50,7 +50,7 @@ class Payment {
     public function getById($id) {
         $id = (int)$id;
         $sql = "SELECT p.*, b.user_id, b.motel_id, u.name as user_name, u.email,
-                        m.title as motel_title, m.price
+                        m.title as motel_title, m.price, b.booking_code, b.booking_status, b.payment_status AS booking_payment_status
                 FROM payments p
                 LEFT JOIN bookings b ON p.booking_id = b.id
                 LEFT JOIN users u ON b.user_id = u.id
@@ -65,7 +65,15 @@ class Payment {
     public function updateStatus($id, $status) {
         $id = (int)$id;
         $status = $this->db->getConnection()->real_escape_string($status);
-        $data = ['status' => $status];
+        $legacy = match ($status) {
+            'paid' => 'held',
+            'refunded' => 'refunded',
+            default => 'pending',
+        };
+        $data = ['payment_status' => $status, 'status' => $legacy, 'updated_at' => date('Y-m-d H:i:s')];
+        if ($status === 'paid') {
+            $data['paid_at'] = date('Y-m-d H:i:s');
+        }
         return $this->db->update('payments', $data, "id = $id");
     }
     
@@ -76,12 +84,12 @@ class Payment {
         $stats = [];
         
         $stats['total'] = $this->db->count('payments');
-        $stats['pending'] = $this->db->count('payments', "status = 'pending'");
-        $stats['held'] = $this->db->count('payments', "status = 'held'");
-        $stats['released'] = $this->db->count('payments', "status = 'released'");
+        $stats['pending'] = $this->db->count('payments', "payment_status = 'pending'");
+        $stats['processing'] = $this->db->count('payments', "payment_status = 'processing'");
+        $stats['paid'] = $this->db->count('payments', "payment_status = 'paid'");
         
         // Get total amount
-        $result = $this->db->getRow("SELECT SUM(amount) as total_amount FROM payments WHERE status = 'released'");
+        $result = $this->db->getRow("SELECT SUM(amount) as total_amount FROM payments WHERE payment_status = 'paid'");
         $stats['total_amount'] = $result['total_amount'] ?? 0;
         
         return $stats;

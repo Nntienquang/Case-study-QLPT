@@ -51,7 +51,7 @@ $hasReports = admin_dash_table_exists($conn, 'reports');
 $hasViewingAppointments = admin_dash_table_exists($conn, 'viewing_appointments');
 
 $adminQueue = [
-    'pending_owners' => admin_dash_count($db, "SELECT COUNT(*) AS count FROM users WHERE role = 'owner' AND status = 'pending'"),
+    'pending_owners' => admin_dash_count($db, "SELECT COUNT(*) AS count FROM users WHERE role = 'owner' AND owner_verification_status = 'submitted'"),
     'pending_motels' => admin_dash_count($db, "SELECT COUNT(*) AS count FROM motels WHERE status = 'pending'"),
     'pending_reports' => $hasReports ? admin_dash_count($db, "SELECT COUNT(*) AS count FROM reports WHERE status = 'pending'") : 0,
     'pending_viewings' => $hasViewingAppointments ? admin_dash_count($db, "SELECT COUNT(*) AS count FROM viewing_appointments WHERE status = 'pending'") : 0,

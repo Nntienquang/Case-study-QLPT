@@ -1,145 +1,149 @@
 <?php
-/**
- * Payment Controller
- */
 
-class PaymentController {
-    private $payment;
-    private $db;
+class PaymentController
+{
+    private Payment $payment;
+    private Database $db;
     private $activityLog;
-    
-    public function __construct($db, $activityLog = null) {
+
+    public function __construct(Database $db, $activityLog = null)
+    {
         $this->payment = new Payment($db);
         $this->db = $db;
         $this->activityLog = $activityLog;
     }
-    
-    /**
-     * List all payments
-     */
-    public function listPayments() {
+
+    public function listPayments(): array
+    {
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $status = isset($_GET['status']) ? $_GET['status'] : '';
-        
+        $status = isset($_GET['status']) ? (string)$_GET['status'] : '';
+
         $payments = $this->payment->getAll($page, ITEMS_PER_PAGE, $status);
         $total = $this->payment->getTotal($status);
-        $total_pages = ceil($total / ITEMS_PER_PAGE);
-        
+
         return [
             'payments' => $payments,
             'total' => $total,
             'page' => $page,
-            'total_pages' => $total_pages,
-            'status' => $status
+            'total_pages' => (int)ceil($total / ITEMS_PER_PAGE),
+            'status' => $status,
         ];
     }
-    
-    /**
-     * View payment details
-     */
-    public function viewPayment() {
+
+    public function viewPayment(): array
+    {
         if (!isset($_GET['id'])) {
             header('Location: ' . ADMIN_URL . 'payments.php');
             exit;
         }
-        
-        $id = (int)$_GET['id'];
-        $payment = $this->payment->getById($id);
-        
+
+        $payment = $this->payment->getById((int)$_GET['id']);
         if (!$payment) {
             header('Location: ' . ADMIN_URL . 'payments.php');
             exit;
         }
-        
+
         return ['payment' => $payment];
     }
-    
-    /**
-     * Update payment status
-     */
-    public function updateStatus() {
-        if (!isset($_POST['id']) || !isset($_POST['status'])) {
+
+    public function updateStatus(): void
+    {
+        if (!isset($_POST['id'], $_POST['status'])) {
             $_SESSION['error'] = 'Dữ liệu không hợp lệ';
             header('Location: ' . ADMIN_URL . 'payments.php');
             exit;
         }
-        
+
         $id = (int)$_POST['id'];
         $status = (string)$_POST['status'];
-        $payment_old = $this->payment->getById($id);
-        
-        // Validate status
-        $valid_status = ['pending', 'held', 'released', 'refunded'];
-        if (!in_array($status, $valid_status)) {
+        $paymentOld = $this->payment->getById($id);
+
+        $valid = ['pending', 'processing', 'paid', 'failed', 'cancelled', 'refunded'];
+        if (!$paymentOld || !in_array($status, $valid, true)) {
             $_SESSION['error'] = 'Trạng thái không hợp lệ';
             header('Location: ' . ADMIN_URL . 'payments.php');
             exit;
         }
 
-        $oldStatus = (string)($payment_old['status'] ?? '');
+        $oldStatus = (string)($paymentOld['payment_status'] ?? $paymentOld['status'] ?? 'pending');
         $allowedTransitions = [
-            'pending' => ['held', 'refunded'],
-            'held' => ['released', 'refunded'],
+            'pending' => ['processing', 'paid', 'failed', 'cancelled'],
+            'processing' => ['paid', 'failed', 'cancelled'],
+            'paid' => ['refunded'],
         ];
-        if (!in_array($status, $allowedTransitions[$oldStatus] ?? [], true)) {
+        if ($status !== $oldStatus && !in_array($status, $allowedTransitions[$oldStatus] ?? [], true)) {
             $_SESSION['error'] = 'Luồng cập nhật trạng thái thanh toán không hợp lệ';
             header('Location: ' . ADMIN_URL . 'payments.php');
             exit;
         }
-        
-        if ($this->payment->updateStatus($id, $status)) {
-            // Log activity
-            if ($this->activityLog && $payment_old) {
+
+        $conn = $this->db->getConnection();
+        $conn->begin_transaction();
+
+        try {
+            if (!$this->payment->updateStatus($id, $status)) {
+                throw new RuntimeException('Không thể cập nhật thanh toán');
+            }
+
+            $bookingId = (int)($paymentOld['booking_id'] ?? 0);
+            if ($bookingId > 0) {
+                $bookingStatus = match ($status) {
+                    'paid' => 'paid',
+                    'refunded', 'cancelled' => 'cancelled',
+                    default => 'waiting_payment',
+                };
+                $legacyBookingStatus = match ($status) {
+                    'paid' => 'paid',
+                    'refunded', 'cancelled' => 'cancelled',
+                    default => 'pending',
+                };
+                $stmt = $conn->prepare('UPDATE bookings SET payment_status = ?, booking_status = ?, status = ?, updated_at = NOW() WHERE id = ?');
+                $stmt->bind_param('sssi', $status, $bookingStatus, $legacyBookingStatus, $bookingId);
+                $stmt->execute();
+                $stmt->close();
+
+                if ($status === 'paid') {
+                    $stmt = $conn->prepare("UPDATE booking_room_holds SET hold_status = 'converted', updated_at = NOW() WHERE booking_id = ?");
+                    $stmt->bind_param('i', $bookingId);
+                    $stmt->execute();
+                    $stmt->close();
+                }
+            }
+
+            if ($status === 'paid') {
+                $payment = $this->payment->getById($id);
+                $platformFee = (int)ceil(((int)($payment['amount'] ?? 0)) * 0.05);
+                $stmt = $conn->prepare('UPDATE payments SET fee = ? WHERE id = ?');
+                $stmt->bind_param('ii', $platformFee, $id);
+                $stmt->execute();
+                $stmt->close();
+
+                $adminId = (int)($_SESSION['user_id'] ?? 1);
+                $stmt = $conn->prepare("INSERT INTO transactions (to_user, booking_id, amount, type, created_at) VALUES (?, ?, ?, 'fee', NOW())");
+                $stmt->bind_param('iii', $adminId, $bookingId, $platformFee);
+                $stmt->execute();
+                $stmt->close();
+            }
+
+            if ($this->activityLog) {
                 $this->activityLog->log(
-                    $_SESSION['user_id'],
+                    (int)$_SESSION['user_id'],
                     'update_payment_status',
                     'payment',
                     $id,
-                    ['old' => $payment_old['status'], 'new' => $status],
-                    "Cập nhật thanh toán từ {$payment_old['status']} thành {$status}"
+                    ['old' => $oldStatus, 'new' => $status],
+                    "Cập nhật thanh toán từ {$oldStatus} thành {$status}"
                 );
             }
-            
-            // Nếu status = 'released', tính commission 1% cho admin
-            if ($status === 'released') {
-                $payment = $this->payment->getById($id);
-                
-                if ($payment && $payment['booking_id']) {
-                    // Lấy thông tin booking để tính commission
-                    $booking_sql = "SELECT * FROM bookings WHERE id = " . (int)$payment['booking_id'];
-                    $booking = $this->db->getRow($booking_sql);
-                    
-                    if ($booking) {
-                        // Lấy admin id (giả sử admin id = 1, hoặc lấy từ session)
-                        $admin_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 1;
-                        
-                        // Tính commission (1% của deposit_amount)
-                        $commission = ceil($booking['deposit_amount'] * 0.01);
-                        
-                        // Thêm transaction record cho admin (commission)
-                        $conn = $this->db->getConnection();
-                        $admin_id_esc = $conn->real_escape_string($admin_id);
-                        $booking_id_esc = $conn->real_escape_string($payment['booking_id']);
-                        $commission_esc = $conn->real_escape_string($commission);
-                        
-                        $trans_query = "INSERT INTO transactions 
-                                       (to_user, booking_id, amount, type, created_at) 
-                                       VALUES 
-                                       ({$admin_id_esc}, {$booking_id_esc}, {$commission_esc}, 'fee', NOW())";
-                        
-                        $this->db->query($trans_query);
-                    }
-                }
-            }
-            
+
+            $conn->commit();
             $_SESSION['success'] = 'Cập nhật trạng thái thanh toán thành công';
-        } else {
-            $_SESSION['error'] = 'Có lỗi xảy ra';
+        } catch (Throwable $e) {
+            $conn->rollback();
+            $_SESSION['error'] = 'Có lỗi xảy ra: ' . $e->getMessage();
         }
-        
+
         header('Location: ' . ADMIN_URL . 'payments.php');
         exit;
     }
 }
-
-?>

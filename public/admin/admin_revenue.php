@@ -37,7 +37,7 @@ admin_flash_messages();
 
 <div class="wb-section-head">
     <h2>Danh sách commission</h2>
-    <span class="wb-pill">1% mỗi booking</span>
+    <span class="wb-pill">5% platform fee</span>
 </div>
 
 <div class="wb-table-card">

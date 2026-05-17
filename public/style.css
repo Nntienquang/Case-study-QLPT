@@ -1,0 +1,80 @@
+/* Shared public navigation helpers for legacy public pages. */
+.user-dropdown {
+    position: relative;
+    width: max-content;
+}
+
+.user-btn {
+    border: 0;
+    min-height: 42px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: #101828;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.user-dropdown .dropdown-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 220px;
+    display: none;
+    padding: 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 18px 50px rgba(15, 23, 42, .14);
+    z-index: 1000;
+}
+
+.user-dropdown .dropdown-menu.active {
+    display: block;
+}
+
+.user-dropdown .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    color: #344054;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.user-dropdown .dropdown-item:hover {
+    background: #f3f6fa;
+    color: #101828;
+}
+
+.user-dropdown .dropdown-item.logout {
+    color: #dc2626;
+}
+
+.user-dropdown .dropdown-divider {
+    margin: 6px 0;
+    border: 0;
+    border-top: 1px solid #eef2f7;
+}
+
+@media (max-width: 991px) {
+    .user-dropdown,
+    .user-btn {
+        width: 100%;
+    }
+
+    .user-btn {
+        justify-content: center;
+    }
+
+    .user-dropdown .dropdown-menu {
+        position: static;
+        width: 100%;
+        margin-top: 8px;
+    }
+}

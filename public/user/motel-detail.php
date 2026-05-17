@@ -1,20 +1,19 @@
 ﻿<?php
 @require_once '../../config/database.php';
+@require_once '../../config/constants.php';
 @require_once '../../core/Database.php';
 @require_once '../../core/NotificationHelper.php';
+@require_once '../../core/PathHelper.php';
+@require_once '../components/PublicNav.php';
 
 session_start();
 
 /** @var mysqli $conn */
-if (!isset($_SESSION['user_id'])) {
-    header('Location: ../login.php');
-    exit;
-}
-
 $db = new Database($conn);
-$user_id = (int)$_SESSION['user_id'];
+$is_logged_in = isset($_SESSION['user_id']);
+$user_id = $is_logged_in ? (int)$_SESSION['user_id'] : 0;
 $user_role = $_SESSION['role'] ?? $_SESSION['user_role'] ?? 'user';
-$is_renter = $user_role === 'user';
+$is_renter = $is_logged_in && $user_role === 'user';
 $motel_id = (int)($_GET['id'] ?? 0);
 
 // Get motel details
@@ -36,8 +35,19 @@ if (!$motel) {
     exit;
 }
 
+$stmt = $db->prepare('SELECT image_url FROM motel_images WHERE motel_id = ? ORDER BY id ASC');
+$stmt->bind_param('i', $motel_id);
+$stmt->execute();
+$motel_images = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
+
 $message = '';
 $message_type = 'success';
+
+if (!$is_logged_in && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    header('Location: ../login.php');
+    exit;
+}
 
 if ($is_renter && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['schedule_viewing'])) {
     $preferred_time = $_POST['preferred_time'] ?? '';
@@ -56,7 +66,7 @@ if ($is_renter && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['schedul
             $message = 'Đã gửi lịch xem phòng. Chủ phòng sẽ xác nhận lại với bạn.';
             $notifyTitle = 'Có lịch xem phòng mới';
             $notifyBody = 'Người thuê ' . ($_SESSION['name'] ?? 'User') . ' muốn xem phòng: ' . $motel['title'];
-            $notifyLink = 'owner/index.php';
+            $notifyLink = 'owner/dashboard.php';
             qlpt_send_notification($db, $ownerId, 'viewing_request', $notifyTitle, $notifyBody, $notifyLink);
         } else {
             $message = 'Không thể gửi lịch xem phòng lúc này.';
@@ -227,7 +237,10 @@ $move_in_total = (int)$motel['price'] + $service_fee + $deposit_amount;
         .navbar { background: linear-gradient(135deg, #667eea, #764ba2); }
         .navbar-brand { font-size: 22px; font-weight: 700; color: white !important; }
         .header { background: white; padding: 30px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 30px; }
-        .main-image { background: linear-gradient(135deg, #667eea, #764ba2); height: 400px; display: flex; align-items: center; justify-content: center; color: white; border-radius: 12px; margin-bottom: 30px; }
+        .main-image { background: linear-gradient(135deg, #667eea, #764ba2); height: 400px; display: flex; align-items: center; justify-content: center; color: white; border-radius: 12px; margin-bottom: 30px; overflow: hidden; }
+        .main-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .thumb-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; margin-top: -18px; margin-bottom: 30px; }
+        .thumb-strip img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; border: 1px solid #e5e7eb; }
         .main-image i { font-size: 100px; }
         .title-section { display: flex; justify-content: space-between; align-items: start; margin-bottom: 30px; }
         .motel-title { font-size: 32px; font-weight: 700; color: #333; margin-bottom: 10px; }
@@ -263,6 +276,8 @@ $move_in_total = (int)$motel['price'] + $service_fee + $deposit_amount;
     <link href="../assets/css/modern.css" rel="stylesheet">
 </head>
 <body>
+    <?php qlpt_render_public_nav(['base' => '../', 'active' => 'rooms']); ?>
+    <?php /*
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
         <div class="container-lg">
             <a class="navbar-brand" href="../index.php">
@@ -270,6 +285,7 @@ $move_in_total = (int)$motel['price'] + $service_fee + $deposit_amount;
             </a>
         </div>
     </nav>
+    */ ?>
 
     <div class="container-lg" style="padding: 30px 0;">
         <?php if ($message): ?>
@@ -286,8 +302,19 @@ $move_in_total = (int)$motel['price'] + $service_fee + $deposit_amount;
         <div class="row">
             <div class="col-lg-8">
                 <div class="main-image">
-                    <i class="fas fa-image"></i>
+                    <?php if (!empty($motel_images)): ?>
+                        <img src="<?php echo htmlspecialchars(qlpt_public_asset_url($motel_images[0]['image_url'] ?? '')); ?>" alt="<?php echo htmlspecialchars($motel['title']); ?>">
+                    <?php else: ?>
+                        <i class="fas fa-image"></i>
+                    <?php endif; ?>
                 </div>
+                <?php if (count($motel_images) > 1): ?>
+                    <div class="thumb-strip">
+                        <?php foreach (array_slice($motel_images, 1) as $image): ?>
+                            <img src="<?php echo htmlspecialchars(qlpt_public_asset_url($image['image_url'] ?? '')); ?>" alt="<?php echo htmlspecialchars($motel['title']); ?>">
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
 
                 <div class="title-section">
                     <div>
@@ -420,9 +447,13 @@ $move_in_total = (int)$motel['price'] + $service_fee + $deposit_amount;
                                 <i class="fas fa-heart"></i> Yêu thích
                             </button>
                         <?php else: ?>
-                            <div class="alert alert-light border mb-0">
-                                Bạn đang xem bằng tài khoản <?php echo htmlspecialchars($user_role); ?>. Các thao tác đặt phòng chỉ mở cho người thuê.
-                            </div>
+                            <?php if (!$is_logged_in): ?>
+                                <a href="../login.php" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> Đăng nhập để đặt phòng</a>
+                            <?php else: ?>
+                                <div class="alert alert-light border mb-0">
+                                    Bạn đang xem bằng tài khoản <?php echo htmlspecialchars($user_role); ?>. Các thao tác đặt phòng chỉ mở cho người thuê.
+                                </div>
+                            <?php endif; ?>
                         <?php endif; ?>
                     </div>
                     <?php if ($is_renter): ?>

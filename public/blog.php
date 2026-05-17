@@ -1,3 +1,8 @@
+<?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+?>
 <!DOCTYPE html>
 <html lang="vi">
 
@@ -304,6 +309,9 @@
             color: #1185a1;
         }
     </style>
+</head>
+
+<body>
     <nav class="home-nav">
         <div class="nav-container">
 
@@ -328,18 +336,42 @@
                 </div>
 
                 <div class="nav-actions">
-                    <a href="login.php" class="nav-item login-text">Đăng nhập</a>
-                    <a href="owner-register.php" class="btn-post">Đăng phòng</a>
+                    <?php if (isset($_SESSION['user_id'])): ?>
+                        <div class="user-dropdown">
+                            <button class="user-btn" type="button" onclick="togglePublicDropdown(event)">
+                                <i class="fas fa-user-circle"></i>
+                                <span><?php echo htmlspecialchars($_SESSION['name'] ?? $_SESSION['user_name'] ?? 'User'); ?></span>
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="dropdown-menu" id="public-user-dropdown">
+                                <?php if (($_SESSION['role'] ?? $_SESSION['user_role'] ?? '') === 'owner'): ?>
+                                    <a href="owner/dashboard.php" class="dropdown-item"><i class="fas fa-chart-line"></i> Dashboard</a>
+                                    <a href="owner/listings.php" class="dropdown-item"><i class="fas fa-home"></i> Phòng của tôi</a>
+                                    <a href="owner/bookings.php" class="dropdown-item"><i class="fas fa-calendar"></i> Booking</a>
+                                    <a href="owner/profile.php" class="dropdown-item"><i class="fas fa-user"></i> Hồ sơ</a>
+                                <?php else: ?>
+                                    <a href="user/dashboard.php" class="dropdown-item"><i class="fas fa-chart-line"></i> Dashboard</a>
+                                    <a href="user/my-bookings.php" class="dropdown-item"><i class="fas fa-calendar"></i> Booking của tôi</a>
+                                    <a href="user/saved-motels.php" class="dropdown-item"><i class="fas fa-heart"></i> Yêu thích</a>
+                                    <a href="user/profile.php" class="dropdown-item"><i class="fas fa-user"></i> Hồ sơ</a>
+                                <?php endif; ?>
+                                <hr class="dropdown-divider">
+                                <a href="logout.php" class="dropdown-item logout"><i class="fas fa-sign-out-alt"></i> Đăng xuất</a>
+                            </div>
+                        </div>
+                    <?php else: ?>
+                        <a href="login.php" class="nav-item login-text">Đăng nhập</a>
+                        <a href="owner-register.php" class="btn-post">Đăng phòng</a>
+                    <?php endif; ?>
                 </div>
             </div>
 
         </div>
     </nav>
-</head>
-
-<body>
     <?php
-    session_start();
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
     require_once '../config/database.php';
 
     $category_slug = isset($_GET['category']) ? $_GET['category'] : '';
@@ -780,7 +812,7 @@
                         <ul class="list-unstyled">
                             <li><a href="owner-register.php" class="footer-link">Đăng tin cho thuê</a></li>
                             <li><a href="login.php" class="footer-link">Quản lý phòng</a></li>
-                            <li><a href="#" class="footer-link">Chính sách chủ trọ</a></li>
+                            <li><a href="policies/owner-policy.php" class="footer-link">Chính sách chủ trọ</a></li>
                         </ul>
                     </div>
 
@@ -800,12 +832,42 @@
                         © 2026 <strong>QuanLyPhongTro</strong>. Bản quyền thuộc về Team dự án.
                     </div>
                     <div class="footer-bottom-links">
-                        <a href="#" class="footer-link me-3">Chính sách bảo mật</a>
-                        <a href="#" class="footer-link">Điều khoản sử dụng</a>
+                        <a href="policies/user-policy.php" class="footer-link me-3">Chính sách người thuê</a>
+                        <a href="policies/payment-policy.php" class="footer-link">Chính sách thanh toán</a>
                     </div>
                 </div>
             </div>
         </footer>
+        <script>
+            function togglePublicDropdown(event) {
+                event.stopPropagation();
+                const dropdown = document.getElementById('public-user-dropdown');
+                if (dropdown) {
+                    dropdown.classList.toggle('active');
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+                const menuBtn = document.getElementById('mobile-menu-btn');
+                const menuContent = document.getElementById('mobile-menu');
+                if (menuBtn && menuContent) {
+                    menuBtn.addEventListener('click', function() {
+                        menuContent.classList.toggle('show');
+                        const icon = menuBtn.querySelector('i');
+                        if (icon) {
+                            icon.classList.toggle('fa-bars');
+                            icon.classList.toggle('fa-times');
+                        }
+                    });
+                }
+                document.addEventListener('click', function(e) {
+                    const dropdown = document.getElementById('public-user-dropdown');
+                    if (dropdown && !e.target.closest('.user-dropdown')) {
+                        dropdown.classList.remove('active');
+                    }
+                });
+            });
+        </script>
     </body>
 
 </html>
