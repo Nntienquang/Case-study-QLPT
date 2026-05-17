@@ -83,7 +83,6 @@ function admin_nav_items(): array
         // Quản lý nội dung
         'motels' => ['icon' => 'fa fa-building', 'label' => 'Phòng trọ', 'url' => 'motels.php', 'group' => 'content'],
         'categories' => ['icon' => 'fa fa-list', 'label' => 'Danh mục', 'url' => 'categories.php', 'group' => 'content'],
-        'utilities' => ['icon' => 'fa fa-wrench', 'label' => 'Tiện nghi', 'url' => 'utilities.php', 'group' => 'content'],
         
         // Quản lý giao dịch
         'bookings' => ['icon' => 'fa fa-calendar', 'label' => 'Booking', 'url' => 'bookings.php', 'group' => 'transaction'],
