@@ -12,6 +12,12 @@ $emailNotification = new EmailNotification($db);
 $userApprovalController = new UserApprovalController($db, $activityLog, $emailNotification);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    if (!Csrf::validateRequest('admin_user_approval_action')) {
+        $_SESSION['error'] = 'Phiên thao tác không hợp lệ, vui lòng thử lại.';
+        header('Location: user_approvals.php');
+        exit;
+    }
+
     if ($_POST['action'] === 'approve') {
         $id = (int)($_POST['id'] ?? 0);
         if ($id > 0) {
@@ -163,6 +169,7 @@ admin_flash_messages();
 <?php endif; ?>
 
 <form id="approveForm" method="POST" class="d-none">
+    <?php echo Csrf::field('admin_user_approval_action'); ?>
     <input type="hidden" name="action" value="approve">
     <input type="hidden" name="id" id="approveId">
 </form>
@@ -171,6 +178,7 @@ admin_flash_messages();
     <div class="modal-dialog">
         <div class="modal-content">
             <form method="POST">
+                <?php echo Csrf::field('admin_user_approval_action'); ?>
                 <div class="modal-header">
                     <h5 class="modal-title">Từ chối tài khoản</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>

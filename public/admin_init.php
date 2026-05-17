@@ -64,6 +64,11 @@ if ($is_logged_in && ($_SESSION['status'] ?? '') === 'blocked') {
     exit;
 }
 
+if ($is_logged_in && ($_SESSION['user_role'] ?? $_SESSION['role'] ?? '') !== 'admin') {
+    header('Location: ' . BASE_URL . 'login.php?area=admin');
+    exit;
+}
+
 if ($is_logged_in && (int)($_SESSION['force_password_change'] ?? 0) === 1) {
     header('Location: ' . BASE_URL . 'change-password.php');
     exit;

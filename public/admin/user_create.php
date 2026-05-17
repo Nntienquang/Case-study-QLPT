@@ -10,6 +10,12 @@ if (!$is_logged_in) {
 $controller = new UserController($db, new ActivityLog($db));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!Csrf::validateRequest('admin_user_form')) {
+        $_SESSION['error'] = 'Phiên thao tác không hợp lệ, vui lòng thử lại.';
+        header('Location: ' . ADMIN_URL . 'user_create.php');
+        exit;
+    }
+
     $controller->createUser();
     if (!isset($_SESSION['error'])) {
         header('Location: ' . ADMIN_URL . 'users.php');
@@ -25,6 +31,7 @@ admin_flash_messages();
 
 <div class="wb-card">
     <form method="POST" class="row g-3">
+        <?php echo Csrf::field('admin_user_form'); ?>
         <div class="col-md-6">
             <label class="form-label fw-semibold">Tên</label>
             <input type="text" name="name" class="form-control" value="<?php echo admin_e($_POST['name'] ?? ''); ?>" required>

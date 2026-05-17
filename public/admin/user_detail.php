@@ -16,6 +16,12 @@ $id = (int)$_GET['id'];
 $activityLog = new ActivityLog($db);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    if (!Csrf::validateRequest('admin_user_detail_action')) {
+        $_SESSION['error'] = 'Phiên thao tác không hợp lệ, vui lòng thử lại.';
+        header('Location: user_detail.php?id=' . $id);
+        exit;
+    }
+
     $userForAction = $db->getRow("SELECT * FROM users WHERE id = {$id}");
     if ($userForAction && $userForAction['role'] === 'owner') {
         $adminId = (int)$_SESSION['user_id'];
@@ -96,6 +102,7 @@ admin_flash_messages();
     <div class="wb-card mb-3">
         <div class="wb-actions">
             <form method="POST">
+                <?php echo Csrf::field('admin_user_detail_action'); ?>
                 <input type="hidden" name="action" value="approve">
                 <button type="submit" class="btn btn-success" onclick="return confirm('Duyệt owner này?');"><i class="fa fa-check"></i> Duyệt owner</button>
             </form>
@@ -226,6 +233,7 @@ admin_flash_messages();
     <div class="modal-dialog">
         <div class="modal-content">
             <form method="POST">
+                <?php echo Csrf::field('admin_user_detail_action'); ?>
                 <div class="modal-header"><h5 class="modal-title">Từ chối owner</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                 <div class="modal-body">
                     <input type="hidden" name="action" value="reject">

@@ -11,6 +11,12 @@ $controller = new UserController($db, new ActivityLog($db));
 $id = (int)($_GET['id'] ?? $_POST['id'] ?? 0);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!Csrf::validateRequest('admin_user_form')) {
+        $_SESSION['error'] = 'Phiên thao tác không hợp lệ, vui lòng thử lại.';
+        header('Location: ' . ADMIN_URL . 'user_edit.php?id=' . $id);
+        exit;
+    }
+
     $formAction = $_POST['form_action'] ?? 'update';
     if ($formAction === 'reset_password') {
         $controller->resetPassword($id, (string)($_POST['password'] ?? ''));
@@ -43,6 +49,7 @@ admin_flash_messages();
     <div class="col-lg-8">
         <div class="wb-card">
             <form method="POST" class="row g-3">
+                <?php echo Csrf::field('admin_user_form'); ?>
                 <input type="hidden" name="form_action" value="update">
                 <input type="hidden" name="id" value="<?php echo $id; ?>">
                 <div class="col-md-6">
@@ -85,6 +92,7 @@ admin_flash_messages();
         <div class="wb-card">
             <div class="wb-title mb-3">Reset mật khẩu</div>
             <form method="POST">
+                <?php echo Csrf::field('admin_user_form'); ?>
                 <input type="hidden" name="form_action" value="reset_password">
                 <input type="hidden" name="id" value="<?php echo $id; ?>">
                 <label class="form-label fw-semibold">Mật khẩu mới</label>
