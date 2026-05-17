@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../admin_init.php';
 require_once __DIR__ . '/layout.php';
 
@@ -12,7 +12,7 @@ $action = $_POST['action'] ?? '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($action, ['delete', 'status'], true)) {
     if (!Csrf::validateRequest('admin_user_action')) {
-        $_SESSION['error'] = 'PhiÃªn thao tÃ¡c khÃ´ng há»£p lá»‡, vui lÃ²ng thá»­ láº¡i.';
+        $_SESSION['error'] = 'Phiên thao tác không hợp lệ, vui lòng thử lại.';
         header('Location: ' . ADMIN_URL . 'users.php');
         exit;
     }
@@ -32,47 +32,47 @@ $data = $controller->listUsers();
 $queryBase = '&role=' . urlencode((string)$data['role']) . '&status=' . urlencode((string)$data['status']) . '&search=' . urlencode((string)$data['search']);
 $adminId = (int)($_SESSION['user_id'] ?? 0);
 
-admin_layout_start('Quáº£n lÃ½ ngÆ°á»i dÃ¹ng', 'Danh sÃ¡ch tÃ i khoáº£n há»‡ thá»‘ng. Táº¡o vÃ  chá»‰nh sá»­a tÃ i khoáº£n á»Ÿ cÃ¡c mÃ n hÃ¬nh riÃªng.', 'users');
+admin_layout_start('Quản lý người dùng', 'Danh sách tài khoản hệ thống. Tạo và chỉnh sửa tài khoản ở các màn hình riêng.', 'users');
 admin_flash_messages();
 ?>
 
 <div class="wb-card mb-3">
     <form method="GET" class="row g-3 align-items-end">
         <div class="col-md-3">
-            <label class="form-label fw-semibold">Tá»« khÃ³a</label>
-            <input type="text" name="search" class="form-control" value="<?php echo admin_e($data['search']); ?>" placeholder="TÃªn, email, SÄT">
+            <label class="form-label fw-semibold">Từ khóa</label>
+            <input type="text" name="search" class="form-control" value="<?php echo admin_e($data['search']); ?>" placeholder="Tên, email, SĐT">
         </div>
         <div class="col-md-3">
-            <label class="form-label fw-semibold">Vai trÃ²</label>
+            <label class="form-label fw-semibold">Vai trò</label>
             <select name="role" class="form-select">
-                <option value="">Táº¥t cáº£</option>
+                <option value="">Tất cả</option>
                 <option value="admin" <?php echo $data['role'] === 'admin' ? 'selected' : ''; ?>>Admin</option>
-                <option value="owner" <?php echo $data['role'] === 'owner' ? 'selected' : ''; ?>>Chá»§ phÃ²ng</option>
-                <option value="user" <?php echo $data['role'] === 'user' ? 'selected' : ''; ?>>NgÆ°á»i thuÃª</option>
+                <option value="owner" <?php echo $data['role'] === 'owner' ? 'selected' : ''; ?>>Chủ phòng</option>
+                <option value="user" <?php echo $data['role'] === 'user' ? 'selected' : ''; ?>>Người thuê</option>
             </select>
         </div>
         <div class="col-md-3">
-            <label class="form-label fw-semibold">Tráº¡ng thÃ¡i</label>
+            <label class="form-label fw-semibold">Trạng thái</label>
             <select name="status" class="form-select">
-                <option value="">Táº¥t cáº£</option>
-                <option value="approved" <?php echo $data['status'] === 'approved' ? 'selected' : ''; ?>>ÄÃ£ duyá»‡t</option>
-                <option value="pending" <?php echo $data['status'] === 'pending' ? 'selected' : ''; ?>>Chá» duyá»‡t</option>
-                <option value="blocked" <?php echo $data['status'] === 'blocked' ? 'selected' : ''; ?>>Bá»‹ khÃ³a</option>
-                <option value="rejected" <?php echo $data['status'] === 'rejected' ? 'selected' : ''; ?>>Tá»« chá»‘i</option>
+                <option value="">Tất cả</option>
+                <option value="approved" <?php echo $data['status'] === 'approved' ? 'selected' : ''; ?>>Đã duyệt</option>
+                <option value="pending" <?php echo $data['status'] === 'pending' ? 'selected' : ''; ?>>Chờ duyệt</option>
+                <option value="blocked" <?php echo $data['status'] === 'blocked' ? 'selected' : ''; ?>>Bị khóa</option>
+                <option value="rejected" <?php echo $data['status'] === 'rejected' ? 'selected' : ''; ?>>Từ chối</option>
             </select>
         </div>
         <div class="col-md-3 d-flex gap-2">
-            <button type="submit" class="btn btn-primary flex-fill"><i class="fa fa-filter"></i> Lá»c</button>
-            <a href="<?php echo ADMIN_URL; ?>users.php" class="btn btn-outline-secondary">XÃ³a lá»c</a>
+            <button type="submit" class="btn btn-primary flex-fill"><i class="fa fa-filter"></i> Lọc</button>
+            <a href="<?php echo ADMIN_URL; ?>users.php" class="btn btn-outline-secondary">Xóa lọc</a>
         </div>
     </form>
 </div>
 
 <div class="wb-section-head">
-    <h2>Danh sÃ¡ch ngÆ°á»i dÃ¹ng</h2>
+    <h2>Danh sách người dùng</h2>
     <div class="wb-actions">
-        <span class="wb-pill"><?php echo (int)$data['total']; ?> tÃ i khoáº£n</span>
-        <a href="<?php echo ADMIN_URL; ?>user_create.php" class="btn btn-primary btn-sm"><i class="fa fa-plus"></i> ThÃªm tÃ i khoáº£n</a>
+        <span class="wb-pill"><?php echo (int)$data['total']; ?> tài khoản</span>
+        <a href="<?php echo ADMIN_URL; ?>user_create.php" class="btn btn-primary btn-sm"><i class="fa fa-plus"></i> Thêm tài khoản</a>
     </div>
 </div>
 
@@ -82,12 +82,12 @@ admin_flash_messages();
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>TÃªn</th>
+                    <th>Tên</th>
                     <th>Email</th>
-                    <th>Äiá»‡n thoáº¡i</th>
-                    <th>Vai trÃ²</th>
-                    <th>Tráº¡ng thÃ¡i</th>
-                    <th>NgÃ y táº¡o</th>
+                    <th>Điện thoại</th>
+                    <th>Vai trò</th>
+                    <th>Trạng thái</th>
+                    <th>Ngày tạo</th>
                     <th></th>
                 </tr>
             </thead>
@@ -115,7 +115,7 @@ admin_flash_messages();
                                         <button type="submit" class="btn btn-sm btn-success"><i class="fa fa-unlock"></i></button>
                                     </form>
                                 <?php else: ?>
-                                    <form method="POST" class="d-inline" onsubmit="return confirm('KhÃ³a tÃ i khoáº£n nÃ y?');">
+                                    <form method="POST" class="d-inline" onsubmit="return confirm('Khóa tài khoản này?');">
                                         <?php echo Csrf::field('admin_user_action'); ?>
                                         <input type="hidden" name="action" value="status">
                                         <input type="hidden" name="status" value="blocked">
@@ -123,7 +123,7 @@ admin_flash_messages();
                                         <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="fa fa-lock"></i></button>
                                     </form>
                                 <?php endif; ?>
-                                <form method="POST" class="d-inline" onsubmit="return confirm('XÃ³a tÃ i khoáº£n nÃ y?');">
+                                <form method="POST" class="d-inline" onsubmit="return confirm('Xóa tài khoản này?');">
                                     <?php echo Csrf::field('admin_user_action'); ?>
                                     <input type="hidden" name="action" value="delete">
                                     <input type="hidden" name="id" value="<?php echo (int)$user['id']; ?>">
@@ -136,7 +136,7 @@ admin_flash_messages();
             </tbody>
         </table>
     <?php else: ?>
-        <div class="wb-empty">KhÃ´ng cÃ³ tÃ i khoáº£n phÃ¹ há»£p bá»™ lá»c.</div>
+        <div class="wb-empty">Không có tài khoản phù hợp bộ lọc.</div>
     <?php endif; ?>
 </div>
 

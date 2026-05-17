@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../admin_init.php';
 require_once __DIR__ . '/layout.php';
 
@@ -12,7 +12,7 @@ $conn = $db->getConnection();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if (!Csrf::validateRequest('admin_report_action')) {
-        $_SESSION['error'] = 'PhiÃªn thao tÃ¡c khÃ´ng há»£p lá»‡, vui lÃ²ng thá»­ láº¡i.';
+        $_SESSION['error'] = 'Phiên thao tác không hợp lệ, vui lòng thử lại.';
         header('Location: reports.php');
         exit;
     }
@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $validStatuses = ['investigating', 'resolved', 'rejected', 'closed'];
 
         if (in_array($status, ['resolved', 'rejected', 'closed'], true) && $adminNote === '') {
-            $_SESSION['error'] = 'Vui lÃ²ng nháº­p ghi chÃº xá»­ lÃ½ cho tráº¡ng thÃ¡i nÃ y.';
+            $_SESSION['error'] = 'Vui lòng nhập ghi chú xử lý cho trạng thái này.';
             header('Location: reports.php');
             exit;
         }
@@ -35,8 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $statusEsc = $conn->real_escape_string($status);
             $noteEsc = $conn->real_escape_string($adminNote);
             if ($report && $db->query("UPDATE reports SET status = '{$statusEsc}', admin_note = '{$noteEsc}', handled_by = {$adminId}, handled_at = NOW() WHERE id = {$id}")) {
-                $activityLog->log($adminId, 'update_report_status', 'report', $id, ['old' => $report['status'], 'new' => $status], "Cáº­p nháº­t bÃ¡o cÃ¡o tá»« {$report['status']} thÃ nh {$status}");
-                $_SESSION['success'] = 'Cáº­p nháº­t tráº¡ng thÃ¡i bÃ¡o cÃ¡o thÃ nh cÃ´ng';
+                $activityLog->log($adminId, 'update_report_status', 'report', $id, ['old' => $report['status'], 'new' => $status], "Cập nhật báo cáo từ {$report['status']} thành {$status}");
+                $_SESSION['success'] = 'Cập nhật trạng thái báo cáo thành công';
             }
         }
     }
@@ -46,8 +46,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if ($id > 0) {
             $report = $db->getRow("SELECT * FROM reports WHERE id = {$id}");
             if ($report && $db->query("DELETE FROM reports WHERE id = {$id}")) {
-                $activityLog->log((int)$_SESSION['user_id'], 'delete_report', 'report', $id, [], "XÃ³a bÃ¡o cÃ¡o: {$report['reason']}");
-                $_SESSION['success'] = 'XÃ³a bÃ¡o cÃ¡o thÃ nh cÃ´ng';
+                $activityLog->log((int)$_SESSION['user_id'], 'delete_report', 'report', $id, [], "Xóa báo cáo: {$report['reason']}");
+                $_SESSION['success'] = 'Xóa báo cáo thành công';
             }
         }
     }
@@ -99,55 +99,55 @@ $stats = [
 
 $reportTypes = [
     'spam' => 'Spam',
-    'inappropriate' => 'Ná»™i dung khÃ´ng phÃ¹ há»£p',
-    'fraud' => 'Gian láº­n',
-    'unsafe' => 'KhÃ´ng an toÃ n',
-    'false_info' => 'ThÃ´ng tin sai',
-    'other' => 'KhÃ¡c',
+    'inappropriate' => 'Nội dung không phù hợp',
+    'fraud' => 'Gian lận',
+    'unsafe' => 'Không an toàn',
+    'false_info' => 'Thông tin sai',
+    'other' => 'Khác',
 ];
 
-admin_layout_start('BÃ¡o cÃ¡o vi pháº¡m', 'Tiáº¿p nháº­n, xÃ¡c minh vÃ  xá»­ lÃ½ bÃ¡o cÃ¡o tá»« ngÆ°á»i dÃ¹ng vá» phÃ²ng trá» hoáº·c tÃ i khoáº£n.', 'reports');
+admin_layout_start('Báo cáo vi phạm', 'Tiếp nhận, xác minh và xử lý báo cáo từ người dùng về phòng trọ hoặc tài khoản.', 'reports');
 admin_flash_messages();
 ?>
 
 <div class="wb-grid wb-stats-4 mb-3">
-    <div class="wb-card"><i class="fa fa-flag wb-card-icon"></i><div class="wb-card-value"><?php echo (int)$stats['total']; ?></div><div class="wb-card-label">Tá»•ng bÃ¡o cÃ¡o</div></div>
-    <div class="wb-card"><i class="fa fa-clock-o wb-card-icon"></i><div class="wb-card-value"><?php echo (int)$stats['pending']; ?></div><div class="wb-card-label">Chá» xá»­ lÃ½</div></div>
-    <div class="wb-card"><i class="fa fa-search wb-card-icon"></i><div class="wb-card-value"><?php echo (int)$stats['investigating']; ?></div><div class="wb-card-label">Äang xÃ¡c minh</div></div>
-    <div class="wb-card"><i class="fa fa-check-circle wb-card-icon"></i><div class="wb-card-value"><?php echo (int)$stats['resolved']; ?></div><div class="wb-card-label">ÄÃ£ xá»­ lÃ½</div></div>
+    <div class="wb-card"><i class="fa fa-flag wb-card-icon"></i><div class="wb-card-value"><?php echo (int)$stats['total']; ?></div><div class="wb-card-label">Tổng báo cáo</div></div>
+    <div class="wb-card"><i class="fa fa-clock-o wb-card-icon"></i><div class="wb-card-value"><?php echo (int)$stats['pending']; ?></div><div class="wb-card-label">Chờ xử lý</div></div>
+    <div class="wb-card"><i class="fa fa-search wb-card-icon"></i><div class="wb-card-value"><?php echo (int)$stats['investigating']; ?></div><div class="wb-card-label">Đang xác minh</div></div>
+    <div class="wb-card"><i class="fa fa-check-circle wb-card-icon"></i><div class="wb-card-value"><?php echo (int)$stats['resolved']; ?></div><div class="wb-card-label">Đã xử lý</div></div>
 </div>
 
 <div class="wb-card mb-3">
     <form method="GET" class="row g-3 align-items-end">
         <div class="col-md-4">
-            <label class="form-label fw-semibold">Tráº¡ng thÃ¡i</label>
+            <label class="form-label fw-semibold">Trạng thái</label>
             <select name="status" class="form-select">
-                <option value="">Táº¥t cáº£</option>
-                <option value="pending" <?php echo $status === 'pending' ? 'selected' : ''; ?>>Chá» xá»­ lÃ½</option>
-                <option value="investigating" <?php echo $status === 'investigating' ? 'selected' : ''; ?>>Äang xÃ¡c minh</option>
-                <option value="resolved" <?php echo $status === 'resolved' ? 'selected' : ''; ?>>ÄÃ£ xá»­ lÃ½</option>
-                <option value="rejected" <?php echo $status === 'rejected' ? 'selected' : ''; ?>>Tá»« chá»‘i</option>
-                <option value="closed" <?php echo $status === 'closed' ? 'selected' : ''; ?>>ÄÃ£ Ä‘Ã³ng</option>
+                <option value="">Tất cả</option>
+                <option value="pending" <?php echo $status === 'pending' ? 'selected' : ''; ?>>Chờ xử lý</option>
+                <option value="investigating" <?php echo $status === 'investigating' ? 'selected' : ''; ?>>Đang xác minh</option>
+                <option value="resolved" <?php echo $status === 'resolved' ? 'selected' : ''; ?>>Đã xử lý</option>
+                <option value="rejected" <?php echo $status === 'rejected' ? 'selected' : ''; ?>>Từ chối</option>
+                <option value="closed" <?php echo $status === 'closed' ? 'selected' : ''; ?>>Đã đóng</option>
             </select>
         </div>
         <div class="col-md-4">
-            <label class="form-label fw-semibold">Loáº¡i bÃ¡o cÃ¡o</label>
+            <label class="form-label fw-semibold">Loại báo cáo</label>
             <select name="type" class="form-select">
-                <option value="">Táº¥t cáº£</option>
+                <option value="">Tất cả</option>
                 <?php foreach ($reportTypes as $key => $label): ?>
                     <option value="<?php echo admin_e($key); ?>" <?php echo $type === $key ? 'selected' : ''; ?>><?php echo admin_e($label); ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
         <div class="col-md-4">
-            <button type="submit" class="btn btn-primary w-100"><i class="fa fa-filter"></i> Lá»c bÃ¡o cÃ¡o</button>
+            <button type="submit" class="btn btn-primary w-100"><i class="fa fa-filter"></i> Lọc báo cáo</button>
         </div>
     </form>
 </div>
 
 <div class="wb-section-head">
-    <h2>Danh sÃ¡ch bÃ¡o cÃ¡o</h2>
-    <span class="wb-pill"><?php echo $total; ?> bÃ¡o cÃ¡o</span>
+    <h2>Danh sách báo cáo</h2>
+    <span class="wb-pill"><?php echo $total; ?> báo cáo</span>
 </div>
 
 <div class="wb-table-card">
@@ -156,12 +156,12 @@ admin_flash_messages();
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>TiÃªu Ä‘á»</th>
-                    <th>Loáº¡i</th>
-                    <th>Äá»‘i tÆ°á»£ng</th>
-                    <th>NgÆ°á»i bÃ¡o cÃ¡o</th>
-                    <th>Tráº¡ng thÃ¡i</th>
-                    <th>NgÃ y táº¡o</th>
+                    <th>Tiêu đề</th>
+                    <th>Loại</th>
+                    <th>Đối tượng</th>
+                    <th>Người báo cáo</th>
+                    <th>Trạng thái</th>
+                    <th>Ngày tạo</th>
                     <th></th>
                 </tr>
             </thead>
@@ -173,13 +173,13 @@ admin_flash_messages();
                         <td>
                             <div class="wb-title"><?php echo admin_e(substr((string)($report['reason'] ?? 'N/A'), 0, 55)); ?></div>
                             <?php if (!empty($report['motel_title'])): ?>
-                                <div class="wb-muted">PhÃ²ng: <?php echo admin_e($report['motel_title']); ?></div>
+                                <div class="wb-muted">Phòng: <?php echo admin_e($report['motel_title']); ?></div>
                             <?php endif; ?>
                         </td>
-                        <td><span class="wb-pill warning"><?php echo admin_e($reportTypes[$report['report_type']] ?? $report['report_type'] ?? 'KhÃ¡c'); ?></span></td>
+                        <td><span class="wb-pill warning"><?php echo admin_e($reportTypes[$report['report_type']] ?? $report['report_type'] ?? 'Khác'); ?></span></td>
                         <td><?php echo admin_e($report['reported_name'] ?? $report['motel_title'] ?? '-'); ?></td>
                         <td>
-                            <div><?php echo admin_e($report['reporter_name'] ?? 'áº¨n danh'); ?></div>
+                            <div><?php echo admin_e($report['reporter_name'] ?? 'Ẩn danh'); ?></div>
                             <div class="wb-muted"><?php echo admin_e($report['reporter_email'] ?? ''); ?></div>
                         </td>
                         <td><span class="wb-pill <?php echo admin_pill_class($reportStatus); ?>"><?php echo admin_status_label($reportStatus); ?></span></td>
@@ -195,7 +195,7 @@ admin_flash_messages();
             </tbody>
         </table>
     <?php else: ?>
-        <div class="wb-empty">KhÃ´ng cÃ³ bÃ¡o cÃ¡o phÃ¹ há»£p bá»™ lá»c.</div>
+        <div class="wb-empty">Không có báo cáo phù hợp bộ lọc.</div>
     <?php endif; ?>
 </div>
 
@@ -217,26 +217,26 @@ admin_flash_messages();
             <form method="POST">
                 <?php echo Csrf::field('admin_report_action'); ?>
                 <div class="modal-header">
-                    <h5 class="modal-title">Cáº­p nháº­t bÃ¡o cÃ¡o</h5>
+                    <h5 class="modal-title">Cập nhật báo cáo</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="action" value="update_status">
                     <input type="hidden" id="reportId" name="id">
-                    <label class="form-label">Tráº¡ng thÃ¡i má»›i</label>
+                    <label class="form-label">Trạng thái mới</label>
                     <select name="status" class="form-select mb-3" required>
-                        <option value="">Chá»n tráº¡ng thÃ¡i</option>
-                        <option value="investigating">Äang xÃ¡c minh</option>
-                        <option value="resolved">ÄÃ£ xá»­ lÃ½</option>
-                        <option value="rejected">Tá»« chá»‘i</option>
-                        <option value="closed">ÄÃ£ Ä‘Ã³ng</option>
+                        <option value="">Chọn trạng thái</option>
+                        <option value="investigating">Đang xác minh</option>
+                        <option value="resolved">Đã xử lý</option>
+                        <option value="rejected">Từ chối</option>
+                        <option value="closed">Đã đóng</option>
                     </select>
-                    <label class="form-label">Ghi chÃº admin</label>
+                    <label class="form-label">Ghi chú admin</label>
                     <textarea name="admin_note" class="form-control" rows="4"></textarea>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Há»§y</button>
-                    <button type="submit" class="btn btn-primary">LÆ°u thay Ä‘á»•i</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
                 </div>
             </form>
         </div>

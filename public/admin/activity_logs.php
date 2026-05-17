@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../admin_init.php';
 require_once __DIR__ . '/layout.php';
 
@@ -67,15 +67,15 @@ $querySuffix = ($adminId > 0 ? '&admin_id=' . $adminId : '')
     . ($dateFrom !== '' ? '&date_from=' . urlencode($dateFrom) : '')
     . ($dateTo !== '' ? '&date_to=' . urlencode($dateTo) : '');
 
-admin_layout_start('Nháº­t kÃ½ hoáº¡t Ä‘á»™ng', 'Theo dÃµi thao tÃ¡c quáº£n trá»‹ Ä‘á»ƒ truy váº¿t thay Ä‘á»•i vÃ  kiá»ƒm soÃ¡t rá»§i ro váº­n hÃ nh.', 'activity_logs');
+admin_layout_start('Nhật ký hoạt động', 'Theo dõi thao tác quản trị để truy vết thay đổi và kiểm soát rủi ro vận hành.', 'activity_logs');
 admin_flash_messages();
 ?>
 
 <div class="wb-grid wb-stats-4 mb-3">
-    <div class="wb-card"><i class="fa fa-list wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($stats['total'] ?? 0); ?></div><div class="wb-card-label">Tá»•ng hoáº¡t Ä‘á»™ng</div></div>
-    <div class="wb-card"><i class="fa fa-calendar-o wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($stats['today'] ?? 0); ?></div><div class="wb-card-label">HÃ´m nay</div></div>
-    <div class="wb-card"><i class="fa fa-calendar-check-o wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($stats['week'] ?? 0); ?></div><div class="wb-card-label">Tuáº§n nÃ y</div></div>
-    <div class="wb-card"><i class="fa fa-calendar wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($stats['month'] ?? 0); ?></div><div class="wb-card-label">ThÃ¡ng nÃ y</div></div>
+    <div class="wb-card"><i class="fa fa-list wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($stats['total'] ?? 0); ?></div><div class="wb-card-label">Tổng hoạt động</div></div>
+    <div class="wb-card"><i class="fa fa-calendar-o wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($stats['today'] ?? 0); ?></div><div class="wb-card-label">Hôm nay</div></div>
+    <div class="wb-card"><i class="fa fa-calendar-check-o wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($stats['week'] ?? 0); ?></div><div class="wb-card-label">Tuần này</div></div>
+    <div class="wb-card"><i class="fa fa-calendar wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($stats['month'] ?? 0); ?></div><div class="wb-card-label">Tháng này</div></div>
 </div>
 
 <div class="wb-card mb-3">
@@ -83,47 +83,47 @@ admin_flash_messages();
         <div class="col-md-2">
             <label class="form-label fw-semibold">Admin</label>
             <select name="admin_id" class="form-select">
-                <option value="">Táº¥t cáº£</option>
+                <option value="">Tất cả</option>
                 <?php foreach ($allAdmins as $admin): ?>
                     <option value="<?php echo (int)$admin['id']; ?>" <?php echo $adminId === (int)$admin['id'] ? 'selected' : ''; ?>><?php echo admin_e($admin['name'] ?? 'Admin'); ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
         <div class="col-md-2">
-            <label class="form-label fw-semibold">Thá»±c thá»ƒ</label>
+            <label class="form-label fw-semibold">Thực thể</label>
             <select name="entity_type" class="form-select">
-                <option value="">Táº¥t cáº£</option>
+                <option value="">Tất cả</option>
                 <?php foreach ($allEntityTypes as $type): ?>
                     <option value="<?php echo admin_e($type['entity_type']); ?>" <?php echo $entityType === $type['entity_type'] ? 'selected' : ''; ?>><?php echo admin_e(ucfirst($type['entity_type'])); ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
         <div class="col-md-2">
-            <label class="form-label fw-semibold">HÃ nh Ä‘á»™ng</label>
+            <label class="form-label fw-semibold">Hành động</label>
             <select name="action" class="form-select">
-                <option value="">Táº¥t cáº£</option>
+                <option value="">Tất cả</option>
                 <?php foreach ($allActions as $item): ?>
                     <option value="<?php echo admin_e($item['action']); ?>" <?php echo $actionFilter === $item['action'] ? 'selected' : ''; ?>><?php echo admin_e(str_replace('_', ' ', $item['action'])); ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
         <div class="col-md-2">
-            <label class="form-label fw-semibold">Tá»« ngÃ y</label>
+            <label class="form-label fw-semibold">Từ ngày</label>
             <input type="date" name="date_from" class="form-control" value="<?php echo admin_e($dateFrom); ?>">
         </div>
         <div class="col-md-2">
-            <label class="form-label fw-semibold">Äáº¿n ngÃ y</label>
+            <label class="form-label fw-semibold">Đến ngày</label>
             <input type="date" name="date_to" class="form-control" value="<?php echo admin_e($dateTo); ?>">
         </div>
         <div class="col-md-2">
-            <button type="submit" class="btn btn-primary w-100"><i class="fa fa-search"></i> Lá»c</button>
+            <button type="submit" class="btn btn-primary w-100"><i class="fa fa-search"></i> Lọc</button>
         </div>
     </form>
 </div>
 
 <div class="wb-section-head">
-    <h2>DÃ²ng hoáº¡t Ä‘á»™ng</h2>
-    <span class="wb-pill"><?php echo $total; ?> báº£n ghi</span>
+    <h2>Dòng hoạt động</h2>
+    <span class="wb-pill"><?php echo $total; ?> bản ghi</span>
 </div>
 
 <div class="wb-table-card">
@@ -132,11 +132,11 @@ admin_flash_messages();
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Thá»i gian</th>
+                    <th>Thời gian</th>
                     <th>Admin</th>
-                    <th>HÃ nh Ä‘á»™ng</th>
-                    <th>Thá»±c thá»ƒ</th>
-                    <th>MÃ´ táº£</th>
+                    <th>Hành động</th>
+                    <th>Thực thể</th>
+                    <th>Mô tả</th>
                     <th>IP</th>
                     <th></th>
                 </tr>
@@ -146,7 +146,7 @@ admin_flash_messages();
                     <tr>
                         <td>#<?php echo (int)$log['id']; ?></td>
                         <td><?php echo !empty($log['created_at']) ? date('d/m/Y H:i:s', strtotime((string)$log['created_at'])) : ''; ?></td>
-                        <td><?php echo admin_e($log['admin_name'] ?? 'áº¨n danh'); ?></td>
+                        <td><?php echo admin_e($log['admin_name'] ?? 'Ẩn danh'); ?></td>
                         <td><span class="wb-pill warning"><?php echo admin_e(str_replace('_', ' ', (string)$log['action'])); ?></span></td>
                         <td><?php echo admin_e(ucfirst((string)$log['entity_type'])); ?> #<?php echo (int)$log['entity_id']; ?></td>
                         <td><?php echo admin_e(substr((string)($log['description'] ?? ''), 0, 80)); ?></td>
@@ -157,7 +157,7 @@ admin_flash_messages();
             </tbody>
         </table>
     <?php else: ?>
-        <div class="wb-empty">KhÃ´ng cÃ³ hoáº¡t Ä‘á»™ng phÃ¹ há»£p bá»™ lá»c.</div>
+        <div class="wb-empty">Không có hoạt động phù hợp bộ lọc.</div>
     <?php endif; ?>
 </div>
 

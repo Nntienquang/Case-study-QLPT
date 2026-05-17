@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../admin_init.php';
 require_once __DIR__ . '/layout.php';
 
@@ -19,8 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             if ($user && $user['role'] === 'owner') {
                 $adminId = (int)$_SESSION['user_id'];
                 if ($db->query("UPDATE users SET status = 'approved', owner_verification_status = 'approved', approved_by = {$adminId}, approved_at = NOW(), verified_at = NOW(), verification_reviewed_by = {$adminId}, verification_reviewed_at = NOW(), verification_rejection_reason = NULL WHERE id = {$id}")) {
-                    $activityLog->log($adminId, 'approve_user', 'user', $id, [], "Duyá»‡t tÃ i khoáº£n owner: {$user['name']} ({$user['email']})");
-                    $_SESSION['success'] = "ÄÃ£ duyá»‡t tÃ i khoáº£n {$user['name']}";
+                    $activityLog->log($adminId, 'approve_user', 'user', $id, [], "Duyệt tài khoản owner: {$user['name']} ({$user['email']})");
+                    $_SESSION['success'] = "Đã duyệt tài khoản {$user['name']}";
                 }
             }
         }
@@ -35,8 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $adminId = (int)$_SESSION['user_id'];
                 $reasonEsc = $db->getConnection()->real_escape_string($reason);
                 if ($db->query("UPDATE users SET status = 'approved', owner_verification_status = 'rejected', approved_by = {$adminId}, approved_at = NOW(), verification_reviewed_by = {$adminId}, verification_reviewed_at = NOW(), verification_rejection_reason = '{$reasonEsc}', rejection_reason = '{$reasonEsc}' WHERE id = {$id}")) {
-                    $activityLog->log($adminId, 'reject_user', 'user', $id, [], "Tá»« chá»‘i tÃ i khoáº£n owner: {$user['name']}. LÃ½ do: {$reason}");
-                    $_SESSION['success'] = "ÄÃ£ tá»« chá»‘i tÃ i khoáº£n {$user['name']}";
+                    $activityLog->log($adminId, 'reject_user', 'user', $id, [], "Từ chối tài khoản owner: {$user['name']}. Lý do: {$reason}");
+                    $_SESSION['success'] = "Đã từ chối tài khoản {$user['name']}";
                 }
             }
         }
@@ -76,38 +76,38 @@ $stats = [
 
 $tabUrl = static fn(string $name): string => '?tab=' . urlencode($name) . ($search !== '' ? '&search=' . urlencode($search) : '');
 
-admin_layout_start('Duyá»‡t tÃ i khoáº£n owner', 'XÃ¡c minh tÃ i khoáº£n chá»§ phÃ²ng trÆ°á»›c khi cho phÃ©p Ä‘Äƒng vÃ  quáº£n lÃ½ phÃ²ng trá».', 'user_approvals');
+admin_layout_start('Duyệt tài khoản owner', 'Xác minh tài khoản chủ phòng trước khi cho phép đăng và quản lý phòng trọ.', 'user_approvals');
 admin_flash_messages();
 ?>
 
 <div class="wb-grid wb-stats-4 mb-3">
-    <div class="wb-card"><i class="fa fa-users wb-card-icon"></i><div class="wb-card-value"><?php echo (int)$stats['total']; ?></div><div class="wb-card-label">Tá»•ng owner</div></div>
-    <div class="wb-card"><i class="fa fa-hourglass-half wb-card-icon"></i><div class="wb-card-value"><?php echo (int)$stats['pending']; ?></div><div class="wb-card-label">Chá» duyá»‡t</div></div>
-    <div class="wb-card"><i class="fa fa-check-circle wb-card-icon"></i><div class="wb-card-value"><?php echo (int)$stats['approved']; ?></div><div class="wb-card-label">ÄÃ£ duyá»‡t</div></div>
-    <div class="wb-card"><i class="fa fa-times-circle wb-card-icon"></i><div class="wb-card-value"><?php echo (int)$stats['rejected']; ?></div><div class="wb-card-label">Tá»« chá»‘i</div></div>
+    <div class="wb-card"><i class="fa fa-users wb-card-icon"></i><div class="wb-card-value"><?php echo (int)$stats['total']; ?></div><div class="wb-card-label">Tổng owner</div></div>
+    <div class="wb-card"><i class="fa fa-hourglass-half wb-card-icon"></i><div class="wb-card-value"><?php echo (int)$stats['pending']; ?></div><div class="wb-card-label">Chờ duyệt</div></div>
+    <div class="wb-card"><i class="fa fa-check-circle wb-card-icon"></i><div class="wb-card-value"><?php echo (int)$stats['approved']; ?></div><div class="wb-card-label">Đã duyệt</div></div>
+    <div class="wb-card"><i class="fa fa-times-circle wb-card-icon"></i><div class="wb-card-value"><?php echo (int)$stats['rejected']; ?></div><div class="wb-card-label">Từ chối</div></div>
 </div>
 
 <div class="wb-card mb-3">
     <div class="d-flex flex-wrap gap-2 mb-3">
-        <?php foreach (['pending' => 'Chá» duyá»‡t', 'approved' => 'ÄÃ£ duyá»‡t', 'rejected' => 'Tá»« chá»‘i', 'all' => 'Táº¥t cáº£'] as $key => $label): ?>
+        <?php foreach (['pending' => 'Chờ duyệt', 'approved' => 'Đã duyệt', 'rejected' => 'Từ chối', 'all' => 'Tất cả'] as $key => $label): ?>
             <a class="btn btn-sm <?php echo $tab === $key ? 'btn-primary' : 'btn-outline-primary'; ?>" href="<?php echo $tabUrl($key); ?>"><?php echo $label; ?></a>
         <?php endforeach; ?>
     </div>
     <form method="GET" class="row g-3 align-items-end">
         <input type="hidden" name="tab" value="<?php echo admin_e($tab); ?>">
         <div class="col-md-8">
-            <label class="form-label fw-semibold">TÃ¬m kiáº¿m</label>
-            <input type="text" name="search" class="form-control" value="<?php echo admin_e($search); ?>" placeholder="TÃªn, email hoáº·c sá»‘ Ä‘iá»‡n thoáº¡i">
+            <label class="form-label fw-semibold">Tìm kiếm</label>
+            <input type="text" name="search" class="form-control" value="<?php echo admin_e($search); ?>" placeholder="Tên, email hoặc số điện thoại">
         </div>
         <div class="col-md-4">
-            <button type="submit" class="btn btn-primary w-100"><i class="fa fa-search"></i> TÃ¬m kiáº¿m</button>
+            <button type="submit" class="btn btn-primary w-100"><i class="fa fa-search"></i> Tìm kiếm</button>
         </div>
     </form>
 </div>
 
 <div class="wb-section-head">
-    <h2>Danh sÃ¡ch owner</h2>
-    <span class="wb-pill"><?php echo $total; ?> tÃ i khoáº£n</span>
+    <h2>Danh sách owner</h2>
+    <span class="wb-pill"><?php echo $total; ?> tài khoản</span>
 </div>
 
 <div class="wb-table-card">
@@ -116,11 +116,11 @@ admin_flash_messages();
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>TÃªn</th>
+                    <th>Tên</th>
                     <th>Email</th>
-                    <th>Äiá»‡n thoáº¡i</th>
-                    <th>NgÃ y Ä‘Äƒng kÃ½</th>
-                    <th>Tráº¡ng thÃ¡i</th>
+                    <th>Điện thoại</th>
+                    <th>Ngày đăng ký</th>
+                    <th>Trạng thái</th>
                     <th></th>
                 </tr>
             </thead>
@@ -137,8 +137,8 @@ admin_flash_messages();
                         <td class="text-end">
                             <a href="user_detail.php?id=<?php echo (int)$user['id']; ?>" class="btn btn-sm btn-primary"><i class="fa fa-eye"></i> Xem</a>
                             <?php if ($status === 'submitted'): ?>
-                                <button type="button" class="btn btn-sm btn-success" onclick="approveUser(<?php echo (int)$user['id']; ?>)"><i class="fa fa-check"></i> Duyá»‡t</button>
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick='openRejectModal(<?php echo (int)$user['id']; ?>, <?php echo json_encode((string)($user['name'] ?? 'Owner')); ?>)'><i class="fa fa-times"></i> Tá»« chá»‘i</button>
+                                <button type="button" class="btn btn-sm btn-success" onclick="approveUser(<?php echo (int)$user['id']; ?>)"><i class="fa fa-check"></i> Duyệt</button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick='openRejectModal(<?php echo (int)$user['id']; ?>, <?php echo json_encode((string)($user['name'] ?? 'Owner')); ?>)'><i class="fa fa-times"></i> Từ chối</button>
                             <?php endif; ?>
                         </td>
                     </tr>
@@ -146,7 +146,7 @@ admin_flash_messages();
             </tbody>
         </table>
     <?php else: ?>
-        <div class="wb-empty">KhÃ´ng cÃ³ tÃ i khoáº£n owner phÃ¹ há»£p.</div>
+        <div class="wb-empty">Không có tài khoản owner phù hợp.</div>
     <?php endif; ?>
 </div>
 
@@ -172,19 +172,19 @@ admin_flash_messages();
         <div class="modal-content">
             <form method="POST">
                 <div class="modal-header">
-                    <h5 class="modal-title">Tá»« chá»‘i tÃ i khoáº£n</h5>
+                    <h5 class="modal-title">Từ chối tài khoản</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="action" value="reject">
                     <input type="hidden" name="id" id="rejectId">
-                    <p>Báº¡n sáº¯p tá»« chá»‘i tÃ i khoáº£n <strong id="rejectUserName"></strong>.</p>
-                    <label class="form-label">LÃ½ do tá»« chá»‘i</label>
+                    <p>Bạn sắp từ chối tài khoản <strong id="rejectUserName"></strong>.</p>
+                    <label class="form-label">Lý do từ chối</label>
                     <textarea name="rejection_reason" id="rejectionReason" class="form-control" rows="4" required></textarea>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Há»§y</button>
-                    <button type="submit" class="btn btn-danger">Tá»« chá»‘i</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-danger">Từ chối</button>
                 </div>
             </form>
         </div>
@@ -196,7 +196,7 @@ $script = <<<'HTML'
 <script>
 const rejectModal = new bootstrap.Modal(document.getElementById('rejectModal'));
 function approveUser(userId) {
-    if (confirm('Duyá»‡t tÃ i khoáº£n owner nÃ y?')) {
+    if (confirm('Duyệt tài khoản owner này?')) {
         document.getElementById('approveId').value = userId;
         document.getElementById('approveForm').submit();
     }

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../admin_init.php';
 require_once __DIR__ . '/layout.php';
 
@@ -30,20 +30,20 @@ function admin_dash_table_exists(mysqli $conn, string $table): bool
 
 function admin_dash_money($value): string
 {
-    return number_format((int)$value) . ' VNÄ';
+    return number_format((int)$value) . ' VNĐ';
 }
 
 function admin_dash_status(string $status): string
 {
     return [
-        'pending' => 'Chá» xá»­ lÃ½',
-        'approved' => 'ÄÃ£ duyá»‡t',
-        'accepted' => 'ÄÃ£ nháº­n',
-        'paid' => 'ÄÃ£ cá»c',
-        'completed' => 'HoÃ n táº¥t',
-        'hidden' => 'ÄÃ£ áº©n',
-        'rejected' => 'Tá»« chá»‘i',
-        'cancelled' => 'ÄÃ£ há»§y',
+        'pending' => 'Chờ xử lý',
+        'approved' => 'Đã duyệt',
+        'accepted' => 'Đã nhận',
+        'paid' => 'Đã cọc',
+        'completed' => 'Hoàn tất',
+        'hidden' => 'Đã ẩn',
+        'rejected' => 'Từ chối',
+        'cancelled' => 'Đã hủy',
     ][strtolower($status)] ?? ucfirst($status);
 }
 
@@ -69,7 +69,7 @@ $adminName = $_SESSION['user_name'] ?? $_SESSION['name'] ?? 'Admin';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Báº£ng Ä‘iá»u hÃ nh admin - QuanLyPhongTro</title>
+    <title>Bảng điều hành admin - QuanLyPhongTro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <link href="../assets/css/modern.css" rel="stylesheet">
@@ -84,7 +84,7 @@ $adminName = $_SESSION['user_name'] ?? $_SESSION['name'] ?? 'Admin';
             </a>
             <div class="wb-user">
                 <span><?php echo admin_dash_e($adminName); ?></span>
-                <a class="btn btn-outline-secondary btn-sm" href="<?php echo ADMIN_URL; ?>logout.php">ÄÄƒng xuáº¥t</a>
+                <a class="btn btn-outline-secondary btn-sm" href="<?php echo ADMIN_URL; ?>logout.php">Đăng xuất</a>
             </div>
         </div>
     </header>
@@ -92,7 +92,7 @@ $adminName = $_SESSION['user_name'] ?? $_SESSION['name'] ?? 'Admin';
     <main class="wb-shell">
         <div class="container-fluid px-4 wb-layout">
             <aside class="wb-sidebar">
-                <div class="wb-side-title">Váº­n hÃ nh há»‡ thá»‘ng</div>
+                <div class="wb-side-title">Vận hành hệ thống</div>
                 <?php foreach (admin_nav_items() as $key => $item): ?>
                     <a class="wb-side-link <?php echo $key === 'index' ? 'active' : ''; ?>" href="<?php echo ADMIN_URL . $item['url']; ?>">
                         <i class="<?php echo admin_dash_e($item['icon']); ?>"></i>
@@ -118,12 +118,12 @@ $adminName = $_SESSION['user_name'] ?? $_SESSION['name'] ?? 'Admin';
 
                 <div class="wb-hero admin mb-3">
                     <div>
-                        <div class="wb-eyebrow">Trung tÃ¢m Ä‘iá»u phá»‘i</div>
-                        <h1>Báº£ng Ä‘iá»u hÃ nh admin</h1>
-                        <p>Theo dÃµi tin Ä‘Äƒng, duyá»‡t tÃ i khoáº£n chá»§ phÃ²ng, kiá»ƒm soÃ¡t booking, thanh toÃ¡n vÃ  pháº£n Ã¡nh trong má»™t mÃ n hÃ¬nh lÃ m viá»‡c.</p>
+                        <div class="wb-eyebrow">Trung tâm điều phối</div>
+                        <h1>Bảng điều hành admin</h1>
+                        <p>Theo dõi tin đăng, duyệt tài khoản chủ phòng, kiểm soát booking, thanh toán và phản ánh trong một màn hình làm việc.</p>
                     </div>
                     <div class="wb-actions">
-                        <a class="btn btn-primary" href="<?php echo ADMIN_URL; ?>motels.php"><i class="fa fa-check"></i> Duyá»‡t phÃ²ng</a>
+                        <a class="btn btn-primary" href="<?php echo ADMIN_URL; ?>motels.php"><i class="fa fa-check"></i> Duyệt phòng</a>
                         <a class="btn btn-outline-primary" href="<?php echo ADMIN_URL; ?>admin_revenue.php"><i class="fa fa-line-chart"></i> Doanh thu</a>
                     </div>
                 </div>
@@ -131,43 +131,43 @@ $adminName = $_SESSION['user_name'] ?? $_SESSION['name'] ?? 'Admin';
                 <div class="wb-grid wb-queue mb-3">
                     <a class="wb-card wb-queue-card" href="<?php echo ADMIN_URL; ?>user_approvals.php">
                         <div class="wb-queue-top"><div class="wb-queue-value"><?php echo $adminQueue['pending_owners']; ?></div><i class="fa fa-user-plus wb-card-icon"></i></div>
-                        <div class="wb-queue-label">Owner chá» duyá»‡t</div>
+                        <div class="wb-queue-label">Owner chờ duyệt</div>
                     </a>
                     <a class="wb-card wb-queue-card" href="<?php echo ADMIN_URL; ?>motels.php">
                         <div class="wb-queue-top"><div class="wb-queue-value"><?php echo $adminQueue['pending_motels']; ?></div><i class="fa fa-home wb-card-icon"></i></div>
-                        <div class="wb-queue-label">PhÃ²ng cáº§n kiá»ƒm duyá»‡t</div>
+                        <div class="wb-queue-label">Phòng cần kiểm duyệt</div>
                     </a>
                     <a class="wb-card wb-queue-card" href="<?php echo ADMIN_URL; ?>reports.php">
                         <div class="wb-queue-top"><div class="wb-queue-value"><?php echo $adminQueue['pending_reports']; ?></div><i class="fa fa-flag wb-card-icon"></i></div>
-                        <div class="wb-queue-label">BÃ¡o cÃ¡o chÆ°a xá»­ lÃ½</div>
+                        <div class="wb-queue-label">Báo cáo chưa xử lý</div>
                     </a>
                     <a class="wb-card wb-queue-card" href="<?php echo ADMIN_URL; ?>bookings.php">
                         <div class="wb-queue-top"><div class="wb-queue-value"><?php echo $adminQueue['pending_viewings']; ?></div><i class="fa fa-calendar wb-card-icon"></i></div>
-                        <div class="wb-queue-label">Lá»‹ch xem Ä‘ang chá»</div>
+                        <div class="wb-queue-label">Lịch xem đang chờ</div>
                     </a>
                     <a class="wb-card wb-queue-card" href="<?php echo ADMIN_URL; ?>payments.php">
                         <div class="wb-queue-top"><div class="wb-queue-value"><?php echo $adminQueue['held_payments']; ?></div><i class="fa fa-credit-card wb-card-icon"></i></div>
-                        <div class="wb-queue-label">Thanh toÃ¡n cáº§n theo dÃµi</div>
+                        <div class="wb-queue-label">Thanh toán cần theo dõi</div>
                     </a>
                 </div>
 
                 <div class="wb-grid wb-stats-4 mb-3">
-                    <div class="wb-card"><i class="fa fa-building wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($motelStats['total'] ?? 0); ?></div><div class="wb-card-label">Tá»•ng phÃ²ng trá»</div></div>
-                    <div class="wb-card"><i class="fa fa-clock-o wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($motelStats['pending'] ?? 0); ?></div><div class="wb-card-label">Tin Ä‘ang chá» duyá»‡t</div></div>
-                    <div class="wb-card"><i class="fa fa-users wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($userStats['total'] ?? 0); ?></div><div class="wb-card-label">Tá»•ng ngÆ°á»i dÃ¹ng</div></div>
-                    <div class="wb-card"><i class="fa fa-star wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($data['total_reviews'] ?? 0); ?></div><div class="wb-card-label">ÄÃ¡nh giÃ¡ Ä‘Ã£ ghi nháº­n</div></div>
+                    <div class="wb-card"><i class="fa fa-building wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($motelStats['total'] ?? 0); ?></div><div class="wb-card-label">Tổng phòng trọ</div></div>
+                    <div class="wb-card"><i class="fa fa-clock-o wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($motelStats['pending'] ?? 0); ?></div><div class="wb-card-label">Tin đang chờ duyệt</div></div>
+                    <div class="wb-card"><i class="fa fa-users wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($userStats['total'] ?? 0); ?></div><div class="wb-card-label">Tổng người dùng</div></div>
+                    <div class="wb-card"><i class="fa fa-star wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($data['total_reviews'] ?? 0); ?></div><div class="wb-card-label">Đánh giá đã ghi nhận</div></div>
                 </div>
 
                 <div class="wb-grid wb-stats-4">
-                    <div class="wb-card"><i class="fa fa-calendar-check-o wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($bookingStats['accepted'] ?? 0); ?></div><div class="wb-card-label">Booking Ä‘Ã£ nháº­n</div></div>
-                    <div class="wb-card"><i class="fa fa-hourglass-half wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($bookingStats['pending'] ?? 0); ?></div><div class="wb-card-label">Booking chá» xá»­ lÃ½</div></div>
-                    <div class="wb-card"><i class="fa fa-money wb-card-icon"></i><div class="wb-card-value fs-4"><?php echo admin_dash_money($revenueStats['month'] ?? 0); ?></div><div class="wb-card-label">Doanh thu thÃ¡ng nÃ y</div></div>
-                    <div class="wb-card"><i class="fa fa-line-chart wb-card-icon"></i><div class="wb-card-value fs-4"><?php echo admin_dash_money($revenueStats['total'] ?? 0); ?></div><div class="wb-card-label">Tá»•ng commission</div></div>
+                    <div class="wb-card"><i class="fa fa-calendar-check-o wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($bookingStats['accepted'] ?? 0); ?></div><div class="wb-card-label">Booking đã nhận</div></div>
+                    <div class="wb-card"><i class="fa fa-hourglass-half wb-card-icon"></i><div class="wb-card-value"><?php echo (int)($bookingStats['pending'] ?? 0); ?></div><div class="wb-card-label">Booking chờ xử lý</div></div>
+                    <div class="wb-card"><i class="fa fa-money wb-card-icon"></i><div class="wb-card-value fs-4"><?php echo admin_dash_money($revenueStats['month'] ?? 0); ?></div><div class="wb-card-label">Doanh thu tháng này</div></div>
+                    <div class="wb-card"><i class="fa fa-line-chart wb-card-icon"></i><div class="wb-card-value fs-4"><?php echo admin_dash_money($revenueStats['total'] ?? 0); ?></div><div class="wb-card-label">Tổng commission</div></div>
                 </div>
 
                 <div class="wb-section-head">
-                    <h2>PhÃ²ng chá» duyá»‡t</h2>
-                    <a class="btn btn-outline-primary btn-sm" href="<?php echo ADMIN_URL; ?>motels.php">Xem táº¥t cáº£</a>
+                    <h2>Phòng chờ duyệt</h2>
+                    <a class="btn btn-outline-primary btn-sm" href="<?php echo ADMIN_URL; ?>motels.php">Xem tất cả</a>
                 </div>
                 <div class="wb-table-card">
                     <?php if (!empty($data['recent_motels'])): ?>
@@ -175,10 +175,10 @@ $adminName = $_SESSION['user_name'] ?? $_SESSION['name'] ?? 'Admin';
                             <thead>
                                 <tr>
                                     <th>ID</th>
-                                    <th>TiÃªu Ä‘á»</th>
-                                    <th>Chá»§ phÃ²ng</th>
-                                    <th>GiÃ¡</th>
-                                    <th>Tráº¡ng thÃ¡i</th>
+                                    <th>Tiêu đề</th>
+                                    <th>Chủ phòng</th>
+                                    <th>Giá</th>
+                                    <th>Trạng thái</th>
                                     <th></th>
                                 </tr>
                             </thead>
@@ -196,13 +196,13 @@ $adminName = $_SESSION['user_name'] ?? $_SESSION['name'] ?? 'Admin';
                             </tbody>
                         </table>
                     <?php else: ?>
-                        <div class="wb-empty">KhÃ´ng cÃ³ phÃ²ng Ä‘ang chá» duyá»‡t.</div>
+                        <div class="wb-empty">Không có phòng đang chờ duyệt.</div>
                     <?php endif; ?>
                 </div>
 
                 <div class="wb-section-head">
-                    <h2>Booking gáº§n Ä‘Ã¢y</h2>
-                    <a class="btn btn-outline-primary btn-sm" href="<?php echo ADMIN_URL; ?>bookings.php">Quáº£n lÃ½ booking</a>
+                    <h2>Booking gần đây</h2>
+                    <a class="btn btn-outline-primary btn-sm" href="<?php echo ADMIN_URL; ?>bookings.php">Quản lý booking</a>
                 </div>
                 <div class="wb-table-card">
                     <?php if (!empty($data['recent_bookings'])): ?>
@@ -210,11 +210,11 @@ $adminName = $_SESSION['user_name'] ?? $_SESSION['name'] ?? 'Admin';
                             <thead>
                                 <tr>
                                     <th>ID</th>
-                                    <th>NgÆ°á»i thuÃª</th>
-                                    <th>PhÃ²ng</th>
-                                    <th>Tiá»n cá»c</th>
+                                    <th>Người thuê</th>
+                                    <th>Phòng</th>
+                                    <th>Tiền cọc</th>
                                     <th>Check-in</th>
-                                    <th>Tráº¡ng thÃ¡i</th>
+                                    <th>Trạng thái</th>
                                     <th></th>
                                 </tr>
                             </thead>
@@ -233,7 +233,7 @@ $adminName = $_SESSION['user_name'] ?? $_SESSION['name'] ?? 'Admin';
                             </tbody>
                         </table>
                     <?php else: ?>
-                        <div class="wb-empty">ChÆ°a cÃ³ booking má»›i.</div>
+                        <div class="wb-empty">Chưa có booking mới.</div>
                     <?php endif; ?>
                 </div>
             </section>
