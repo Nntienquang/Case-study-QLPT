@@ -4,6 +4,7 @@
 @require_once '../core/Database.php';
 @require_once '../core/User.php';
 @require_once '../app/controller/AuthController.php';
+require_once __DIR__ . '/components/PasswordInput.php';
 
 // Initialize
 /** @var mysqli $conn */
@@ -113,6 +114,56 @@ h2 {
     font-size: 14px;
 }
 
+.input-group.has-password-toggle input {
+    padding-right: 48px;
+}
+
+.password-toggle,
+.password-input__toggle {
+    position: absolute;
+    right: 8px;
+    top: 32px;
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
+    display: grid;
+    place-items: center;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0;
+    border-radius: 8px;
+    color: #667eea;
+    background: transparent;
+    box-shadow: none;
+    line-height: 1;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.password-toggle:hover,
+.password-input__toggle:hover {
+    transform: none;
+    box-shadow: none;
+    background: #f1f3ff;
+}
+
+.password-toggle i,
+.password-input__toggle i,
+.password-toggle svg,
+.password-input__toggle svg {
+    position: static;
+    color: inherit;
+    font-size: 14px;
+}
+
+.password-toggle svg,
+.password-input__toggle svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
 input {
     width: 100%;
     padding: 12px 12px 12px 35px;
@@ -214,16 +265,22 @@ button:hover {
 
     <?php if(!empty($show_form)): ?>
     <form method="POST">
-        <div class="input-group">
+        <div class="input-group has-password-toggle">
             <label for="password">Mật khẩu mới</label>
             <i class="fa fa-lock"></i>
             <input type="password" id="password" name="password" placeholder="Nhập mật khẩu mới (ít nhất 6 ký tự)" required>
+            <button type="button" class="password-toggle" data-password-toggle aria-label="Hiện mật khẩu" title="Hiện mật khẩu">
+                <i class="fa fa-eye"></i>
+            </button>
         </div>
 
-        <div class="input-group">
+        <div class="input-group has-password-toggle">
             <label for="confirm">Xác nhận mật khẩu</label>
             <i class="fa fa-lock"></i>
             <input type="password" id="confirm" name="confirm" placeholder="Xác nhận mật khẩu" required>
+            <button type="button" class="password-toggle" data-password-toggle aria-label="Hiện mật khẩu" title="Hiện mật khẩu">
+                <i class="fa fa-eye"></i>
+            </button>
         </div>
 
         <button type="submit">Cập nhật mật khẩu</button>
@@ -250,5 +307,6 @@ button:hover {
     <?php endif; ?>
 </div>
 
+<script src="assets/js/password-toggle.js?v=auth-password-ui-3"></script>
 </body>
 </html>

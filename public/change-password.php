@@ -2,6 +2,7 @@
 require_once '../config/database.php';
 require_once '../config/constants.php';
 require_once '../core/Csrf.php';
+require_once __DIR__ . '/components/PasswordInput.php';
 
 session_start();
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
@@ -77,7 +78,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đổi mật khẩu - QuanLyPhongTro</title>
-    <link href="assets/css/modern.css?v=auth-security-overlay-1" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="assets/css/modern.css?v=auth-password-ui-3" rel="stylesheet">
 </head>
 <body class="auth-dark">
     <main class="auth-3d-page">
@@ -96,20 +98,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <form method="POST" autocomplete="off">
                 <?php echo Csrf::field('change_password'); ?>
                 <label>Mật khẩu hiện tại</label>
-                <div class="input-group">
+                <div class="input-group has-password-toggle">
+                    <i class="fa fa-lock"></i>
                     <input type="password" name="current_password" required>
+                    <button type="button" class="password-toggle" data-password-toggle aria-label="Hiện mật khẩu" title="Hiện mật khẩu">
+                        <i class="fa fa-eye"></i>
+                    </button>
                 </div>
                 <label>Mật khẩu mới</label>
-                <div class="input-group">
+                <div class="input-group has-password-toggle">
+                    <i class="fa fa-lock"></i>
                     <input type="password" name="password" required minlength="6">
+                    <button type="button" class="password-toggle" data-password-toggle aria-label="Hiện mật khẩu" title="Hiện mật khẩu">
+                        <i class="fa fa-eye"></i>
+                    </button>
                 </div>
                 <label>Nhập lại mật khẩu mới</label>
-                <div class="input-group">
+                <div class="input-group has-password-toggle">
+                    <i class="fa fa-lock"></i>
                     <input type="password" name="confirm_password" required minlength="6">
+                    <button type="button" class="password-toggle" data-password-toggle aria-label="Hiện mật khẩu" title="Hiện mật khẩu">
+                        <i class="fa fa-eye"></i>
+                    </button>
                 </div>
                 <button type="submit">Cập nhật mật khẩu</button>
             </form>
         </section>
     </main>
+    <script src="assets/js/password-toggle.js?v=auth-password-ui-3"></script>
 </body>
 </html>

@@ -6,13 +6,15 @@
 session_start();
 
 /** @var mysqli $conn */
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'user') {
+if (!isset($_SESSION['user_id'])) {
     header('Location: ../login.php');
     exit;
 }
 
 $db = new Database($conn);
-$user_id = $_SESSION['user_id'];
+$user_id = (int)$_SESSION['user_id'];
+$user_role = $_SESSION['role'] ?? $_SESSION['user_role'] ?? 'user';
+$is_renter = $user_role === 'user';
 $motel_id = (int)($_GET['id'] ?? 0);
 
 // Get motel details
@@ -37,7 +39,7 @@ if (!$motel) {
 $message = '';
 $message_type = 'success';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['schedule_viewing'])) {
+if ($is_renter && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['schedule_viewing'])) {
     $preferred_time = $_POST['preferred_time'] ?? '';
     $note = trim($_POST['note'] ?? '');
     if ($preferred_time === '') {
@@ -64,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['schedule_viewing'])) 
     }
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_review'])) {
+if ($is_renter && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_review'])) {
     $rating = (int)($_POST['rating'] ?? 0);
     $comment = trim((string)($_POST['review_comment'] ?? ''));
     $stmt = $db->prepare('SELECT id FROM reviews WHERE user_id = ? AND motel_id = ?');
@@ -103,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_review'])) {
     }
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['contact_owner'])) {
+if ($is_renter && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['contact_owner'])) {
     $body = trim((string)($_POST['contact_message'] ?? ''));
     $ownerId = (int)($motel['user_id'] ?? 0);
     if ($ownerId <= 0 || $ownerId === (int)$user_id) {
@@ -168,11 +170,14 @@ $stmt->execute();
 $stmt->close();
 
 // Check if favorite
-$stmt = $db->prepare("SELECT id FROM favorites WHERE user_id = ? AND motel_id = ?");
-$stmt->bind_param("ii", $user_id, $motel_id);
-$stmt->execute();
-$is_favorite = $stmt->get_result()->fetch_assoc() ? true : false;
-$stmt->close();
+$is_favorite = false;
+if ($is_renter) {
+    $stmt = $db->prepare("SELECT id FROM favorites WHERE user_id = ? AND motel_id = ?");
+    $stmt->bind_param("ii", $user_id, $motel_id);
+    $stmt->execute();
+    $is_favorite = $stmt->get_result()->fetch_assoc() ? true : false;
+    $stmt->close();
+}
 
 // Get reviews
 $stmt = $db->prepare("
@@ -188,16 +193,20 @@ $stmt->execute();
 $reviews = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-$stmt = $db->prepare('SELECT id FROM reviews WHERE user_id = ? AND motel_id = ?');
-$stmt->bind_param('ii', $user_id, $motel_id);
-$stmt->execute();
-$has_user_review = (bool)$stmt->get_result()->fetch_assoc();
-$stmt->close();
-$stmt = $db->prepare("SELECT id FROM bookings WHERE user_id = ? AND motel_id = ? AND status IN ('accepted','paid','completed') LIMIT 1");
-$stmt->bind_param('ii', $user_id, $motel_id);
-$stmt->execute();
-$can_write_review = !$has_user_review && (bool)$stmt->get_result()->fetch_assoc();
-$stmt->close();
+$has_user_review = false;
+$can_write_review = false;
+if ($is_renter) {
+    $stmt = $db->prepare('SELECT id FROM reviews WHERE user_id = ? AND motel_id = ?');
+    $stmt->bind_param('ii', $user_id, $motel_id);
+    $stmt->execute();
+    $has_user_review = (bool)$stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    $stmt = $db->prepare("SELECT id FROM bookings WHERE user_id = ? AND motel_id = ? AND status IN ('accepted','paid','completed') LIMIT 1");
+    $stmt->bind_param('ii', $user_id, $motel_id);
+    $stmt->execute();
+    $can_write_review = !$has_user_review && (bool)$stmt->get_result()->fetch_assoc();
+    $stmt->close();
+}
 
 $utilities_array = array_filter(explode(',', $motel['utilities']));
 $service_fee = (int)($motel['service_fee'] ?? 0);
@@ -400,27 +409,35 @@ $move_in_total = (int)$motel['price'] + $service_fee + $deposit_amount;
                         </div>
                     </div>
                     <div class="d-grid gap-2">
-                        <a href="checkout.php?id=<?php echo $motel['id']; ?>" class="btn btn-primary">
-                            <i class="fas fa-calendar-plus"></i> Đặt phòng
-                        </a>
-                        <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#viewingForm">
-                            <i class="fas fa-calendar-check"></i> Đặt lịch xem
-                        </button>
-                        <button class="btn btn-heart <?php echo $is_favorite ? 'active' : ''; ?>" onclick="toggleFavorite(<?php echo $motel['id']; ?>, this)">
-                            <i class="fas fa-heart"></i> Yêu thích
-                        </button>
+                        <?php if ($is_renter): ?>
+                            <a href="checkout.php?id=<?php echo $motel['id']; ?>" class="btn btn-primary">
+                                <i class="fas fa-calendar-plus"></i> Đặt phòng
+                            </a>
+                            <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#viewingForm">
+                                <i class="fas fa-calendar-check"></i> Đặt lịch xem
+                            </button>
+                            <button class="btn btn-heart <?php echo $is_favorite ? 'active' : ''; ?>" onclick="toggleFavorite(<?php echo $motel['id']; ?>, this)">
+                                <i class="fas fa-heart"></i> Yêu thích
+                            </button>
+                        <?php else: ?>
+                            <div class="alert alert-light border mb-0">
+                                Bạn đang xem bằng tài khoản <?php echo htmlspecialchars($user_role); ?>. Các thao tác đặt phòng chỉ mở cho người thuê.
+                            </div>
+                        <?php endif; ?>
                     </div>
-                    <form method="POST" class="collapse mt-3" id="viewingForm">
-                        <div class="mb-2">
-                            <label class="form-label">Thời gian muốn xem</label>
-                            <input type="datetime-local" name="preferred_time" class="form-control" required>
-                        </div>
-                        <div class="mb-2">
-                            <label class="form-label">Ghi chú</label>
-                            <textarea name="note" class="form-control" rows="3" placeholder="Ví dụ: Mình muốn xem phòng sau 18h"></textarea>
-                        </div>
-                        <button type="submit" name="schedule_viewing" class="btn btn-primary w-100">Gửi lịch xem</button>
-                    </form>
+                    <?php if ($is_renter): ?>
+                        <form method="POST" class="collapse mt-3" id="viewingForm">
+                            <div class="mb-2">
+                                <label class="form-label">Thời gian muốn xem</label>
+                                <input type="datetime-local" name="preferred_time" class="form-control" required>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">Ghi chú</label>
+                                <textarea name="note" class="form-control" rows="3" placeholder="Ví dụ: Mình muốn xem phòng sau 18h"></textarea>
+                            </div>
+                            <button type="submit" name="schedule_viewing" class="btn btn-primary w-100">Gửi lịch xem</button>
+                        </form>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Owner Card -->
@@ -432,16 +449,18 @@ $move_in_total = (int)$motel['price'] + $service_fee + $deposit_amount;
                         <div class="verified-badge mb-2"><i class="fas fa-shield-alt"></i> Chủ nhà đã xác minh</div>
                     <?php endif; ?>
                     <p style="color: #666; margin-bottom: 15px;">Chủ nhà / Người cho thuê</p>
-                    <button class="btn-contact w-100 mb-2" type="button" data-bs-toggle="collapse" data-bs-target="#contactOwnerForm">
-                        <i class="fas fa-envelope"></i> Nhắn tin cho chủ trọ
-                    </button>
-                    <div class="collapse" id="contactOwnerForm">
-                        <form method="POST" class="mt-2">
-                            <label class="form-label small">Nội dung (tối thiểu 5 ký tự)</label>
-                            <textarea name="contact_message" class="form-control mb-2" rows="4" minlength="5" required placeholder="Ví dụ: Cho em hỏi thêm về giờ giấc, hợp đồng..."></textarea>
-                            <button type="submit" name="contact_owner" class="btn btn-primary w-100">Gửi tin nhắn</button>
-                        </form>
-                    </div>
+                    <?php if ($is_renter): ?>
+                        <button class="btn-contact w-100 mb-2" type="button" data-bs-toggle="collapse" data-bs-target="#contactOwnerForm">
+                            <i class="fas fa-envelope"></i> Nhắn tin cho chủ trọ
+                        </button>
+                        <div class="collapse" id="contactOwnerForm">
+                            <form method="POST" class="mt-2">
+                                <label class="form-label small">Nội dung (tối thiểu 5 ký tự)</label>
+                                <textarea name="contact_message" class="form-control mb-2" rows="4" minlength="5" required placeholder="Ví dụ: Cho em hỏi thêm về giờ giấc, hợp đồng..."></textarea>
+                                <button type="submit" name="contact_owner" class="btn btn-primary w-100">Gửi tin nhắn</button>
+                            </form>
+                        </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Stats -->

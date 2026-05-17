@@ -6,6 +6,7 @@ require_once '../core/User.php';
 require_once '../core/Captcha.php';
 require_once '../core/Csrf.php';
 require_once '../app/controller/AuthController.php';
+require_once __DIR__ . '/components/PasswordInput.php';
 
 session_start();
 
@@ -15,14 +16,7 @@ $auth = new AuthController($db->getConnection());
 
 function auth_redirect_for_role(string $role): string
 {
-    if ($role === 'admin') {
-        return './admin/index.php';
-    }
-    if ($role === 'owner') {
-        return './owner/dashboard.php';
-    }
-
-    return './user/dashboard.php';
+    return './index.php';
 }
 
 function login_client_ip(): string
@@ -211,7 +205,7 @@ if ($showCaptcha) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đăng nhập - QuanLyPhongTro</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-    <link href="assets/css/modern.css?v=auth-security-overlay-1" rel="stylesheet">
+    <link href="assets/css/modern.css?v=auth-password-ui-3" rel="stylesheet">
 </head>
 <body class="auth-dark">
     <div class="three-stage auth-scene" data-three-scene data-scene="housing" data-accent="#2563eb" data-accent2="#14b8a6"></div>
@@ -251,11 +245,12 @@ if ($showCaptcha) {
                         <input type="email" name="email" placeholder="admin123@gmail.com" value="<?php echo htmlspecialchars($email); ?>" required>
                     </div>
 
-                    <label>Mật khẩu</label>
-                    <div class="input-group">
-                        <i class="fa fa-lock"></i>
-                        <input type="password" name="password" placeholder="Nhập mật khẩu" required>
-                    </div>
+                    <?php PasswordInput::render([
+                        'name' => 'password',
+                        'label' => 'Mật khẩu',
+                        'placeholder' => 'Nhập mật khẩu',
+                        'autocomplete' => 'current-password',
+                    ]); ?>
 
                     <?php if ($showCaptcha): ?>
                         <label>Mã xác minh</label>
@@ -284,6 +279,7 @@ if ($showCaptcha) {
     </main>
 
     <script type="module" src="assets/js/three-interface.js"></script>
+    <script src="assets/js/password-toggle.js?v=auth-password-ui-3"></script>
     <script>
         function refreshCaptcha(button) {
             const image = button.parentElement.querySelector('.captcha-image');

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 17, 2026 at 07:56 AM
+-- Generation Time: May 17, 2026 at 08:55 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -51,7 +51,9 @@ INSERT INTO `activity_logs` (`id`, `admin_id`, `action`, `entity_type`, `entity_
 (2, 5, 'approve_user', 'user', 8, NULL, NULL, 'Duyệt tài khoản owner: Bảo Phan (admin1234@gmail.com)', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36', '2026-05-14 06:07:58'),
 (0, 5, 'login_success', 'user', 5, NULL, NULL, 'Đăng nhập thành công', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', '2026-05-16 08:49:25'),
 (0, 5, 'delete_user', 'user', 4, NULL, NULL, 'Xóa tài khoản admin@gmail.com', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', '2026-05-16 08:54:30'),
-(0, 5, 'login_success', 'user', 5, NULL, NULL, 'Đăng nhập thành công', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', '2026-05-17 05:38:04');
+(0, 5, 'login_success', 'user', 5, NULL, NULL, 'Đăng nhập thành công', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', '2026-05-17 05:38:04'),
+(0, 0, 'login_success', 'user', 0, NULL, NULL, 'Đăng nhập thành công', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', '2026-05-17 06:28:05'),
+(0, 0, 'login_success', 'user', 0, NULL, NULL, 'Đăng nhập thành công', '::1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36', '2026-05-17 06:29:27');
 
 -- --------------------------------------------------------
 
@@ -173,17 +175,19 @@ CREATE TABLE `conversations` (
 
 CREATE TABLE `districts` (
   `id` int(11) NOT NULL,
-  `name` varchar(255) DEFAULT NULL
+  `name` varchar(255) DEFAULT NULL,
+  `province_code` varchar(20) DEFAULT NULL,
+  `district_code` varchar(20) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `districts`
 --
 
-INSERT INTO `districts` (`id`, `name`) VALUES
-(1, 'Quận 1'),
-(2, 'Quận 3'),
-(3, 'Quận 7');
+INSERT INTO `districts` (`id`, `name`, `province_code`, `district_code`) VALUES
+(1, 'Quận 1', NULL, NULL),
+(2, 'Quận 3', NULL, NULL),
+(3, 'Quận 7', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -360,6 +364,14 @@ CREATE TABLE `motels` (
   `price` int(11) NOT NULL,
   `area` int(11) DEFAULT NULL,
   `address` varchar(255) DEFAULT NULL,
+  `province_code` varchar(20) DEFAULT NULL,
+  `province_name` varchar(120) DEFAULT NULL,
+  `district_code` varchar(20) DEFAULT NULL,
+  `district_name` varchar(120) DEFAULT NULL,
+  `ward_code` varchar(20) DEFAULT NULL,
+  `ward_name` varchar(120) DEFAULT NULL,
+  `street_address` varchar(255) DEFAULT NULL,
+  `address_api_source` varchar(80) DEFAULT NULL,
   `lat` decimal(10,8) DEFAULT NULL,
   `lng` decimal(11,8) DEFAULT NULL,
   `phone` varchar(20) DEFAULT NULL,
@@ -614,7 +626,8 @@ INSERT INTO `users` (`id`, `name`, `email`, `password`, `reset_token`, `reset_ex
 (5, 'Admin', 'admin123@gmail.com', '$2y$10$o5dhV8yry9Mmv7Cgdq6ZjuWCGYRSNLrReh5G4DTh4eN/xFYhvTNCy', NULL, NULL, 0, '', NULL, 'admin', '2026-04-25 10:29:43', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 1, 1, 0),
 (6, 'Chủ trọ 1', 'owner@gmail.com', '$2y$10$gU1LggXMYCfg4nEh8NZIv.hcB1L1kTxSJMsiMuwvy2mCzRdact4i2', NULL, NULL, 0, NULL, NULL, 'owner', '2026-04-29 09:27:23', 'approved', 5, '2026-05-14 13:05:10', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 1, 1, 0),
 (7, 'Bảo Phan', 'baopdq1@qlpt.com', '$2y$10$KN3kCa1p67bAncjLp3AZkuvKk6P6idJdAMcMCufdZxayyFKaSkcxu', NULL, NULL, 0, '0123456789', NULL, 'user', '2026-05-14 05:06:30', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 1, 1, 0),
-(8, 'Bảo Phan', 'admin1234@gmail.com', '$2y$10$I6QhngehzijRnpltd0cdXeRE0Zq5Ne2hsCYWRXpyEqFwDT.PewGTW', NULL, NULL, 0, '0123456789', NULL, 'owner', '2026-05-14 06:06:46', 'approved', 5, '2026-05-14 13:07:58', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 1, 1, 0);
+(8, 'Bảo Phan', 'admin1234@gmail.com', '$2y$10$I6QhngehzijRnpltd0cdXeRE0Zq5Ne2hsCYWRXpyEqFwDT.PewGTW', NULL, NULL, 0, '0123456789', NULL, 'owner', '2026-05-14 06:06:46', 'approved', 5, '2026-05-14 13:07:58', NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 1, 1, 0),
+(0, 'Nguyễn Văn Doanh', 'user5@gmail.com', '$2y$10$hle/h5oru2xTUeU5YMm3MusPsJ4btCuACrm7Csm4dPKVF4olPCGBy', NULL, NULL, 0, '0393833839', NULL, 'user', '2026-05-17 06:27:51', 'approved', NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, 1, 1, 0);
 
 -- --------------------------------------------------------
 
@@ -699,6 +712,18 @@ ALTER TABLE `admin_notes`
   ADD PRIMARY KEY (`id`),
   ADD KEY `idx_admin_id` (`admin_id`),
   ADD KEY `idx_entity` (`entity_type`,`entity_id`);
+
+--
+-- Indexes for table `districts`
+--
+ALTER TABLE `districts`
+  ADD KEY `idx_districts_codes` (`province_code`,`district_code`);
+
+--
+-- Indexes for table `motels`
+--
+ALTER TABLE `motels`
+  ADD KEY `idx_motels_location_codes` (`province_code`,`district_code`,`ward_code`);
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

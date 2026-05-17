@@ -504,6 +504,125 @@ body.auth-dark {
     padding-right: 14px !important;
 }
 
+.auth-card-3d .password-input,
+.auth-card-3d .input-group.has-password-toggle {
+    display: block;
+    position: relative;
+    margin-bottom: 18px;
+}
+
+.auth-card-3d .password-input input,
+.auth-card-3d .input-group.has-password-toggle input {
+    min-height: 48px;
+    padding-left: 38px !important;
+    padding-right: 50px !important;
+    border-radius: var(--app-radius) !important;
+    transition: border-color .22s ease, box-shadow .22s ease, background-color .22s ease;
+}
+
+.auth-card-3d .password-input input:focus,
+.auth-card-3d .input-group.has-password-toggle input:focus {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, .12) !important;
+}
+
+.auth-card-3d .password-input__toggle,
+.auth-card-3d .password-toggle {
+    position: absolute;
+    right: 7px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 8px;
+    color: #64748b;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    cursor: pointer;
+    z-index: 2;
+    line-height: 1;
+    appearance: none;
+    -webkit-appearance: none;
+    overflow: hidden;
+    transition: color .22s ease, background-color .22s ease, opacity .22s ease;
+}
+
+.auth-card-3d .password-input__toggle:hover,
+.auth-card-3d .password-toggle:hover {
+    color: #101828;
+    background: rgba(15, 23, 42, .06) !important;
+}
+
+.auth-card-3d .password-input__toggle:focus-visible,
+.auth-card-3d .password-toggle:focus-visible {
+    color: #101828;
+    outline: 0;
+    background: rgba(37, 99, 235, .1) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .16) !important;
+}
+
+.auth-card-3d .password-input__toggle i,
+.auth-card-3d .password-toggle i,
+.auth-card-3d .password-input__toggle svg,
+.auth-card-3d .password-toggle svg,
+.auth-card-3d .password-input__leading {
+    position: static;
+    transform: none;
+    color: inherit;
+}
+
+.auth-card-3d .password-input__toggle svg,
+.auth-card-3d .password-toggle svg {
+    width: 19px;
+    height: 19px;
+    display: block;
+    flex: 0 0 auto;
+}
+
+.auth-card-3d .password-input__toggle.is-toggling,
+.auth-card-3d .password-toggle.is-toggling {
+    opacity: .72;
+}
+
+.auth-card-3d .password-input__leading {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #64748b;
+    z-index: 1;
+}
+
+body.auth-dark .auth-card-3d .password-input__toggle {
+    color: #667085;
+}
+
+body.auth-dark .auth-card-3d .password-input__toggle:hover,
+body.auth-dark .auth-card-3d .password-input__toggle:focus-visible,
+body.auth-dark .auth-card-3d .password-toggle:hover,
+body.auth-dark .auth-card-3d .password-toggle:focus-visible {
+    color: #101828;
+}
+
+@media (prefers-color-scheme: dark) {
+    .auth-card-3d .password-input input,
+    .auth-card-3d .input-group.has-password-toggle input {
+        background: rgba(255, 255, 255, .94) !important;
+    }
+
+    .auth-card-3d .password-input__toggle,
+    .auth-card-3d .password-toggle {
+        color: #475467;
+    }
+}
+
 .auth-card-3d input::placeholder {
     color: #98a2b3;
 }
@@ -556,7 +675,7 @@ body.auth-dark {
     grid-template-columns: 190px 44px minmax(0, 1fr);
     gap: 10px;
     align-items: center;
-    margin-bottom: 18px;
+    margin: 8px 0 18px;
 }
 
 .auth-card-3d .captcha-image {

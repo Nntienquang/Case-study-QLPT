@@ -17,6 +17,86 @@ $db = new Database($conn);
 $owner_id = $_SESSION['user_id'];
 $ownerName = $_SESSION['name'] ?? 'Chủ phòng';
 
+function owner_column_exists(mysqli $conn, string $table, string $column): bool
+{
+    static $cache = [];
+    $key = $table . '.' . $column;
+    if (array_key_exists($key, $cache)) {
+        return $cache[$key];
+    }
+
+    $stmt = $conn->prepare('
+        SELECT COUNT(*) AS total
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?
+    ');
+    $stmt->bind_param('ss', $table, $column);
+    $stmt->execute();
+    $cache[$key] = ((int)($stmt->get_result()->fetch_assoc()['total'] ?? 0)) > 0;
+    $stmt->close();
+
+    return $cache[$key];
+}
+
+function owner_sync_district_id(mysqli $conn, string $districtName, int $fallbackId = 0, string $provinceCode = '', string $districtCode = ''): int
+{
+    $districtName = trim($districtName);
+    if ($districtName === '') {
+        return $fallbackId;
+    }
+
+    $stmt = $conn->prepare('SELECT id FROM districts WHERE name = ? LIMIT 1');
+    $stmt->bind_param('s', $districtName);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if ($row) {
+        return (int)$row['id'];
+    }
+
+    if (owner_column_exists($conn, 'districts', 'province_code') && owner_column_exists($conn, 'districts', 'district_code')) {
+        $stmt = $conn->prepare('INSERT INTO districts (name, province_code, district_code) VALUES (?, ?, ?)');
+        $stmt->bind_param('sss', $districtName, $provinceCode, $districtCode);
+    } else {
+        $stmt = $conn->prepare('INSERT INTO districts (name) VALUES (?)');
+        $stmt->bind_param('s', $districtName);
+    }
+    $stmt->execute();
+    $newId = (int)$stmt->insert_id;
+    $stmt->close();
+
+    return $newId > 0 ? $newId : $fallbackId;
+}
+
+function owner_update_standard_address(mysqli $conn, int $motelId, array $data): void
+{
+    if (!owner_column_exists($conn, 'motels', 'province_code')) {
+        return;
+    }
+
+    $stmt = $conn->prepare('
+        UPDATE motels
+        SET province_code = ?, province_name = ?, district_code = ?, district_name = ?,
+            ward_code = ?, ward_name = ?, street_address = ?, address_api_source = ?
+        WHERE id = ?
+    ');
+    $source = 'provinces.open-api.vn';
+    $stmt->bind_param(
+        'ssssssssi',
+        $data['province_code'],
+        $data['province_name'],
+        $data['district_code'],
+        $data['district_name'],
+        $data['ward_code'],
+        $data['ward_name'],
+        $data['street_address'],
+        $source,
+        $motelId
+    );
+    $stmt->execute();
+    $stmt->close();
+}
+
 // --- BƯỚC MỚI: KIỂM TRA ĐỊNH DANH (KYC) ---
 $userCheck = $conn->prepare("SELECT idcard_number, status FROM users WHERE id = ?");
 $userCheck->bind_param("i", $owner_id);
@@ -47,9 +127,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_verified) {
     $area = (int)($_POST['area'] ?? 0);
     $bedrooms = (int)($_POST['bedrooms'] ?? 0);
     $bathrooms = (int)($_POST['bathrooms'] ?? 0);
+    $province_code = trim($_POST['province_code'] ?? '');
+    $province_name = trim($_POST['province_name'] ?? '');
+    $district_code = trim($_POST['district_code'] ?? '');
+    $district_name = trim($_POST['district_name'] ?? '');
+    $ward_code = trim($_POST['ward_code'] ?? '');
+    $ward_name = trim($_POST['ward_name'] ?? '');
+    $street_address = trim($_POST['street_address'] ?? '');
     $address = trim($_POST['address'] ?? '');
+    if ($address === '') {
+        $address = implode(', ', array_filter([$street_address, $ward_name, $district_name, $province_name]));
+    }
     $category_id = (int)($_POST['category_id'] ?? 0);
-    $district_id = (int)($_POST['district_id'] ?? 0);
+    $district_id = owner_sync_district_id($conn, $district_name, (int)($_POST['district_id'] ?? 0), $province_code, $district_code);
 
     // Tọa độ Bản đồ
     $lat = !empty($_POST['lat']) ? (float)$_POST['lat'] : null;
@@ -87,6 +177,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_verified) {
 
         if ($stmt->execute()) {
             $motel_id = $stmt->insert_id;
+            owner_update_standard_address($conn, (int)$motel_id, [
+                'province_code' => $province_code,
+                'province_name' => $province_name,
+                'district_code' => $district_code,
+                'district_name' => $district_name,
+                'ward_code' => $ward_code,
+                'ward_name' => $ward_name,
+                'street_address' => $street_address,
+            ]);
 
             // Xử lý upload hình ảnh
             if (!empty($_FILES['images']['name'][0])) {
@@ -288,9 +387,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_verified) {
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-6 mb-3 d-none">
                             <label class="form-label">Quận/Huyện *</label>
-                            <select name="district_id" class="form-select" required>
+                            <select name="district_id" class="form-select d-none" aria-hidden="true">
                                 <option value="">-- Khu vực --</option>
                                 <?php foreach ($districts as $district): ?>
                                 <option value="<?php echo $district['id']; ?>">
@@ -300,7 +399,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_verified) {
                         </div>
                         <div class="col-12 mb-3">
                             <label class="form-label">Địa chỉ *</label>
-                            <input type="text" name="address" class="form-control" required>
+                            <input type="hidden" name="address" data-address-full>
+                            <div data-address-picker>
+                                <input type="hidden" name="province_name" data-address-province-name>
+                                <input type="hidden" name="district_name" data-address-district-name>
+                                <input type="hidden" name="ward_name" data-address-ward-name>
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Tỉnh/Thành phố *</label>
+                                        <select name="province_code" class="form-select" data-address-province required>
+                                            <option value="">-- Chọn tỉnh/thành --</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Quận/Huyện *</label>
+                                        <select name="district_code" class="form-select" data-address-district required disabled>
+                                            <option value="">-- Chọn quận/huyện --</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Phường/Xã *</label>
+                                        <select name="ward_code" class="form-select" data-address-ward required disabled>
+                                            <option value="">-- Chọn phường/xã --</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Số nhà, tên đường *</label>
+                                        <input type="text" name="street_address" class="form-control" data-address-street required placeholder="Ví dụ: 182 Lê Duẩn">
+                                        <div class="form-text" data-address-status></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -345,6 +474,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_verified) {
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script src="../assets/js/vn-address-picker.js"></script>
     <script>
     let selectedFiles = [];
     document.getElementById('imageInput').addEventListener('change', function(e) {

@@ -5,6 +5,7 @@
 @require_once '../core/User.php';
 @require_once '../core/Captcha.php';
 @require_once '../app/controller/AuthController.php';
+require_once __DIR__ . '/components/PasswordInput.php';
 
 session_start();
 
@@ -63,7 +64,7 @@ $captchaChallenge = Captcha::ensure('owner_register_captcha');
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đăng ký chủ phòng - QuanLyPhongTro</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-    <link href="assets/css/modern.css?v=auth-captcha-2" rel="stylesheet">
+    <link href="assets/css/modern.css?v=auth-password-ui-3" rel="stylesheet">
 </head>
 <body class="auth-dark">
     <div class="three-stage auth-scene" data-three-scene data-scene="housing" data-accent="#14b8a6" data-accent2="#2563eb"></div>
@@ -118,15 +119,21 @@ $captchaChallenge = Captcha::ensure('owner_register_captcha');
                     </div>
 
                     <label>Mật khẩu</label>
-                    <div class="input-group">
+                    <div class="input-group has-password-toggle">
                         <i class="fa fa-lock"></i>
                         <input type="password" name="password" placeholder="Ít nhất 6 ký tự" required>
+                        <button type="button" class="password-toggle" data-password-toggle aria-label="Hiện mật khẩu" title="Hiện mật khẩu">
+                            <i class="fa fa-eye"></i>
+                        </button>
                     </div>
 
                     <label>Xác nhận mật khẩu</label>
-                    <div class="input-group">
+                    <div class="input-group has-password-toggle">
                         <i class="fa fa-lock"></i>
                         <input type="password" name="confirm" placeholder="Nhập lại mật khẩu" required>
+                        <button type="button" class="password-toggle" data-password-toggle aria-label="Hiện mật khẩu" title="Hiện mật khẩu">
+                            <i class="fa fa-eye"></i>
+                        </button>
                     </div>
 
                     <label>Mã xác thực</label>
@@ -153,6 +160,7 @@ $captchaChallenge = Captcha::ensure('owner_register_captcha');
     </main>
 
     <script type="module" src="assets/js/three-interface.js"></script>
+    <script src="assets/js/password-toggle.js?v=auth-password-ui-3"></script>
     <script>
         function refreshCaptcha(button) {
             const image = button.parentElement.querySelector('.captcha-image');

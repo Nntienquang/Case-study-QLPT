@@ -9,6 +9,61 @@ require_once '../config/database.php';
 
 $current_user_id = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
 
+if (!function_exists('phongtro_order_by')) {
+    function phongtro_order_by(string $sort): string
+    {
+        if ($sort === 'price_asc') {
+            return 'm.price ASC';
+        }
+        if ($sort === 'price_desc') {
+            return 'm.price DESC';
+        }
+
+        return 'm.created_at DESC';
+    }
+}
+
+if (!function_exists('phongtro_filter_sql')) {
+    function phongtro_filter_sql(array $source, array &$params, string &$types): string
+    {
+        $where = '';
+        $keyword = trim((string)($source['keyword'] ?? ''));
+        $districtId = trim((string)($source['district_id'] ?? ''));
+        $categoryId = trim((string)($source['category_id'] ?? ''));
+        $maxPrice = trim((string)($source['max_price'] ?? ''));
+        $areaMin = trim((string)($source['area_min'] ?? ''));
+
+        if ($keyword !== '') {
+            $where .= ' AND (m.title LIKE ? OR m.description LIKE ? OR m.address LIKE ? OR m.utilities LIKE ? OR m.province_name LIKE ? OR m.district_name LIKE ? OR m.ward_name LIKE ? OR m.street_address LIKE ?)';
+            $kw = '%' . $keyword . '%';
+            array_push($params, $kw, $kw, $kw, $kw, $kw, $kw, $kw, $kw);
+            $types .= 'ssssssss';
+        }
+        if ($districtId !== '') {
+            $where .= ' AND m.district_id = ?';
+            $params[] = (int)$districtId;
+            $types .= 'i';
+        }
+        if ($categoryId !== '') {
+            $where .= ' AND m.category_id = ?';
+            $params[] = (int)$categoryId;
+            $types .= 'i';
+        }
+        if ($maxPrice !== '') {
+            $where .= ' AND m.price <= ?';
+            $params[] = (int)$maxPrice;
+            $types .= 'i';
+        }
+        if ($areaMin !== '') {
+            $where .= ' AND m.area >= ?';
+            $params[] = (float)$areaMin;
+            $types .= 'd';
+        }
+
+        return $where;
+    }
+}
+
 // =================================================================
 // 1. PHẦN XỬ LÝ AJAX (Sắp xếp & Tải thêm phòng)
 // =================================================================
@@ -20,12 +75,10 @@ if (isset($_POST['ajax_action']) && $_POST['ajax_action'] === 'load_rooms') {
     $limit = 9; 
     $offset = ($page - 1) * $limit;
 
-    $orderBy = "m.created_at DESC"; 
-    if ($sort === 'price_asc') {
-        $orderBy = "m.price ASC"; 
-    } elseif ($sort === 'price_desc') {
-        $orderBy = "m.price DESC"; 
-    }
+    $orderBy = phongtro_order_by($sort);
+    $params = [$current_user_id];
+    $types = 'i';
+    $filterSql = phongtro_filter_sql($_POST, $params, $types);
 
     try {
         $sql = "SELECT m.id, m.title, m.price, m.area, m.address, m.bedrooms, m.bathrooms, 
@@ -33,12 +86,15 @@ if (isset($_POST['ajax_action']) && $_POST['ajax_action'] === 'load_rooms') {
                        IF(f.id IS NOT NULL, 1, 0) as is_favorited
                 FROM motels m 
                 LEFT JOIN favorites f ON f.motel_id = m.id AND f.user_id = ?
-                WHERE m.status = 'approved' 
+                WHERE m.status = 'approved' $filterSql
                 ORDER BY $orderBy 
                 LIMIT ? OFFSET ?";
 
         $stmt = $conn->prepare($sql);
-        $stmt->bind_param("iii", $current_user_id, $limit, $offset);
+        $params[] = $limit;
+        $params[] = $offset;
+        $types .= 'ii';
+        $stmt->bind_param($types, ...$params);
         $stmt->execute();
         $result = $stmt->get_result();
         $rooms = $result->fetch_all(MYSQLI_ASSOC);
@@ -67,7 +123,7 @@ if (isset($_POST['ajax_action']) && $_POST['ajax_action'] === 'load_rooms') {
                     
                     <div class="room-content">
                         <div class="room-price">'.$price_format.' đ<span>/tháng</span></div>
-                        <a href="detail.php?id='.$room['id'].'" class="room-title">'.htmlspecialchars($room['title']).'</a>
+                        <a href="user/motel-detail.php?id='.$room['id'].'" class="room-title">'.htmlspecialchars($room['title']).'</a>
                         
                         <div class="room-specs">
                             <span><i class="fas fa-vector-square"></i> '.$room['area'].' m²</span>
@@ -704,13 +760,19 @@ a {
             $current_user_id = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
 
             try {
+                $sort = isset($_GET['sort']) ? (string)$_GET['sort'] : 'newest';
+                $orderBy = phongtro_order_by($sort);
+                $params = [$current_user_id];
+                $types = 'i';
+                $filterSql = phongtro_filter_sql($_GET, $params, $types);
+
                 $sql = "SELECT m.id, m.title, m.price, m.area, m.address, m.bedrooms, m.bathrooms, 
                                (SELECT image_url FROM motel_images mi WHERE mi.motel_id = m.id LIMIT 1) as thumbnail,
                                IF(f.id IS NOT NULL, 1, 0) as is_favorited
                         FROM motels m 
                         LEFT JOIN favorites f ON f.motel_id = m.id AND f.user_id = ?
-                        WHERE m.status = 'approved' 
-                        ORDER BY m.created_at DESC 
+                        WHERE m.status = 'approved' $filterSql
+                        ORDER BY $orderBy 
                         LIMIT 9";
                 $stmt = $conn->prepare($sql);
                 
@@ -718,7 +780,7 @@ a {
                     throw new Exception("Lỗi prepare SQL: " . $conn->error);
                 }
 
-                $stmt->bind_param("i", $current_user_id);
+                $stmt->bind_param($types, ...$params);
                 $stmt->execute();
                 
                 $result = $stmt->get_result();
@@ -752,7 +814,7 @@ a {
                             
                             <div class="room-content">
                                 <div class="room-price"><?php echo $price_format; ?> đ<span>/tháng</span></div>
-                                <a href="detail.php?id=<?php echo $room['id']; ?>" class="room-title">
+                                <a href="user/motel-detail.php?id=<?php echo $room['id']; ?>" class="room-title">
                                     <?php echo htmlspecialchars($room['title']); ?>
                                 </a>
                                 
@@ -892,10 +954,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const loadMoreContainer = document.getElementById('load-more-container');
   
     const loadMoreBtn = loadMoreContainer ? loadMoreContainer.querySelector('.btn-load-more') : null;
+    const urlParams = new URLSearchParams(window.location.search);
 
     let currentPage = 1;
-    let currentSort = sortSelect ? sortSelect.value : 'newest';
+    let currentSort = urlParams.get('sort') || (sortSelect ? sortSelect.value : 'newest');
     let isLoading = false;
+
+    if (sortSelect && urlParams.get('sort')) {
+        sortSelect.value = currentSort;
+    }
 
     function fetchRooms(page, sort, isLoadMore = false) {
         if (isLoading) return;
@@ -915,6 +982,11 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('ajax_action', 'load_rooms'); 
         formData.append('page', page);
         formData.append('sort', sort);
+        ['keyword', 'district_id', 'category_id', 'max_price', 'area_min'].forEach((key) => {
+            if (urlParams.get(key)) {
+                formData.append(key, urlParams.get(key));
+            }
+        });
 
         fetch('phongtro.php', { 
             method: 'POST',
