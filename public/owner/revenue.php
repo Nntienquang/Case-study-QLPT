@@ -27,31 +27,56 @@ require_once __DIR__ . '/_owner_guard.php';
 // ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'withdraw') {
     $amount = (int)$_POST['amount'];
-    
-    // Check số dư hiện tại
-    $stmt = $conn->prepare("SELECT balance FROM wallets WHERE user_id = ?");
-    $stmt->bind_param("i", $owner_id);
-    $stmt->execute();
-    $wallet = $stmt->get_result()->fetch_assoc();
-    $current_balance = $wallet['balance'] ?? 0;
-    
-    if ($amount > 0 && $amount <= $current_balance) {
-        // 1. Trừ tiền ví ngay lập tức để tránh rút lố
-        $new_balance = $current_balance - $amount;
-        $conn->query("UPDATE wallets SET balance = $new_balance WHERE user_id = $owner_id");
-        
-        // 2. Tạo request rút tiền
+
+    $conn->begin_transaction();
+    try {
+        $stmt = $conn->prepare("
+            SELECT u.bank_name, u.bank_account_no, u.bank_account_name, COALESCE(w.balance, 0) AS balance
+            FROM users u
+            LEFT JOIN wallets w ON w.user_id = u.id
+            WHERE u.id = ?
+            LIMIT 1
+            FOR UPDATE
+        ");
+        $stmt->bind_param("i", $owner_id);
+        $stmt->execute();
+        $account = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        $current_balance = (int)($account['balance'] ?? 0);
+        if (empty($account['bank_name']) || empty($account['bank_account_no']) || empty($account['bank_account_name'])) {
+            throw new RuntimeException('missing_bank');
+        }
+
+        if ($amount < 50000 || $amount > $current_balance) {
+            throw new RuntimeException('invalid_amount');
+        }
+
+        $stmt = $conn->prepare("UPDATE wallets SET balance = balance - ? WHERE user_id = ? AND balance >= ?");
+        $stmt->bind_param("iii", $amount, $owner_id, $amount);
+        $stmt->execute();
+        if ($stmt->affected_rows !== 1) {
+            throw new RuntimeException('invalid_amount');
+        }
+        $stmt->close();
+
         $stmt = $conn->prepare("INSERT INTO withdraw_requests (user_id, amount, status) VALUES (?, ?, 'pending')");
         $stmt->bind_param("ii", $owner_id, $amount);
         $stmt->execute();
-        
-        // 3. Ghi log giao dịch (Loại tiền ra)
-        $conn->query("INSERT INTO transactions (from_user, to_user, amount, type) VALUES ($owner_id, NULL, $amount, 'withdraw')");
-        
+        $stmt->close();
+
+        $stmt = $conn->prepare("INSERT INTO transactions (from_user, to_user, amount, type, created_at) VALUES (?, NULL, ?, 'withdraw', NOW())");
+        $stmt->bind_param("ii", $owner_id, $amount);
+        $stmt->execute();
+        $stmt->close();
+
+        $conn->commit();
         header('Location: revenue.php?success=withdraw_requested');
         exit;
-    } else {
-        header('Location: revenue.php?error=invalid_amount');
+    } catch (Throwable $e) {
+        $conn->rollback();
+        $code = $e->getMessage() === 'missing_bank' ? 'missing_bank' : 'invalid_amount';
+        header('Location: revenue.php?error=' . $code);
         exit;
     }
 }
@@ -73,6 +98,20 @@ $stmt = $conn->prepare("SELECT SUM(amount) as pending_withdraw FROM withdraw_req
 $stmt->bind_param("i", $owner_id);
 $stmt->execute();
 $pending_withdraw = $stmt->get_result()->fetch_assoc()['pending_withdraw'] ?? 0;
+
+// Tiền khách đã thanh toán, admin đang giữ hộ và chờ giải ngân.
+$stmt = $conn->prepare("
+    SELECT COALESCE(SUM(p.amount - p.fee), 0) as held_escrow
+    FROM payments p
+    JOIN bookings b ON b.id = p.booking_id
+    WHERE b.owner_id = ?
+      AND p.payment_status = 'paid'
+      AND p.status = 'held'
+");
+$stmt->bind_param("i", $owner_id);
+$stmt->execute();
+$held_escrow = (int)($stmt->get_result()->fetch_assoc()['held_escrow'] ?? 0);
+$stmt->close();
 
 // 2. Lấy thống kê tổng quan
 $stmt = $conn->prepare("
@@ -290,6 +329,12 @@ function get_trans_type_label($type) {
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
                 <?php endif; ?>
+                <?php if (isset($_GET['error']) && $_GET['error'] == 'missing_bank'): ?>
+                <div class="alert alert-warning alert-dismissible fade show shadow-sm" role="alert">
+                    <i class="fas fa-triangle-exclamation me-2"></i> Vui lòng cập nhật đầy đủ thông tin ngân hàng trong Hồ sơ trước khi rút tiền.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <?php endif; ?>
 
                 <div class="wb-section-head d-flex justify-content-between align-items-end mb-4">
                     <div>
@@ -316,6 +361,12 @@ function get_trans_type_label($type) {
                                     <?php echo number_format($pending_withdraw); ?>đ</span>
                                 <?php endif; ?>
                             </div>
+                            <?php if ($held_escrow > 0): ?>
+                            <div class="mt-3 small opacity-90">
+                                <i class="fas fa-shield-halved me-1"></i>
+                                Admin đang giữ hộ chờ giải ngân: <strong><?php echo number_format($held_escrow); ?>đ</strong>
+                            </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                     <div class="col-lg-7">
@@ -341,8 +392,8 @@ function get_trans_type_label($type) {
                             </div>
                             <div class="col-sm-6">
                                 <div class="wb-card stat-small-card p-3 h-100">
-                                    <div class="text-muted small mb-1">Hành động đang chờ</div>
-                                    <h4 class="fw-bold mb-0 text-warning"><?php echo $stats['pending_actions']; ?> việc
+                                    <div class="text-muted small mb-1">Tiền đang chờ admin giải ngân</div>
+                                    <h4 class="fw-bold mb-0 text-warning"><?php echo number_format($held_escrow); ?> đ
                                     </h4>
                                 </div>
                             </div>

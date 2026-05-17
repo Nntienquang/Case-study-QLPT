@@ -46,14 +46,16 @@ function get_booking_status_ui($status)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST['status'])) {
     $booking_id = (int)$_POST['booking_id'];
     $status = $_POST['status'];
-    $allowed_statuses = ['accepted', 'completed', 'rejected'];
+    $allowed_statuses = ['accepted', 'rejected'];
 
     if (in_array($status, $allowed_statuses, true)) {
         // Lấy thông tin chi tiết
         $stmt = $conn->prepare('
-            SELECT b.user_id as tenant_id, b.motel_id, b.deposit_amount, b.status as current_status, b.payment_status, b.booking_status, m.title, m.user_id as owner_id
+            SELECT b.user_id as tenant_id, b.motel_id, b.deposit_amount, b.status as current_status, b.payment_status, b.booking_status,
+                   p.fee as payment_fee, p.status as escrow_status, m.title, m.user_id as owner_id
             FROM bookings b 
             JOIN motels m ON b.motel_id = m.id 
+            LEFT JOIN payments p ON p.booking_id = b.id
             WHERE b.id = ? AND m.user_id = ?
         ');
         $stmt->bind_param('ii', $booking_id, $owner_id);
@@ -70,7 +72,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST[
 
                 $newBookingStatus = match ($status) {
                     'accepted' => 'confirmed',
-                    'completed' => 'completed',
                     'rejected' => 'rejected',
                     default => 'pending',
                 };
@@ -89,16 +90,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST[
                     $room->execute();
                     $room->close();
                     $_SESSION['message'] = 'Đã chấp nhận giữ phòng! Vui lòng chờ khách dọn đến để hoàn tất.';
-                } elseif ($status === 'completed') {
-                    // Hoàn tất -> Cộng tiền cọc vào ví chủ trọ (chỉ khi trước đó là accepted)
-                    if ($booking['current_status'] === 'accepted' && $booking['deposit_amount'] > 0) {
-                        $conn->query("UPDATE wallets SET balance = balance + {$booking['deposit_amount']} WHERE user_id = $owner_id");
-                        $conn->query("INSERT INTO transactions (from_user, to_user, amount, type, booking_id, created_at) VALUES ({$booking['tenant_id']}, $owner_id, {$booking['deposit_amount']}, 'release', $booking_id, NOW())");
-                        $conn->query("UPDATE motels SET room_status = 'rented' WHERE id = {$booking['motel_id']}");
-                        $_SESSION['message'] = 'Giao dịch hoàn tất! Tiền cọc đã được cộng vào ví của bạn.';
-                    } else {
-                        $_SESSION['message'] = 'Đã đánh dấu hoàn tất nhận phòng.';
-                    }
                 } elseif ($status === 'rejected') {
                     $_SESSION['message'] = 'Đã từ chối khách thuê thành công.';
                 }
@@ -400,19 +391,12 @@ foreach ($counts as $c) {
                                 <?php elseif ($b['status'] === 'pending'): ?>
                                 <div class="text-center text-muted"><i class="fas fa-credit-card fa-2x mb-2"></i><br><strong>Chờ khách thanh toán</strong></div>
                                 <?php elseif ($b['status'] === 'accepted'): ?>
-                                <form method="POST" class="d-grid gap-2">
-                                    <input type="hidden" name="booking_id" value="<?php echo $b['id']; ?>">
-                                    <button type="submit" name="status" value="completed"
-                                        class="btn btn-primary fw-bold rounded-pill">
-                                        <i class="fas fa-home me-1"></i> Khách đã dọn vào ở
-                                    </button>
-                                </form>
-                                <div class="text-center small text-muted mt-2">Bấm khi khách nhận phòng để hệ thống
-                                    chuyển tiền cọc vào ví.</div>
+                                <div class="text-center text-primary"><i class="fas fa-user-check fa-2x mb-2"></i><br><strong>Chờ khách xác nhận nhận phòng</strong></div>
+                                <div class="text-center small text-muted mt-2">Admin chỉ giải ngân sau khi khách xác nhận đã nhận phòng.</div>
                                 <?php elseif ($b['status'] === 'completed'): ?>
                                 <div class="text-center text-success"><i
-                                        class="fas fa-check-circle fa-2x mb-2"></i><br><strong>Giao dịch hoàn
-                                        tất</strong></div>
+                                        class="fas fa-check-circle fa-2x mb-2"></i><br><strong>Khách đã xác nhận nhận phòng</strong></div>
+                                <div class="text-center small text-muted mt-2">Chờ admin kiểm tra và giải ngân tiền cọc.</div>
                                 <?php else: ?>
                                 <div class="text-center text-muted"><i class="fas fa-ban fa-2x mb-2"></i><br><strong>Đã
                                         kết thúc</strong></div>

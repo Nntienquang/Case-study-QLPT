@@ -89,6 +89,7 @@ function admin_nav_items(): array
         // Quản lý giao dịch
         'bookings' => ['icon' => 'fa fa-calendar', 'label' => 'Booking', 'url' => 'bookings.php', 'group' => 'transaction'],
         'payments' => ['icon' => 'fa fa-credit-card', 'label' => 'Thanh toán', 'url' => 'payments.php', 'group' => 'transaction'],
+        'withdraw_requests' => ['icon' => 'fa fa-bank', 'label' => 'Rút tiền', 'url' => 'withdraw_requests.php', 'group' => 'transaction'],
         'admin_revenue' => ['icon' => 'fa fa-bar-chart', 'label' => 'Doanh thu', 'url' => 'admin_revenue.php', 'group' => 'transaction'],
         
         // Quản lý cộng đồng

@@ -135,6 +135,16 @@ $stats = [
     'total_reviews'    => $totalReviews
 ];
 
+$heldEscrowRows = owner_dash_rows($conn, "
+    SELECT COALESCE(SUM(p.amount - p.fee), 0) AS amount
+    FROM payments p
+    JOIN bookings b ON b.id = p.booking_id
+    WHERE b.owner_id = ?
+      AND p.payment_status = 'paid'
+      AND p.status = 'held'
+", 'i', [$ownerId]);
+$stats['held_escrow'] = (int)($heldEscrowRows[0]['amount'] ?? 0);
+
 $hasViewingAppointments = owner_dash_table_exists($conn, 'viewing_appointments');
 $stats['pending_viewings'] = $hasViewingAppointments
     ? owner_dash_count($conn, "SELECT COUNT(*) AS count FROM viewing_appointments WHERE owner_id = ? AND status = 'pending'", 'i', [$ownerId])
@@ -228,7 +238,16 @@ $upcomingViewings = $hasViewingAppointments
                             </div>
                             <i class="fas fa-wallet wb-card-icon"></i>
                         </div>
-                        <div class="wb-queue-label">Số dư hiện tại</div>
+                        <div class="wb-queue-label">Số dư khả dụng</div>
+                    </a>
+                    <a class="wb-card wb-queue-card" href="revenue.php">
+                        <div class="wb-queue-top">
+                            <div class="wb-queue-value text-primary" style="font-size: 1.2rem;">
+                                <?php echo owner_dash_money($stats['held_escrow']); ?>
+                            </div>
+                            <i class="fas fa-shield-halved wb-card-icon"></i>
+                        </div>
+                        <div class="wb-queue-label">Admin đang giữ hộ</div>
                     </a>
                     <a class="wb-card wb-queue-card" href="bookings.php">
                         <div class="wb-queue-top">

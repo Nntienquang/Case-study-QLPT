@@ -102,6 +102,46 @@ class BookingController
         exit;
     }
 
+    private function refreshRoomAvailability(mysqli $conn, int $motelId): void
+    {
+        if ($motelId <= 0) {
+            return;
+        }
+
+        $stmt = $conn->prepare("
+            SELECT id
+            FROM bookings
+            WHERE motel_id = ?
+              AND booking_status IN ('waiting_payment','paid','confirmed','completed')
+              AND payment_status IN ('pending','processing','paid')
+              AND (expires_at IS NULL OR expires_at > NOW() OR payment_status = 'paid')
+              AND status NOT IN ('rejected','cancelled')
+            LIMIT 1
+        ");
+        $stmt->bind_param('i', $motelId);
+        $stmt->execute();
+        $hasActiveBooking = (bool)$stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        $stmt = $conn->prepare("
+            SELECT id
+            FROM booking_room_holds
+            WHERE motel_id = ? AND hold_status = 'active' AND expires_at > NOW()
+            LIMIT 1
+        ");
+        $stmt->bind_param('i', $motelId);
+        $stmt->execute();
+        $hasActiveHold = (bool)$stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if (!$hasActiveBooking && !$hasActiveHold) {
+            $stmt = $conn->prepare("UPDATE motels SET room_status = 'available' WHERE id = ? AND room_status = 'reserved'");
+            $stmt->bind_param('i', $motelId);
+            $stmt->execute();
+            $stmt->close();
+        }
+    }
+
     /**
      * Delete booking
      */
@@ -115,7 +155,34 @@ class BookingController
         $id = (int)$_POST['id'];
         $booking = $this->booking->getById($id);
 
-        if ($this->booking->delete($id)) {
+        if (!$booking) {
+            $_SESSION['error'] = 'Đơn đặt phòng không tồn tại.';
+            header('Location: ' . ADMIN_URL . 'bookings.php');
+            exit;
+        }
+
+        $motelId = (int)($booking['motel_id'] ?? 0);
+        $conn = $this->db->getConnection();
+        $conn->begin_transaction();
+
+        try {
+            $stmt = $conn->prepare("UPDATE payments SET payment_status = 'cancelled', status = 'refunded', updated_at = NOW() WHERE booking_id = ? AND payment_status != 'paid'");
+            $stmt->bind_param('i', $id);
+            $stmt->execute();
+            $stmt->close();
+
+            $stmt = $conn->prepare("UPDATE booking_room_holds SET hold_status = 'released', updated_at = NOW() WHERE booking_id = ? AND hold_status IN ('active','converted')");
+            $stmt->bind_param('i', $id);
+            $stmt->execute();
+            $stmt->close();
+
+            $stmt = $conn->prepare("UPDATE bookings SET status = 'cancelled', booking_status = 'cancelled', payment_status = IF(payment_status = 'paid', payment_status, 'failed'), updated_at = NOW() WHERE id = ?");
+            $stmt->bind_param('i', $id);
+            $stmt->execute();
+            $stmt->close();
+
+            $this->refreshRoomAvailability($conn, $motelId);
+
             if ($this->activityLog && $booking) {
                 $this->activityLog->log(
                     $_SESSION['user_id'],
@@ -126,9 +193,11 @@ class BookingController
                     "Xóa đơn đặt phòng từ khách {$booking['user_name']}"
                 );
             }
-            $_SESSION['success'] = 'Xóa đơn đặt phòng thành công';
-        } else {
-            $_SESSION['error'] = 'Có lỗi xảy ra';
+            $conn->commit();
+            $_SESSION['success'] = 'Đã hủy đơn đặt phòng và trả trạng thái phòng nếu không còn booking giữ chỗ.';
+        } catch (Throwable $e) {
+            $conn->rollback();
+            $_SESSION['error'] = 'Có lỗi xảy ra: ' . $e->getMessage();
         }
 
         header('Location: ' . ADMIN_URL . 'bookings.php');

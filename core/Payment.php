@@ -49,11 +49,14 @@ class Payment {
      */
     public function getById($id) {
         $id = (int)$id;
-        $sql = "SELECT p.*, b.user_id, b.motel_id, u.name as user_name, u.email,
+        $sql = "SELECT p.*, b.user_id, b.owner_id, b.motel_id, b.status AS booking_legacy_status,
+                        u.name as user_name, u.email,
+                        owner.name AS owner_name, owner.email AS owner_email,
                         m.title as motel_title, m.price, b.booking_code, b.booking_status, b.payment_status AS booking_payment_status
                 FROM payments p
                 LEFT JOIN bookings b ON p.booking_id = b.id
                 LEFT JOIN users u ON b.user_id = u.id
+                LEFT JOIN users owner ON b.owner_id = owner.id
                 LEFT JOIN motels m ON b.motel_id = m.id
                 WHERE p.id = $id";
         return $this->db->getRow($sql);

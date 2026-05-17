@@ -146,4 +146,111 @@ class PaymentController
         header('Location: ' . ADMIN_URL . 'payments.php');
         exit;
     }
+
+    public function releaseHeldPayment(): void
+    {
+        if (!isset($_POST['id'])) {
+            $_SESSION['error'] = 'Dữ liệu không hợp lệ';
+            header('Location: ' . ADMIN_URL . 'payments.php');
+            exit;
+        }
+
+        $id = (int)$_POST['id'];
+        $conn = $this->db->getConnection();
+        $adminId = (int)($_SESSION['user_id'] ?? 0);
+
+        $conn->begin_transaction();
+
+        try {
+            $stmt = $conn->prepare("
+                SELECT p.*, b.id AS booking_id, b.user_id AS tenant_id, b.owner_id, b.motel_id, b.status AS booking_status, b.booking_status AS detailed_booking_status
+                FROM payments p
+                JOIN bookings b ON b.id = p.booking_id
+                WHERE p.id = ?
+                LIMIT 1
+                FOR UPDATE
+            ");
+            $stmt->bind_param('i', $id);
+            $stmt->execute();
+            $payment = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if (!$payment) {
+                throw new RuntimeException('Không tìm thấy thanh toán.');
+            }
+
+            if (($payment['payment_status'] ?? '') !== 'paid' || ($payment['status'] ?? '') !== 'held') {
+                throw new RuntimeException('Chỉ giải ngân khoản đã thanh toán và đang được admin giữ hộ.');
+            }
+
+            if (($payment['booking_status'] ?? '') !== 'completed' || ($payment['detailed_booking_status'] ?? '') !== 'completed') {
+                throw new RuntimeException('Chỉ giải ngân sau khi khách thuê xác nhận đã nhận phòng.');
+            }
+
+            $amount = (int)($payment['amount'] ?? 0);
+            $fee = max(0, (int)($payment['fee'] ?? 0));
+            if ($fee === 0 && $amount > 0) {
+                $fee = (int)ceil($amount * 0.05);
+                $stmt = $conn->prepare('UPDATE payments SET fee = ? WHERE id = ?');
+                $stmt->bind_param('ii', $fee, $id);
+                $stmt->execute();
+                $stmt->close();
+            }
+
+            $releaseAmount = max(0, $amount - $fee);
+            $ownerId = (int)$payment['owner_id'];
+            $bookingId = (int)$payment['booking_id'];
+
+            $stmt = $conn->prepare("INSERT INTO wallets (user_id, balance) VALUES (?, ?) ON DUPLICATE KEY UPDATE balance = balance + VALUES(balance)");
+            $stmt->bind_param('ii', $ownerId, $releaseAmount);
+            $stmt->execute();
+            $stmt->close();
+
+            $stmt = $conn->prepare("INSERT INTO transactions (from_user, to_user, amount, fee, type, booking_id, created_at) VALUES (?, ?, ?, ?, 'release', ?, NOW())");
+            $stmt->bind_param('iiiii', $adminId, $ownerId, $releaseAmount, $fee, $bookingId);
+            $stmt->execute();
+            $stmt->close();
+
+            $stmt = $conn->prepare("UPDATE payments SET status = 'released', updated_at = NOW() WHERE id = ? AND status = 'held'");
+            $stmt->bind_param('i', $id);
+            $stmt->execute();
+            $stmt->close();
+
+            $stmt = $conn->prepare("UPDATE motels SET room_status = 'rented' WHERE id = ?");
+            $stmt->bind_param('i', $payment['motel_id']);
+            $stmt->execute();
+            $stmt->close();
+
+            $stmt = $conn->prepare("
+                INSERT INTO notifications (user_id, type, title, body, link, created_at)
+                VALUES
+                    (?, 'payment_released', 'Admin đã giải ngân tiền cọc', 'Tiền cọc booking đã được chuyển vào ví chủ phòng.', 'owner/revenue.php', NOW()),
+                    (?, 'booking_completed', 'Booking đã hoàn tất', 'Admin đã xác nhận giải ngân tiền cọc cho chủ phòng.', 'user/my-bookings.php', NOW())
+            ");
+            $tenantId = (int)$payment['tenant_id'];
+            $stmt->bind_param('ii', $ownerId, $tenantId);
+            $stmt->execute();
+            $stmt->close();
+
+            if ($this->activityLog) {
+                $this->activityLog->log(
+                    $adminId,
+                    'release_payment',
+                    'payment',
+                    $id,
+                    ['amount' => $releaseAmount, 'fee' => $fee, 'booking_id' => $bookingId],
+                    "Giải ngân thanh toán #{$id} cho owner #{$ownerId}"
+                );
+            }
+
+            $conn->commit();
+            $_SESSION['success'] = 'Đã giải ngân tiền cọc cho chủ phòng.';
+        } catch (Throwable $e) {
+            $conn->rollback();
+            $_SESSION['error'] = 'Không thể giải ngân: ' . $e->getMessage();
+        }
+
+        header('Location: ' . ADMIN_URL . 'payment_detail.php?id=' . $id);
+        exit;
+    }
 }

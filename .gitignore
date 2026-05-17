@@ -19,6 +19,7 @@ uploads/
 ehthumbs.db
 
 # Ignore PHP config
+.env
 config/database.php.local
 config/constants.php.local
 

@@ -41,9 +41,16 @@ $message_type = '';
 // Handle booking
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $check_in = $_POST['check_in_date'] ?? '';
-    $check_out = $_POST['check_out_date'] !== '' ? $_POST['check_out_date'] : null;
     $durationMonths = max(1, (int)($_POST['rental_duration_months'] ?? 1));
+    $durationMonths = min(36, $durationMonths);
+    $check_out = null;
+    if ($check_in !== '') {
+        $startDate = new DateTimeImmutable($check_in);
+        $check_out = $startDate->modify('+' . $durationMonths . ' months')->format('Y-m-d');
+    }
     $deposit = max(1, (int)($_POST['deposit_amount'] ?? ($motel['deposit_amount'] ?: $motel['price'])));
+    $monthlyBase = (int)$motel['price'] + (int)$motel['service_fee'] + (int)$motel['internet_fee'] + (int)$motel['parking_fee'] + (int)$motel['other_fee'];
+    $estimatedTotal = $deposit + ($monthlyBase * $durationMonths);
     $note = trim((string)($_POST['note'] ?? ''));
     $contactName = trim((string)($_POST['contact_name'] ?? ($currentUser['name'] ?? $user_name)));
     $contactPhone = preg_replace('/\s+/', '', trim((string)($_POST['contact_phone'] ?? ($currentUser['phone'] ?? ''))));
@@ -52,9 +59,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($check_in === '') {
         $message = 'Vui lòng chọn ngày dự kiến vào ở!';
-        $message_type = 'danger';
-    } elseif ($check_out !== null && strtotime($check_in) >= strtotime($check_out)) {
-        $message = 'Ngày kết thúc phải sau ngày vào ở!';
         $message_type = 'danger';
     } elseif ($contactName === '' || $contactPhone === '' || $contactEmail === '') {
         $message = 'Vui lòng nhập đủ thông tin liên hệ.';
@@ -80,6 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 SELECT id FROM bookings
                 WHERE motel_id = ? AND booking_status IN ('waiting_payment','paid','confirmed','completed')
                   AND payment_status IN ('pending','processing','paid')
+                  AND (expires_at IS NULL OR expires_at > NOW() OR payment_status = 'paid')
                 LIMIT 1
                 FOR UPDATE
             ");
@@ -116,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $check_in,
                 $durationMonths,
                 $deposit,
-                $deposit,
+                $estimatedTotal,
                 $paymentStatus,
                 $bookingStatus,
                 $note,
@@ -214,6 +219,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .btn-primary:hover { color: white; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102,126,234,0.4); }
         .price-breakdown { background: #f8f9fa; padding: 20px; border-radius: 6px; margin-top: 20px; }
         .price-item { display: flex; justify-content: space-between; margin-bottom: 10px; color: #666; }
+        .price-item.total { border-top: 1px solid #dee2e6; padding-top: 12px; margin-top: 12px; font-weight: 800; color: #111827; font-size: 18px; }
+        .readonly-date { background: #f8fafc; }
         .alert { border-radius: 12px; }
     </style>
     <link href="../assets/css/modern.css" rel="stylesheet">
@@ -269,21 +276,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Ngày dự kiến vào ở *</label>
-                                    <input type="date" name="check_in_date" class="form-control" required min="<?php echo date('Y-m-d'); ?>">
+                                    <input type="date" id="checkInDate" name="check_in_date" class="form-control" required min="<?php echo date('Y-m-d'); ?>">
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label">Ngày kết thúc nếu có</label>
-                                    <input type="date" name="check_out_date" class="form-control" min="<?php echo date('Y-m-d', strtotime('+1 day')); ?>">
+                                    <label class="form-label">Ngày kết thúc dự kiến</label>
+                                    <input type="date" id="checkOutDate" name="check_out_date" class="form-control readonly-date" readonly>
                                 </div>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Thời hạn thuê dự kiến</label>
-                                <select name="rental_duration_months" class="form-select">
+                                <select id="rentalDuration" name="rental_duration_months" class="form-select">
                                     <option value="1">1 tháng</option>
+                                    <option value="2">2 tháng</option>
                                     <option value="3">3 tháng</option>
+                                    <option value="4">4 tháng</option>
+                                    <option value="5">5 tháng</option>
                                     <option value="6">6 tháng</option>
+                                    <option value="9">9 tháng</option>
                                     <option value="12">12 tháng</option>
+                                    <option value="24">24 tháng</option>
                                 </select>
+                            </div>
+                            <div class="price-breakdown">
+                                <div class="price-item"><span>Giá phòng/tháng</span><span id="monthlyRoomPreview"></span></div>
+                                <div class="price-item"><span>Phí dịch vụ cố định/tháng</span><span id="monthlyFeePreview"></span></div>
+                                <div class="price-item"><span>Tiền phòng dự kiến theo thời hạn</span><span id="rentTotalPreview"></span></div>
+                                <div class="price-item"><span>Tiền cọc giữ chỗ</span><span id="depositPreview"></span></div>
+                                <div class="price-item total"><span>Tổng chi phí dự kiến</span><span id="estimatedTotalPreview"></span></div>
                             </div>
                         </div>
 
@@ -292,7 +311,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <h5><i class="fas fa-money-bill-wave"></i> Tiền đặt cọc</h5>
                             <div class="mb-3">
                                 <label class="form-label">Số tiền (VNĐ)</label>
-                                <input type="number" name="deposit_amount" class="form-control" value="<?php echo (int)($motel['deposit_amount'] ?: $motel['price']); ?>" required min="1">
+                                <input type="number" id="depositAmount" name="deposit_amount" class="form-control" value="<?php echo (int)($motel['deposit_amount'] ?: $motel['price']); ?>" required min="1">
                             </div>
                             <div class="price-breakdown">
                                 <div class="price-item">
@@ -313,7 +332,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </div>
                                 <div class="price-item">
                                     <span>Tiền giữ chỗ/cọc:</span>
-                                    <span><?php echo number_format((int)($motel['deposit_amount'] ?: $motel['price'])); ?> VNĐ</span>
+                                    <span id="depositBreakdown"><?php echo number_format((int)($motel['deposit_amount'] ?: $motel['price'])); ?> VNĐ</span>
                                 </div>
                             </div>
                         </div>
@@ -393,5 +412,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const roomPrice = <?php echo (int)$motel['price']; ?>;
+        const monthlyFixedFee = <?php echo (int)$motel['service_fee'] + (int)$motel['internet_fee'] + (int)$motel['parking_fee'] + (int)$motel['other_fee']; ?>;
+        const checkInInput = document.getElementById('checkInDate');
+        const checkOutInput = document.getElementById('checkOutDate');
+        const durationInput = document.getElementById('rentalDuration');
+        const depositInput = document.getElementById('depositAmount');
+        const formatter = new Intl.NumberFormat('vi-VN');
+
+        function addMonths(date, months) {
+            const next = new Date(date.getTime());
+            const day = next.getDate();
+            next.setMonth(next.getMonth() + months);
+            if (next.getDate() !== day) {
+                next.setDate(0);
+            }
+            return next;
+        }
+
+        function toDateInputValue(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function money(value) {
+            return `${formatter.format(Math.max(0, value))} VNĐ`;
+        }
+
+        function refreshEstimate() {
+            const months = Math.max(1, parseInt(durationInput.value || '1', 10));
+            const deposit = Math.max(0, parseInt(depositInput.value || '0', 10));
+            const monthlyTotal = roomPrice + monthlyFixedFee;
+            const rentTotal = monthlyTotal * months;
+            const estimatedTotal = rentTotal + deposit;
+
+            if (checkInInput.value) {
+                const start = new Date(`${checkInInput.value}T00:00:00`);
+                checkOutInput.value = toDateInputValue(addMonths(start, months));
+            } else {
+                checkOutInput.value = '';
+            }
+
+            document.getElementById('monthlyRoomPreview').textContent = money(roomPrice);
+            document.getElementById('monthlyFeePreview').textContent = money(monthlyFixedFee);
+            document.getElementById('rentTotalPreview').textContent = money(rentTotal);
+            document.getElementById('depositPreview').textContent = money(deposit);
+            document.getElementById('estimatedTotalPreview').textContent = money(estimatedTotal);
+            document.getElementById('depositBreakdown').textContent = money(deposit);
+        }
+
+        checkInInput.addEventListener('change', refreshEstimate);
+        durationInput.addEventListener('change', refreshEstimate);
+        depositInput.addEventListener('input', refreshEstimate);
+        refreshEstimate();
+    </script>
 </body>
 </html>

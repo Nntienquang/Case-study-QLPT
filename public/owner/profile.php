@@ -102,16 +102,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $hasFullVerification = $phone !== null && $address !== '' && $idcard_number !== '' && $id_card_front !== '' && $id_card_back !== '' && $bank_name !== '' && $bank_account_no !== '' && $bank_account_name !== '';
-        $nextVerificationStatus = $hasFullVerification ? 'submitted' : 'pending_verification';
+        $hasDemoKycDocuments = $idcard_number !== '' && ($id_card_front !== '' || $id_card_back !== '');
+        $shouldApproveForDemo = $hasFullVerification || $hasDemoKycDocuments;
+        $nextVerificationStatus = $shouldApproveForDemo ? 'approved' : 'pending_verification';
 
         // Cập nhật Database
-        $stmt = $db->prepare("UPDATE users SET name = ?, phone = ?, address = ?, idcard_number = ?, id_card_front = ?, id_card_back = ?, selfie_image = ?, bank_name = ?, bank_account_no = ?, bank_account_name = ?, owner_verification_status = ?, verification_submitted_at = CASE WHEN ? = 'submitted' THEN NOW() ELSE verification_submitted_at END, verification_rejection_reason = CASE WHEN ? = 'submitted' THEN NULL ELSE verification_rejection_reason END WHERE id = ?");
-        $stmt->bind_param("sssssssssssssi", $name, $phone, $address, $idcard_number, $id_card_front, $id_card_back, $selfie_image, $bank_name, $bank_account_no, $bank_account_name, $nextVerificationStatus, $nextVerificationStatus, $nextVerificationStatus, $owner_id);
+        $stmt = $db->prepare("UPDATE users SET name = ?, phone = ?, address = ?, idcard_number = ?, id_card_front = ?, id_card_back = ?, selfie_image = ?, bank_name = ?, bank_account_no = ?, bank_account_name = ?, owner_verification_status = ?, status = CASE WHEN ? = 'approved' THEN 'approved' ELSE status END, verification_submitted_at = CASE WHEN ? = 'approved' THEN COALESCE(verification_submitted_at, NOW()) ELSE verification_submitted_at END, verification_reviewed_at = CASE WHEN ? = 'approved' THEN NOW() ELSE verification_reviewed_at END, verified_at = CASE WHEN ? = 'approved' THEN NOW() ELSE verified_at END, bank_verified_at = CASE WHEN ? = 'approved' AND bank_account_no <> '' THEN NOW() ELSE bank_verified_at END, verification_rejection_reason = CASE WHEN ? = 'approved' THEN NULL ELSE verification_rejection_reason END WHERE id = ?");
+        $stmt->bind_param("sssssssssssssssssi", $name, $phone, $address, $idcard_number, $id_card_front, $id_card_back, $selfie_image, $bank_name, $bank_account_no, $bank_account_name, $nextVerificationStatus, $nextVerificationStatus, $nextVerificationStatus, $nextVerificationStatus, $nextVerificationStatus, $nextVerificationStatus, $nextVerificationStatus, $owner_id);
 
         if ($stmt->execute()) {
             $_SESSION['name'] = $name;
-            $message = $hasFullVerification
-                ? 'Hồ sơ xác minh đã được gửi. Admin sẽ duyệt trước khi bạn sử dụng khu vực owner.'
+            $_SESSION['owner_verification_status'] = $nextVerificationStatus;
+            if ($nextVerificationStatus === 'approved') {
+                $_SESSION['status'] = 'approved';
+            }
+            $message = $shouldApproveForDemo
+                ? 'Hồ sơ xác minh đã được duyệt thành công. Bạn có thể sử dụng khu vực owner ngay.'
                 : 'Hồ sơ đã lưu. Bạn cần bổ sung đủ CCCD, số điện thoại, địa chỉ và ngân hàng để gửi xác minh.';
             $message_type = 'success';
 
