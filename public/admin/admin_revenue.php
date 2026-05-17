@@ -1,9 +1,9 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../admin_init.php';
 require_once __DIR__ . '/layout.php';
 
 if (!$is_logged_in || ($_SESSION['role'] ?? '') !== ROLE_ADMIN) {
-    header('Location: ' . ADMIN_URL . 'login.php');
+    header('Location: ' . BASE_URL . 'login.php?area=admin');
     exit;
 }
 
@@ -12,31 +12,31 @@ $revenueData = $controller->listRevenue();
 $stats = $revenueData['stats'] ?? [];
 $revenue = $revenueData['revenue'] ?? [];
 
-admin_layout_start('Doanh thu admin', 'Theo dõi commission hệ thống nhận được từ các booking và thanh toán đã hoàn tất.', 'admin_revenue');
+admin_layout_start('Doanh thu admin', 'Theo dÃµi commission há»‡ thá»‘ng nháº­n Ä‘Æ°á»£c tá»« cÃ¡c booking vÃ  thanh toÃ¡n Ä‘Ã£ hoÃ n táº¥t.', 'admin_revenue');
 admin_flash_messages();
 ?>
 
 <div class="wb-grid wb-stats-4 mb-3">
     <div class="wb-card"><i class="fa fa-money wb-card-icon"></i>
         <div class="wb-card-value fs-4"><?php echo admin_money($stats['total'] ?? 0); ?></div>
-        <div class="wb-card-label">Tổng doanh thu</div>
+        <div class="wb-card-label">Tá»•ng doanh thu</div>
     </div>
     <div class="wb-card"><i class="fa fa-calendar wb-card-icon"></i>
         <div class="wb-card-value fs-4"><?php echo admin_money($stats['month'] ?? 0); ?></div>
-        <div class="wb-card-label">Tháng này</div>
+        <div class="wb-card-label">ThÃ¡ng nÃ y</div>
     </div>
     <div class="wb-card"><i class="fa fa-check-circle wb-card-icon"></i>
         <div class="wb-card-value"><?php echo (int)($stats['count'] ?? 0); ?></div>
-        <div class="wb-card-label">Lần nhận commission</div>
+        <div class="wb-card-label">Láº§n nháº­n commission</div>
     </div>
     <div class="wb-card"><i class="fa fa-bar-chart wb-card-icon"></i>
         <div class="wb-card-value fs-4"><?php echo admin_money($stats['average'] ?? 0); ?></div>
-        <div class="wb-card-label">Trung bình/commission</div>
+        <div class="wb-card-label">Trung bÃ¬nh/commission</div>
     </div>
 </div>
 
 <div class="wb-section-head">
-    <h2>Danh sách commission</h2>
+    <h2>Danh sÃ¡ch commission</h2>
     <span class="wb-pill">5% platform fee</span>
 </div>
 
@@ -46,11 +46,11 @@ admin_flash_messages();
             <thead>
                 <tr>
                     <th>Booking</th>
-                    <th>Phòng trọ</th>
-                    <th>Khách hàng</th>
-                    <th>Giá phòng</th>
+                    <th>PhÃ²ng trá»</th>
+                    <th>KhÃ¡ch hÃ ng</th>
+                    <th>GiÃ¡ phÃ²ng</th>
                     <th>Commission</th>
-                    <th>Ngày nhận</th>
+                    <th>NgÃ y nháº­n</th>
                 </tr>
             </thead>
             <tbody>
@@ -59,7 +59,7 @@ admin_flash_messages();
                         <td>#<?php echo (int)($item['booking_id'] ?? 0); ?></td>
                         <td>
                             <div class="wb-title"><?php echo admin_e($item['motel_title'] ?? 'N/A'); ?></div>
-                            <div class="wb-muted">Chủ: <?php echo admin_e($item['owner_name'] ?? 'N/A'); ?></div>
+                            <div class="wb-muted">Chá»§: <?php echo admin_e($item['owner_name'] ?? 'N/A'); ?></div>
                         </td>
                         <td>
                             <div><?php echo admin_e($item['user_name'] ?? 'N/A'); ?></div>
@@ -73,7 +73,7 @@ admin_flash_messages();
             </tbody>
         </table>
     <?php else: ?>
-        <div class="wb-empty">Chưa có commission nào. Commission phát sinh khi booking hoàn tất theo luồng thanh toán.</div>
+        <div class="wb-empty">ChÆ°a cÃ³ commission nÃ o. Commission phÃ¡t sinh khi booking hoÃ n táº¥t theo luá»“ng thanh toÃ¡n.</div>
     <?php endif; ?>
 </div>
 
@@ -91,20 +91,20 @@ admin_flash_messages();
 
 <div class="wb-grid wb-stats-4 mt-3">
     <div class="wb-card">
-        <div class="wb-title mb-2">Cơ chế doanh thu</div>
-        <div class="wb-muted">Admin nhận commission theo tỷ lệ hệ thống cấu hình trên mỗi booking hợp lệ.</div>
+        <div class="wb-title mb-2">CÆ¡ cháº¿ doanh thu</div>
+        <div class="wb-muted">Admin nháº­n commission theo tá»· lá»‡ há»‡ thá»‘ng cáº¥u hÃ¬nh trÃªn má»—i booking há»£p lá»‡.</div>
     </div>
     <div class="wb-card">
-        <div class="wb-title mb-2">Dòng tiền</div>
-        <div class="wb-muted">Tiền cọc được giữ, giải ngân cho chủ phòng và ghi nhận phần phí cho admin.</div>
+        <div class="wb-title mb-2">DÃ²ng tiá»n</div>
+        <div class="wb-muted">Tiá»n cá»c Ä‘Æ°á»£c giá»¯, giáº£i ngÃ¢n cho chá»§ phÃ²ng vÃ  ghi nháº­n pháº§n phÃ­ cho admin.</div>
     </div>
     <div class="wb-card">
-        <div class="wb-title mb-2">Đối soát</div>
-        <div class="wb-muted">So sánh commission với booking và trạng thái thanh toán trước khi chốt báo cáo.</div>
+        <div class="wb-title mb-2">Äá»‘i soÃ¡t</div>
+        <div class="wb-muted">So sÃ¡nh commission vá»›i booking vÃ  tráº¡ng thÃ¡i thanh toÃ¡n trÆ°á»›c khi chá»‘t bÃ¡o cÃ¡o.</div>
     </div>
     <div class="wb-card">
-        <div class="wb-title mb-2">Rủi ro</div>
-        <div class="wb-muted">Ưu tiên kiểm tra các giao dịch hoàn tiền, hủy hoặc bị tranh chấp.</div>
+        <div class="wb-title mb-2">Rá»§i ro</div>
+        <div class="wb-muted">Æ¯u tiÃªn kiá»ƒm tra cÃ¡c giao dá»‹ch hoÃ n tiá»n, há»§y hoáº·c bá»‹ tranh cháº¥p.</div>
     </div>
 </div>
 

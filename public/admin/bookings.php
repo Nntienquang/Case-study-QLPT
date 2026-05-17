@@ -1,9 +1,9 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../admin_init.php';
 require_once __DIR__ . '/layout.php';
 
 if (!$is_logged_in || ($_SESSION['user_role'] ?? '') !== 'admin') {
-    header('Location: ' . ADMIN_URL . 'login.php');
+    header('Location: ' . BASE_URL . 'login.php?area=admin');
     exit;
 }
 
@@ -13,7 +13,7 @@ $action = $_POST['action'] ?? '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($action, ['update_status', 'delete'], true)) {
     if (!Csrf::validateRequest('admin_booking_action')) {
-        $_SESSION['error'] = 'Phiên thao tác không hợp lệ, vui lòng thử lại.';
+        $_SESSION['error'] = 'PhiÃªn thao tÃ¡c khÃ´ng há»£p lá»‡, vui lÃ²ng thá»­ láº¡i.';
         header('Location: ' . ADMIN_URL . 'bookings.php');
         exit;
     }
@@ -29,32 +29,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($action, ['update_status',
 
 $data = $controller->listBookings();
 
-admin_layout_start('Quản lý booking', 'Theo dõi các đơn đặt phòng, tiền cọc và trạng thái xử lý giữa người thuê với chủ phòng.', 'bookings');
+admin_layout_start('Quáº£n lÃ½ booking', 'Theo dÃµi cÃ¡c Ä‘Æ¡n Ä‘áº·t phÃ²ng, tiá»n cá»c vÃ  tráº¡ng thÃ¡i xá»­ lÃ½ giá»¯a ngÆ°á»i thuÃª vá»›i chá»§ phÃ²ng.', 'bookings');
 admin_flash_messages();
 ?>
 
 <div class="wb-card mb-3">
     <form method="GET" class="row g-3 align-items-end">
         <div class="col-md-4">
-            <label class="form-label fw-semibold">Trạng thái</label>
+            <label class="form-label fw-semibold">Tráº¡ng thÃ¡i</label>
             <select name="status" class="form-select">
-                <option value="">Tất cả</option>
-                <option value="pending" <?php echo ($data['status'] ?? '') === 'pending' ? 'selected' : ''; ?>>Chờ xử lý</option>
-                <option value="paid" <?php echo ($data['status'] ?? '') === 'paid' ? 'selected' : ''; ?>>Đã cọc</option>
-                <option value="accepted" <?php echo ($data['status'] ?? '') === 'accepted' ? 'selected' : ''; ?>>Đã chấp nhận</option>
-                <option value="completed" <?php echo ($data['status'] ?? '') === 'completed' ? 'selected' : ''; ?>>Hoàn tất</option>
+                <option value="">Táº¥t cáº£</option>
+                <option value="pending" <?php echo ($data['status'] ?? '') === 'pending' ? 'selected' : ''; ?>>Chá» xá»­ lÃ½</option>
+                <option value="paid" <?php echo ($data['status'] ?? '') === 'paid' ? 'selected' : ''; ?>>ÄÃ£ cá»c</option>
+                <option value="accepted" <?php echo ($data['status'] ?? '') === 'accepted' ? 'selected' : ''; ?>>ÄÃ£ cháº¥p nháº­n</option>
+                <option value="completed" <?php echo ($data['status'] ?? '') === 'completed' ? 'selected' : ''; ?>>HoÃ n táº¥t</option>
             </select>
         </div>
         <div class="col-md-8">
-            <button type="submit" class="btn btn-primary"><i class="fa fa-filter"></i> Lọc danh sách</button>
-            <a href="<?php echo ADMIN_URL; ?>bookings.php" class="btn btn-outline-secondary">Xóa lọc</a>
+            <button type="submit" class="btn btn-primary"><i class="fa fa-filter"></i> Lá»c danh sÃ¡ch</button>
+            <a href="<?php echo ADMIN_URL; ?>bookings.php" class="btn btn-outline-secondary">XÃ³a lá»c</a>
         </div>
     </form>
 </div>
 
 <div class="wb-section-head">
-    <h2>Danh sách booking</h2>
-    <span class="wb-pill"><?php echo (int)($data['total'] ?? 0); ?> đơn</span>
+    <h2>Danh sÃ¡ch booking</h2>
+    <span class="wb-pill"><?php echo (int)($data['total'] ?? 0); ?> Ä‘Æ¡n</span>
 </div>
 
 <div class="wb-table-card">
@@ -63,11 +63,11 @@ admin_flash_messages();
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Người thuê</th>
-                    <th>Phòng trọ</th>
-                    <th>Tiền cọc</th>
+                    <th>NgÆ°á»i thuÃª</th>
+                    <th>PhÃ²ng trá»</th>
+                    <th>Tiá»n cá»c</th>
                     <th>Check-in</th>
-                    <th>Trạng thái</th>
+                    <th>Tráº¡ng thÃ¡i</th>
                     <th></th>
                 </tr>
             </thead>
@@ -84,14 +84,14 @@ admin_flash_messages();
                         <td class="text-end">
                             <a href="<?php echo ADMIN_URL . 'booking_detail.php?id=' . (int)$booking['id']; ?>" class="btn btn-sm btn-primary"><i class="fa fa-eye"></i> Xem</a>
                             <?php if ($status === 'pending'): ?>
-                                <form method="POST" class="d-inline" onsubmit="return confirm('Chấp nhận booking này?');">
+                                <form method="POST" class="d-inline" onsubmit="return confirm('Cháº¥p nháº­n booking nÃ y?');">
                                     <?php echo Csrf::field('admin_booking_action'); ?>
                                     <input type="hidden" name="action" value="update_status">
                                     <input type="hidden" name="status" value="accepted">
                                     <input type="hidden" name="id" value="<?php echo (int)$booking['id']; ?>">
                                     <button type="submit" class="btn btn-sm btn-success"><i class="fa fa-check"></i></button>
                                 </form>
-                                <form method="POST" class="d-inline" onsubmit="return confirm('Từ chối booking này?');">
+                                <form method="POST" class="d-inline" onsubmit="return confirm('Tá»« chá»‘i booking nÃ y?');">
                                     <?php echo Csrf::field('admin_booking_action'); ?>
                                     <input type="hidden" name="action" value="update_status">
                                     <input type="hidden" name="status" value="rejected">
@@ -99,7 +99,7 @@ admin_flash_messages();
                                     <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa fa-times"></i></button>
                                 </form>
                             <?php elseif (in_array($status, ['paid', 'accepted'], true)): ?>
-                                <form method="POST" class="d-inline" onsubmit="return confirm('Đánh dấu booking hoàn tất?');">
+                                <form method="POST" class="d-inline" onsubmit="return confirm('ÄÃ¡nh dáº¥u booking hoÃ n táº¥t?');">
                                     <?php echo Csrf::field('admin_booking_action'); ?>
                                     <input type="hidden" name="action" value="update_status">
                                     <input type="hidden" name="status" value="completed">
@@ -107,7 +107,7 @@ admin_flash_messages();
                                     <button type="submit" class="btn btn-sm btn-success"><i class="fa fa-flag-checkered"></i></button>
                                 </form>
                             <?php endif; ?>
-                            <form method="POST" class="d-inline" onsubmit="return confirm('Xóa đơn này?');">
+                            <form method="POST" class="d-inline" onsubmit="return confirm('XÃ³a Ä‘Æ¡n nÃ y?');">
                                 <?php echo Csrf::field('admin_booking_action'); ?>
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="id" value="<?php echo (int)$booking['id']; ?>">
@@ -119,7 +119,7 @@ admin_flash_messages();
             </tbody>
         </table>
     <?php else: ?>
-        <div class="wb-empty">Không có booking phù hợp bộ lọc.</div>
+        <div class="wb-empty">KhÃ´ng cÃ³ booking phÃ¹ há»£p bá»™ lá»c.</div>
     <?php endif; ?>
 </div>
 
@@ -136,3 +136,4 @@ admin_flash_messages();
 <?php endif; ?>
 
 <?php admin_layout_end(); ?>
+

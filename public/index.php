@@ -1346,7 +1346,7 @@ try {
                     <h6 class="fw-bold mb-3 text-white text-uppercase small">Liên hệ hệ thống</h6>
                     <p class="footer-info"><i class="bi bi-geo-alt-fill me-2"></i> Trường Đại học Vinh, Nghệ An</p>
                     <p class="footer-info"><i class="bi bi-envelope-fill me-2"></i> ho-tro@quanlyphongtro.vn</p>
-                    <a href="admin/login.php" class="btn btn-light btn-sm fw-bold px-3 mt-2">Quản trị viên (Admin)</a>
+                    <a href="login.php?area=admin" class="btn btn-light btn-sm fw-bold px-3 mt-2">Quản trị viên (Admin)</a>
                 </div>
             </div>
 

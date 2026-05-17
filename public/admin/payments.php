@@ -1,9 +1,9 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../admin_init.php';
 require_once __DIR__ . '/layout.php';
 
 if (!$is_logged_in || ($_SESSION['user_role'] ?? '') !== 'admin') {
-    header('Location: ' . ADMIN_URL . 'login.php');
+    header('Location: ' . BASE_URL . 'login.php?area=admin');
     exit;
 }
 
@@ -11,7 +11,7 @@ $controller = new PaymentController($db, new ActivityLog($db));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update_status') {
     if (!Csrf::validateRequest('admin_payment_action')) {
-        $_SESSION['error'] = 'Phiên thao tác không hợp lệ, vui lòng thử lại.';
+        $_SESSION['error'] = 'PhiÃªn thao tÃ¡c khÃ´ng há»£p lá»‡, vui lÃ²ng thá»­ láº¡i.';
         header('Location: ' . ADMIN_URL . 'payments.php');
         exit;
     }
@@ -20,31 +20,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
 
 $data = $controller->listPayments();
 
-admin_layout_start('Quản lý thanh toán', 'Theo dõi giao dịch đặt cọc và xác nhận thanh toán trước khi owner xử lý booking.', 'payments');
+admin_layout_start('Quáº£n lÃ½ thanh toÃ¡n', 'Theo dÃµi giao dá»‹ch Ä‘áº·t cá»c vÃ  xÃ¡c nháº­n thanh toÃ¡n trÆ°á»›c khi owner xá»­ lÃ½ booking.', 'payments');
 admin_flash_messages();
 ?>
 
 <div class="wb-card mb-3">
     <form method="GET" class="row g-3 align-items-end">
         <div class="col-md-4">
-            <label class="form-label fw-semibold">Trạng thái</label>
+            <label class="form-label fw-semibold">Tráº¡ng thÃ¡i</label>
             <select name="status" class="form-select">
-                <option value="">Tất cả</option>
-                <?php foreach (['pending' => 'Chờ thanh toán', 'processing' => 'Chờ xác nhận', 'paid' => 'Đã thanh toán', 'failed' => 'Thất bại', 'cancelled' => 'Đã hủy', 'refunded' => 'Hoàn tiền'] as $value => $label): ?>
+                <option value="">Táº¥t cáº£</option>
+                <?php foreach (['pending' => 'Chá» thanh toÃ¡n', 'processing' => 'Chá» xÃ¡c nháº­n', 'paid' => 'ÄÃ£ thanh toÃ¡n', 'failed' => 'Tháº¥t báº¡i', 'cancelled' => 'ÄÃ£ há»§y', 'refunded' => 'HoÃ n tiá»n'] as $value => $label): ?>
                     <option value="<?php echo admin_e($value); ?>" <?php echo ($data['status'] ?? '') === $value ? 'selected' : ''; ?>><?php echo admin_e($label); ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
         <div class="col-md-8">
-            <button type="submit" class="btn btn-primary"><i class="fa fa-filter"></i> Lọc danh sách</button>
-            <a href="<?php echo ADMIN_URL; ?>payments.php" class="btn btn-outline-secondary">Xóa lọc</a>
+            <button type="submit" class="btn btn-primary"><i class="fa fa-filter"></i> Lá»c danh sÃ¡ch</button>
+            <a href="<?php echo ADMIN_URL; ?>payments.php" class="btn btn-outline-secondary">XÃ³a lá»c</a>
         </div>
     </form>
 </div>
 
 <div class="wb-section-head">
-    <h2>Danh sách thanh toán</h2>
-    <span class="wb-pill"><?php echo (int)($data['total'] ?? 0); ?> giao dịch</span>
+    <h2>Danh sÃ¡ch thanh toÃ¡n</h2>
+    <span class="wb-pill"><?php echo (int)($data['total'] ?? 0); ?> giao dá»‹ch</span>
 </div>
 
 <div class="wb-table-card">
@@ -52,13 +52,13 @@ admin_flash_messages();
         <table class="wb-table">
             <thead>
                 <tr>
-                    <th>Mã</th>
+                    <th>MÃ£</th>
                     <th>Booking</th>
-                    <th>Người thuê</th>
-                    <th>Phòng trọ</th>
-                    <th>Số tiền</th>
-                    <th>Phương thức</th>
-                    <th>Trạng thái</th>
+                    <th>NgÆ°á»i thuÃª</th>
+                    <th>PhÃ²ng trá»</th>
+                    <th>Sá»‘ tiá»n</th>
+                    <th>PhÆ°Æ¡ng thá»©c</th>
+                    <th>Tráº¡ng thÃ¡i</th>
                     <th></th>
                 </tr>
             </thead>
@@ -76,14 +76,14 @@ admin_flash_messages();
                         <td class="text-end">
                             <a href="<?php echo ADMIN_URL . 'payment_detail.php?id=' . (int)$payment['id']; ?>" class="btn btn-sm btn-primary"><i class="fa fa-eye"></i> Xem</a>
                             <?php if (in_array($status, ['pending', 'processing'], true)): ?>
-                                <form method="POST" class="d-inline" onsubmit="return confirm('Xác nhận thanh toán này đã thành công?');">
+                                <form method="POST" class="d-inline" onsubmit="return confirm('XÃ¡c nháº­n thanh toÃ¡n nÃ y Ä‘Ã£ thÃ nh cÃ´ng?');">
                                     <?php echo Csrf::field('admin_payment_action'); ?>
                                     <input type="hidden" name="action" value="update_status">
                                     <input type="hidden" name="status" value="paid">
                                     <input type="hidden" name="id" value="<?php echo (int)$payment['id']; ?>">
                                     <button type="submit" class="btn btn-sm btn-success"><i class="fa fa-check"></i></button>
                                 </form>
-                                <form method="POST" class="d-inline" onsubmit="return confirm('Đánh dấu giao dịch thất bại?');">
+                                <form method="POST" class="d-inline" onsubmit="return confirm('ÄÃ¡nh dáº¥u giao dá»‹ch tháº¥t báº¡i?');">
                                     <?php echo Csrf::field('admin_payment_action'); ?>
                                     <input type="hidden" name="action" value="update_status">
                                     <input type="hidden" name="status" value="failed">
@@ -92,7 +92,7 @@ admin_flash_messages();
                                 </form>
                             <?php endif; ?>
                             <?php if ($status === 'paid'): ?>
-                                <form method="POST" class="d-inline" onsubmit="return confirm('Hoàn tiền khoản thanh toán này?');">
+                                <form method="POST" class="d-inline" onsubmit="return confirm('HoÃ n tiá»n khoáº£n thanh toÃ¡n nÃ y?');">
                                     <?php echo Csrf::field('admin_payment_action'); ?>
                                     <input type="hidden" name="action" value="update_status">
                                     <input type="hidden" name="status" value="refunded">
@@ -106,7 +106,7 @@ admin_flash_messages();
             </tbody>
         </table>
     <?php else: ?>
-        <div class="wb-empty">Không có thanh toán phù hợp bộ lọc.</div>
+        <div class="wb-empty">KhÃ´ng cÃ³ thanh toÃ¡n phÃ¹ há»£p bá»™ lá»c.</div>
     <?php endif; ?>
 </div>
 
@@ -123,3 +123,4 @@ admin_flash_messages();
 <?php endif; ?>
 
 <?php admin_layout_end(); ?>
+

@@ -1,9 +1,9 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../admin_init.php';
 require_once __DIR__ . '/layout.php';
 
 if (!$is_logged_in || ($_SESSION['user_role'] ?? '') !== 'admin') {
-    header('Location: ' . ADMIN_URL . 'login.php');
+    header('Location: ' . BASE_URL . 'login.php?area=admin');
     exit;
 }
 
@@ -13,7 +13,7 @@ $action = $_POST['action'] ?? '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'delete') {
     if (!Csrf::validateRequest('admin_review_action')) {
-        $_SESSION['error'] = 'Phiên thao tác không hợp lệ, vui lòng thử lại.';
+        $_SESSION['error'] = 'PhiÃªn thao tÃ¡c khÃ´ng há»£p lá»‡, vui lÃ²ng thá»­ láº¡i.';
         header('Location: ' . ADMIN_URL . 'reviews.php');
         exit;
     }
@@ -23,13 +23,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'delete') {
 
 $data = $controller->listReviews();
 
-admin_layout_start('Quản lý đánh giá', 'Theo dõi phản hồi của người thuê để phát hiện phòng kém chất lượng hoặc nội dung không phù hợp.', 'reviews');
+admin_layout_start('Quáº£n lÃ½ Ä‘Ã¡nh giÃ¡', 'Theo dÃµi pháº£n há»“i cá»§a ngÆ°á»i thuÃª Ä‘á»ƒ phÃ¡t hiá»‡n phÃ²ng kÃ©m cháº¥t lÆ°á»£ng hoáº·c ná»™i dung khÃ´ng phÃ¹ há»£p.', 'reviews');
 admin_flash_messages();
 ?>
 
 <div class="wb-section-head">
-    <h2>Danh sách đánh giá</h2>
-    <span class="wb-pill"><?php echo (int)($data['total'] ?? 0); ?> đánh giá</span>
+    <h2>Danh sÃ¡ch Ä‘Ã¡nh giÃ¡</h2>
+    <span class="wb-pill"><?php echo (int)($data['total'] ?? 0); ?> Ä‘Ã¡nh giÃ¡</span>
 </div>
 
 <div class="wb-table-card">
@@ -38,11 +38,11 @@ admin_flash_messages();
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Người dùng</th>
-                    <th>Phòng trọ</th>
-                    <th>Điểm</th>
-                    <th>Nhận xét</th>
-                    <th>Ngày tạo</th>
+                    <th>NgÆ°á»i dÃ¹ng</th>
+                    <th>PhÃ²ng trá»</th>
+                    <th>Äiá»ƒm</th>
+                    <th>Nháº­n xÃ©t</th>
+                    <th>NgÃ y táº¡o</th>
                     <th></th>
                 </tr>
             </thead>
@@ -57,7 +57,7 @@ admin_flash_messages();
                         <td><?php echo !empty($review['created_at']) ? date('d/m/Y', strtotime((string)$review['created_at'])) : ''; ?></td>
                         <td class="text-end">
                             <a href="<?php echo ADMIN_URL . 'review_detail.php?id=' . (int)$review['id']; ?>" class="btn btn-sm btn-primary"><i class="fa fa-eye"></i> Xem</a>
-                            <form method="POST" class="d-inline" onsubmit="return confirm('Xóa đánh giá này?');">
+                            <form method="POST" class="d-inline" onsubmit="return confirm('XÃ³a Ä‘Ã¡nh giÃ¡ nÃ y?');">
                                 <?php echo Csrf::field('admin_review_action'); ?>
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="id" value="<?php echo (int)$review['id']; ?>">
@@ -69,7 +69,7 @@ admin_flash_messages();
             </tbody>
         </table>
     <?php else: ?>
-        <div class="wb-empty">Chưa có đánh giá nào.</div>
+        <div class="wb-empty">ChÆ°a cÃ³ Ä‘Ã¡nh giÃ¡ nÃ o.</div>
     <?php endif; ?>
 </div>
 
@@ -86,3 +86,4 @@ admin_flash_messages();
 <?php endif; ?>
 
 <?php admin_layout_end(); ?>
+
