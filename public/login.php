@@ -175,6 +175,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $result = verify_public_credentials($conn, $email, $password);
             if ($result['success']) {
+
+
+
+            if(isset($_POST['remember_me'])){
+
+    setcookie(
+        'remember_email',
+        $email,
+        time() + (86400 * 30),
+        "/"
+    );
+
+}else{
+
+    setcookie(
+        'remember_email',
+        '',
+        time() - 3600,
+        "/"
+    );
+}
+
                 set_login_session($result['user']);
                 login_clear_security_state($email);
                 unset($_SESSION[$captchaKey]);
@@ -245,11 +267,22 @@ if ($showCaptcha) {
 
                 <form method="POST" autocomplete="off">
                     <?php echo Csrf::field('login'); ?>
-                    <label>Email</label>
-                    <div class="input-group">
-                        <i class="fa fa-envelope"></i>
-                        <input type="email" name="email" placeholder="admin123@gmail.com" value="<?php echo htmlspecialchars($email); ?>" required>
-                    </div>
+
+
+
+                  <label>Email</label>
+
+<div class="input-group">
+    <i class="fa fa-envelope"></i>
+
+    <input 
+        type="email"
+        name="email"
+        placeholder="admin123@gmail.com"
+        value="<?php echo htmlspecialchars($_COOKIE['remember_email'] ?? $email); ?>"
+        required
+    >
+</div>
 
                     <?php PasswordInput::render([
                         'name' => 'password',
@@ -272,7 +305,27 @@ if ($showCaptcha) {
                         </div>
                     <?php endif; ?>
 
-                    <button type="submit"><i class="fas fa-arrow-right-to-bracket"></i> Đăng nhập</button>
+                   <div style="display:flex;align-items:center;gap:8px;margin:15px 0;color:#111827;font-weight:500;">
+
+    <input 
+        type="checkbox" 
+        name="remember_me"
+        style="
+            width:auto;
+            height:auto;
+            margin:0;
+            transform:scale(1.1);
+            cursor:pointer;
+        "
+    >
+
+    <span>Ghi nhớ đăng nhập</span>
+
+</div>
+
+<button type="submit">
+    <i class="fas fa-arrow-right-to-bracket"></i> Đăng nhập
+</button>
                 </form>
 
                 <div class="links">
