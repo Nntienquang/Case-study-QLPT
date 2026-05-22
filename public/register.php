@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $name = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
-
+    $phone = trim($_POST['phone'] ?? '');
     
     $name = strip_tags($name);
     $email = strip_tags($email);
@@ -149,6 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 (
                     name,
                     email,
+                    phone,
                     password,
                     role,
                     status
@@ -158,15 +159,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ?,
                     ?,
                     ?,
+                    ?,
                     'user',
                     'active'
                 )
             ");
 
             $stmt->bind_param(
-                "sss",
+                "ssss",
                 $name,
                 $email,
+                $phone,
                 $hashedPassword
             );
 
@@ -181,6 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               
                 $name = '';
                 $email = '';
+                $phone = '';
 
             } else {
 
@@ -308,6 +312,22 @@ $captchaChallenge = Captcha::ensure('register_captcha');
                         <i class="fa fa-envelope"></i>
                         <input type="email" name="email" placeholder="you@example.com" value="<?php echo htmlspecialchars($email); ?>" required>
                     </div>
+
+                    <label>Số điện thoại</label>
+
+<div class="input-group">
+
+    <i class="fa fa-phone"></i>
+
+    <input 
+        type="text"
+        name="phone"
+        placeholder="0987654321"
+        value="<?php echo htmlspecialchars($phone); ?>"
+        required
+    >
+
+</div>
 
                   
 
