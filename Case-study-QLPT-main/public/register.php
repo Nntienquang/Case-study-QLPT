@@ -34,27 +34,170 @@ $type = '';
 $name = '';
 $email = '';
 
+
+
+
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
     $name = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
+
+    
+    $name = strip_tags($name);
+    $email = strip_tags($email);
+
     $password = $_POST['password'] ?? '';
-    $confirm = $_POST['confirm'] ?? '';
+
+    
+    $confirm = $_POST['confirm_password'] ?? '';
+
     $captcha = trim($_POST['captcha'] ?? '');
 
-    if (!Captcha::validate('register_captcha', $captcha)) {
-        $message = 'Mã xác thực không đúng. Vui lòng nhập lại mã trong ảnh.';
-        $type = 'error';
-    } else {
-        $result = $auth->register($name, $email, $password, $confirm, 'user');
-        $message = $result['message'];
-        $type = $result['success'] ? 'success' : 'error';
+    
 
-        if ($result['success']) {
-            $name = '';
-            $email = '';
+    if (
+        empty($name) ||
+        empty($email) ||
+        empty($password) ||
+        empty($confirm)
+    ) {
+
+        $message = 'Vui lòng nhập đầy đủ thông tin';
+        $type = 'error';
+    }
+
+    
+    elseif (strlen($name) < 3) {
+
+        $message = 'Họ tên phải từ 3 ký tự';
+        $type = 'error';
+    }
+
+    
+    elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+
+        $message = 'Email không hợp lệ';
+        $type = 'error';
+    }
+
+    
+    elseif (strlen($password) < 6) {
+
+        $message = 'Mật khẩu phải từ 6 ký tự';
+        $type = 'error';
+    }
+
+ 
+    elseif (
+        !preg_match('/[A-Z]/', $password) ||
+        !preg_match('/[0-9]/', $password)
+    ) {
+
+        $message = 'Mật khẩu phải có ít nhất 1 chữ hoa và 1 số';
+        $type = 'error';
+    }
+
+ 
+    elseif ($password !== $confirm) {
+
+        $message = 'Xác nhận mật khẩu không đúng';
+        $type = 'error';
+    }
+
+ 
+    elseif (!Captcha::validate('register_captcha', $captcha)) {
+
+        $message = 'Mã xác thực không đúng';
+        $type = 'error';
+    }
+
+    else {
+
+       
+
+        $stmt = $conn->prepare("
+            SELECT id
+            FROM users
+            WHERE email = ?
+        ");
+
+        $stmt->bind_param("s", $email);
+
+        $stmt->execute();
+
+        $checkEmail = $stmt->get_result();
+
+        if ($checkEmail->num_rows > 0) {
+
+            $message = 'Email đã tồn tại';
+            $type = 'error';
+        }
+
+        else {
+
+
+            $hashedPassword = password_hash(
+                $password,
+                PASSWORD_DEFAULT
+            );
+
+        
+
+            $stmt = $conn->prepare("
+                INSERT INTO users
+                (
+                    name,
+                    email,
+                    password,
+                    role,
+                    status
+                )
+                VALUES
+                (
+                    ?,
+                    ?,
+                    ?,
+                    'user',
+                    'active'
+                )
+            ");
+
+            $stmt->bind_param(
+                "sss",
+                $name,
+                $email,
+                $hashedPassword
+            );
+
+            if ($stmt->execute()) {
+
+               
+                session_regenerate_id(true);
+
+                $message = 'Đăng ký thành công';
+                $type = 'success';
+
+              
+                $name = '';
+                $email = '';
+
+            } else {
+
+                $message = 'Có lỗi xảy ra khi đăng ký';
+                $type = 'error';
+            }
         }
     }
 }
+
+
+
+
+
+
+
+
 
 $captchaChallenge = Captcha::ensure('register_captcha');
 ?>
@@ -66,6 +209,60 @@ $captchaChallenge = Captcha::ensure('register_captcha');
     <title>Đăng ký người thuê - QuanLyPhongTro</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <link href="assets/css/modern.css?v=auth-captcha-2" rel="stylesheet">
+
+<link href="assets/css/modern.css?v=auth-captcha-2" rel="stylesheet">
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+
+
+<style>
+
+.password-wrapper{
+    position:relative;
+}
+
+.password-wrapper .toggle-password{
+
+    position:absolute;
+
+    right:20px;
+
+    top:50%;
+
+    transform:translateY(-50%);
+
+    cursor:pointer;
+
+    color:#666;
+
+    font-size:18px;
+
+    z-index:999999;
+
+}
+
+.password-wrapper input{
+
+    padding-right:55px !important;
+
+}
+
+</style>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 </head>
 <body class="auth-dark">
     <div class="three-stage auth-scene" data-three-scene data-scene="housing" data-accent="#2563eb" data-accent2="#8b5cf6"></div>
@@ -112,17 +309,68 @@ $captchaChallenge = Captcha::ensure('register_captcha');
                         <input type="email" name="email" placeholder="you@example.com" value="<?php echo htmlspecialchars($email); ?>" required>
                     </div>
 
-                    <label>Mật khẩu</label>
-                    <div class="input-group">
-                        <i class="fa fa-lock"></i>
-                        <input type="password" name="password" placeholder="Ít nhất 6 ký tự" required>
-                    </div>
+                  
 
-                    <label>Xác nhận mật khẩu</label>
-                    <div class="input-group">
-                        <i class="fa fa-lock"></i>
-                        <input type="password" name="confirm" placeholder="Nhập lại mật khẩu" required>
-                    </div>
+<label>Mật khẩu</label>
+
+<div class="password-wrapper">
+
+    <div class="input-group">
+
+        <i class="fa fa-lock"></i>
+
+        <input
+            type="password"
+            name="password"
+            id="password"
+            placeholder="Ít nhất 6 ký tự"
+            required
+        >
+
+    </div>
+
+    <span class="toggle-password"
+          id="togglePassword">
+
+        <i class="fa fa-eye"></i>
+
+    </span>
+
+</div>
+
+
+
+                 
+
+<label>Xác nhận mật khẩu</label>
+
+<div class="password-wrapper">
+
+    <div class="input-group">
+
+        <i class="fa fa-lock"></i>
+
+        <input
+            type="password"
+            name="confirm_password"
+            id="confirm_password"
+            placeholder="Nhập lại mật khẩu"
+            required
+        >
+
+    </div>
+
+    <span class="toggle-password"
+          id="toggleConfirmPassword">
+
+        <i class="fa fa-eye"></i>
+
+    </span>
+
+</div>
+
+
+
 
                     <label>Mã xác thực</label>
                     <div class="captcha-widget">
@@ -154,6 +402,50 @@ $captchaChallenge = Captcha::ensure('register_captcha');
             image.src = image.src.split('&v=')[0] + '&v=' + Date.now();
             button.parentElement.querySelector('input[name="captcha"]').value = '';
         }
+
+const togglePassword = document.getElementById('togglePassword');
+const password = document.getElementById('password');
+
+togglePassword.onclick = function () {
+
+    const icon = this.querySelector('i');
+
+    if(password.type === "password"){
+
+        password.type = "text";
+        icon.classList.replace("fa-eye", "fa-eye-slash");
+
+    }else{
+
+        password.type = "password";
+        icon.classList.replace("fa-eye-slash", "fa-eye");
+    }
+}
+
+const toggleConfirmPassword = document.getElementById('toggleConfirmPassword');
+const confirmPassword = document.getElementById('confirm_password');
+
+toggleConfirmPassword.onclick = function () {
+
+    const icon = this.querySelector('i');
+
+    if(confirmPassword.type === "password"){
+
+        confirmPassword.type = "text";
+        icon.classList.replace("fa-eye", "fa-eye-slash");
+
+    }else{
+
+        confirmPassword.type = "password";
+        icon.classList.replace("fa-eye-slash", "fa-eye");
+    }
+}
+
+
+
+
+
+
     </script>
 </body>
 </html>
