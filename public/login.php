@@ -33,16 +33,101 @@ function login_client_ip(): string
     return $_SERVER['REMOTE_ADDR'] ?? 'local';
 }
 
+function login_turnstile_site_key(): string
+{
+    return trim((string)(getenv('TURNSTILE_SITE_KEY') ?: ''));
+}
+
+function login_turnstile_secret_key(): string
+{
+    return trim((string)(getenv('TURNSTILE_SECRET_KEY') ?: ''));
+}
+
+function login_turnstile_enabled(): bool
+{
+    $host = strtolower((string)($_SERVER['HTTP_HOST'] ?? ''));
+    $host = explode(':', $host)[0] ?? $host;
+    $localHosts = ['localhost', '127.0.0.1', '::1'];
+    return !in_array($host, $localHosts, true)
+        && login_turnstile_site_key() !== ''
+        && login_turnstile_secret_key() !== '';
+}
+
+function login_verify_turnstile(string $token): bool
+{
+    if (!login_turnstile_enabled() || $token === '') {
+        return false;
+    }
+
+    $postData = http_build_query([
+        'secret' => login_turnstile_secret_key(),
+        'response' => $token,
+        'remoteip' => login_client_ip(),
+    ]);
+    $endpoint = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+    if (function_exists('curl_init')) {
+        $curl = curl_init($endpoint);
+        curl_setopt_array($curl, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $postData,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 5,
+            CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded'],
+        ]);
+        $body = curl_exec($curl);
+        curl_close($curl);
+    } else {
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => "Content-Type: application/x-www-form-urlencoded\r\n",
+                'content' => $postData,
+                'timeout' => 5,
+            ],
+        ]);
+        $body = @file_get_contents($endpoint, false, $context);
+    }
+
+    $payload = is_string($body) ? json_decode($body, true) : null;
+    return is_array($payload) && !empty($payload['success']);
+}
+
+function login_validate_captcha_challenge(string $captchaKey): bool
+{
+    if (login_turnstile_enabled()) {
+        return login_verify_turnstile((string)($_POST['cf-turnstile-response'] ?? ''));
+    }
+
+    return Captcha::validate($captchaKey, (string)($_POST['captcha'] ?? ''));
+}
+
 function login_security_key(string $email): string
 {
     $normalizedEmail = strtolower(trim($email));
     return hash('sha256', $normalizedEmail . '|' . login_client_ip());
 }
 
-function login_security_state(string $email): array
+function login_table_exists(mysqli $conn, string $table): bool
 {
-    $key = login_security_key($email);
-    return $_SESSION['login_security'][$key] ?? [
+    static $cache = [];
+    if (array_key_exists($table, $cache)) {
+        return $cache[$table];
+    }
+
+    $stmt = $conn->prepare('SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ? LIMIT 1');
+    if (!$stmt) {
+        return $cache[$table] = false;
+    }
+    $stmt->bind_param('s', $table);
+    $stmt->execute();
+    $cache[$table] = (bool)$stmt->get_result()->fetch_row();
+    $stmt->close();
+    return $cache[$table];
+}
+
+function login_security_default_state(): array
+{
+    return [
         'failures' => 0,
         'lock_until' => 0,
         'captcha_required' => false,
@@ -50,19 +135,78 @@ function login_security_state(string $email): array
     ];
 }
 
-function login_save_security_state(string $email, array $state): void
+function login_security_state(mysqli $conn, string $email): array
 {
-    $_SESSION['login_security'][login_security_key($email)] = $state;
+    $key = login_security_key($email);
+    if (!login_table_exists($conn, 'login_security_state')) {
+        return $_SESSION['login_security'][$key] ?? login_security_default_state();
+    }
+
+    $stmt = $conn->prepare('SELECT failures, captcha_required, locked_until, lock_level FROM login_security_state WHERE identity_hash = ? LIMIT 1');
+    if (!$stmt) {
+        return $_SESSION['login_security'][$key] ?? login_security_default_state();
+    }
+    $stmt->bind_param('s', $key);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    if (!$row) {
+        return $_SESSION['login_security'][$key] ?? login_security_default_state();
+    }
+
+    return [
+        'failures' => (int)($row['failures'] ?? 0),
+        'lock_until' => !empty($row['locked_until']) ? (strtotime((string)$row['locked_until']) ?: 0) : 0,
+        'captcha_required' => (bool)($row['captcha_required'] ?? false),
+        'lock_level' => (int)($row['lock_level'] ?? 0),
+    ];
 }
 
-function login_clear_security_state(string $email): void
+function login_save_security_state(mysqli $conn, string $email, array $state): void
 {
-    unset($_SESSION['login_security'][login_security_key($email)]);
+    $key = login_security_key($email);
+    $_SESSION['login_security'][$key] = $state;
+    if (!login_table_exists($conn, 'login_security_state')) {
+        return;
+    }
+
+    $ip = login_client_ip();
+    $failures = (int)($state['failures'] ?? 0);
+    $captchaRequired = !empty($state['captcha_required']) ? 1 : 0;
+    $lockLevel = (int)($state['lock_level'] ?? 0);
+    $lockedUntil = !empty($state['lock_until']) ? date('Y-m-d H:i:s', (int)$state['lock_until']) : null;
+    $stmt = $conn->prepare(
+        'INSERT INTO login_security_state (identity_hash, email, ip_address, failures, captcha_required, locked_until, lock_level, last_failure_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+         ON DUPLICATE KEY UPDATE email = VALUES(email), ip_address = VALUES(ip_address), failures = VALUES(failures), captcha_required = VALUES(captcha_required), locked_until = VALUES(locked_until), lock_level = VALUES(lock_level), last_failure_at = NOW(), updated_at = NOW()'
+    );
+    if (!$stmt) {
+        return;
+    }
+    $stmt->bind_param('sssiisi', $key, $email, $ip, $failures, $captchaRequired, $lockedUntil, $lockLevel);
+    $stmt->execute();
+    $stmt->close();
+}
+
+function login_clear_security_state(mysqli $conn, string $email): void
+{
+    $key = login_security_key($email);
+    unset($_SESSION['login_security'][$key]);
+    if (!login_table_exists($conn, 'login_security_state')) {
+        return;
+    }
+
+    $stmt = $conn->prepare('DELETE FROM login_security_state WHERE identity_hash = ?');
+    if ($stmt) {
+        $stmt->bind_param('s', $key);
+        $stmt->execute();
+        $stmt->close();
+    }
 }
 
 function login_record_failure(mysqli $conn, string $email, string $reason): array
 {
-    $state = login_security_state($email);
+    $state = login_security_state($conn, $email);
     $state['failures'] = (int)($state['failures'] ?? 0) + 1;
     $state['captcha_required'] = $state['failures'] >= 3;
 
@@ -73,7 +217,7 @@ function login_record_failure(mysqli $conn, string $email, string $reason): arra
         $state['lock_level'] = min($level + 1, count($levels) - 1);
     }
 
-    login_save_security_state($email, $state);
+    login_save_security_state($conn, $email, $state);
     login_write_log($conn, 0, 'login_failed', 'user', 0, "Login failed for {$email}: {$reason}");
 
     return $state;
@@ -155,7 +299,7 @@ $captchaKey = 'login_captcha';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim((string)($_POST['email'] ?? ''));
     $password = (string)($_POST['password'] ?? '');
-    $state = login_security_state($email);
+    $state = login_security_state($conn, $email);
 
     if (!Csrf::validateRequest('login')) {
         $message = 'Phiên đăng nhập không hợp lệ, vui lòng thử lại.';
@@ -168,8 +312,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $showCaptcha = true;
     } else {
         $showCaptcha = (bool)($state['captcha_required'] ?? false);
-        if ($showCaptcha && !Captcha::validate($captchaKey, (string)($_POST['captcha'] ?? ''))) {
-            Captcha::generate($captchaKey);
+        if ($showCaptcha && !login_validate_captcha_challenge($captchaKey)) {
+            if (!login_turnstile_enabled()) {
+                Captcha::generate($captchaKey);
+            }
             $message = 'Mã xác minh không đúng.';
             $type = 'error';
         } else {
@@ -198,7 +344,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
                 set_login_session($result['user']);
-                login_clear_security_state($email);
+                login_clear_security_state($conn, $email);
                 unset($_SESSION[$captchaKey]);
                 Csrf::rotate('login');
                 login_write_log($conn, (int)$result['user']['id'], 'login_success', 'user', (int)$result['user']['id'], 'Đăng nhập thành công');
@@ -222,9 +368,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-if ($showCaptcha) {
+if ($showCaptcha && !login_turnstile_enabled()) {
     Captcha::ensure($captchaKey);
 }
+$useTurnstile = $showCaptcha && login_turnstile_enabled();
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -291,7 +438,12 @@ if ($showCaptcha) {
                         'autocomplete' => 'current-password',
                     ]); ?>
 
-                    <?php if ($showCaptcha): ?>
+                    <?php if ($showCaptcha && $useTurnstile): ?>
+                        <label>Mã xác minh</label>
+                        <div class="captcha-widget">
+                            <div class="cf-turnstile" data-sitekey="<?php echo htmlspecialchars(login_turnstile_site_key(), ENT_QUOTES, 'UTF-8'); ?>"></div>
+                        </div>
+                    <?php elseif ($showCaptcha): ?>
                         <label>Mã xác minh</label>
                         <div class="captcha-widget">
                             <img class="captcha-image" src="captcha.php?key=login_captcha&v=<?php echo time(); ?>" alt="Mã xác minh">
@@ -339,6 +491,9 @@ if ($showCaptcha) {
 
     <script type="module" src="assets/js/three-interface.js"></script>
     <script src="assets/js/password-toggle.js?v=auth-password-ui-3"></script>
+    <?php if ($useTurnstile): ?>
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <?php endif; ?>
     <script>
         function refreshCaptcha(button) {
             const image = button.parentElement.querySelector('.captcha-image');

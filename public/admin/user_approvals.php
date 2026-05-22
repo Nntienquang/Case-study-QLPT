@@ -21,12 +21,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if ($_POST['action'] === 'approve') {
         $id = (int)($_POST['id'] ?? 0);
         if ($id > 0) {
-            $user = $db->getRow("SELECT * FROM users WHERE id = {$id}");
+            $userStmt = $db->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
+            if ($userStmt) {
+                $userStmt->bind_param('i', $id);
+                $userStmt->execute();
+                $user = $userStmt->get_result()->fetch_assoc();
+                $userStmt->close();
+            } else {
+                $user = false;
+            }
             if ($user && $user['role'] === 'owner') {
                 $adminId = (int)$_SESSION['user_id'];
-                if ($db->query("UPDATE users SET status = 'approved', owner_verification_status = 'approved', approved_by = {$adminId}, approved_at = NOW(), verified_at = NOW(), verification_reviewed_by = {$adminId}, verification_reviewed_at = NOW(), verification_rejection_reason = NULL WHERE id = {$id}")) {
+                $approveStmt = $db->prepare("UPDATE users SET status = 'approved', owner_verification_status = 'approved', approved_by = ?, approved_at = NOW(), verified_at = NOW(), verification_reviewed_by = ?, verification_reviewed_at = NOW(), verification_rejection_reason = NULL WHERE id = ?");
+                if ($approveStmt) {
+                    $approveStmt->bind_param('iii', $adminId, $adminId, $id);
+                }
+                if ($approveStmt && $approveStmt->execute()) {
                     $activityLog->log($adminId, 'approve_user', 'user', $id, [], "Duyệt tài khoản owner: {$user['name']} ({$user['email']})");
                     $_SESSION['success'] = "Đã duyệt tài khoản {$user['name']}";
+                }
+                if ($approveStmt) {
+                    $approveStmt->close();
                 }
             }
         }
@@ -36,13 +51,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $id = (int)($_POST['id'] ?? 0);
         $reason = trim((string)($_POST['rejection_reason'] ?? ''));
         if ($id > 0 && $reason !== '') {
-            $user = $db->getRow("SELECT * FROM users WHERE id = {$id}");
+            $userStmt = $db->prepare('SELECT * FROM users WHERE id = ? LIMIT 1');
+            if ($userStmt) {
+                $userStmt->bind_param('i', $id);
+                $userStmt->execute();
+                $user = $userStmt->get_result()->fetch_assoc();
+                $userStmt->close();
+            } else {
+                $user = false;
+            }
             if ($user && $user['role'] === 'owner') {
                 $adminId = (int)$_SESSION['user_id'];
-                $reasonEsc = $db->getConnection()->real_escape_string($reason);
-                if ($db->query("UPDATE users SET status = 'approved', owner_verification_status = 'rejected', approved_by = {$adminId}, approved_at = NOW(), verification_reviewed_by = {$adminId}, verification_reviewed_at = NOW(), verification_rejection_reason = '{$reasonEsc}', rejection_reason = '{$reasonEsc}' WHERE id = {$id}")) {
+                $rejectStmt = $db->prepare("UPDATE users SET status = 'approved', owner_verification_status = 'rejected', approved_by = ?, approved_at = NOW(), verification_reviewed_by = ?, verification_reviewed_at = NOW(), verification_rejection_reason = ?, rejection_reason = ? WHERE id = ?");
+                if ($rejectStmt) {
+                    $rejectStmt->bind_param('iissi', $adminId, $adminId, $reason, $reason, $id);
+                }
+                if ($rejectStmt && $rejectStmt->execute()) {
                     $activityLog->log($adminId, 'reject_user', 'user', $id, [], "Từ chối tài khoản owner: {$user['name']}. Lý do: {$reason}");
                     $_SESSION['success'] = "Đã từ chối tài khoản {$user['name']}";
+                }
+                if ($rejectStmt) {
+                    $rejectStmt->close();
                 }
             }
         }
@@ -59,19 +88,52 @@ $limit = ITEMS_PER_PAGE;
 $offset = ($page - 1) * $limit;
 $conn = $db->getConnection();
 
-$where = "role = 'owner'";
+$bindApprovalParams = static function (mysqli_stmt $stmt, string $types, array &$params): void {
+    if ($types === '' || $params === []) {
+        return;
+    }
+
+    $bindValues = [$types];
+    foreach ($params as $key => $value) {
+        $bindValues[] = &$params[$key];
+    }
+    call_user_func_array([$stmt, 'bind_param'], $bindValues);
+};
+$whereParts = ["role = 'owner'"];
+$whereParams = [];
+$whereTypes = '';
 if (in_array($tab, ['pending', 'approved', 'rejected'], true)) {
-    $tabEsc = $tab === 'pending' ? 'submitted' : $conn->real_escape_string($tab);
-    $where .= " AND owner_verification_status = '{$tabEsc}'";
+    $whereParts[] = 'owner_verification_status = ?';
+    $whereParams[] = $tab === 'pending' ? 'submitted' : $tab;
+    $whereTypes .= 's';
+} else {
+    $tab = 'all';
 }
 if ($search !== '') {
-    $searchEsc = $conn->real_escape_string($search);
-    $where .= " AND (name LIKE '%{$searchEsc}%' OR email LIKE '%{$searchEsc}%' OR phone LIKE '%{$searchEsc}%')";
+    $like = '%' . $search . '%';
+    $whereParts[] = '(name LIKE ? OR email LIKE ? OR phone LIKE ?)';
+    array_push($whereParams, $like, $like, $like);
+    $whereTypes .= 'sss';
 }
+$where = implode(' AND ', $whereParts);
 
-$total = (int)($db->getRow("SELECT COUNT(*) AS total FROM users WHERE {$where}")['total'] ?? 0);
+$countStmt = $conn->prepare("SELECT COUNT(*) AS total FROM users WHERE {$where}");
+$total = 0;
+if ($countStmt) {
+    $bindApprovalParams($countStmt, $whereTypes, $whereParams);
+    $countStmt->execute();
+    $total = (int)(($countStmt->get_result()->fetch_assoc() ?: [])['total'] ?? 0);
+    $countStmt->close();
+}
 $totalPages = (int)ceil($total / $limit);
-$users = $db->getRows("SELECT * FROM users WHERE {$where} ORDER BY created_at DESC LIMIT {$offset}, {$limit}");
+$usersStmt = $conn->prepare("SELECT * FROM users WHERE {$where} ORDER BY created_at DESC LIMIT {$offset}, {$limit}");
+$users = [];
+if ($usersStmt) {
+    $bindApprovalParams($usersStmt, $whereTypes, $whereParams);
+    $usersStmt->execute();
+    $users = $usersStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $usersStmt->close();
+}
 
 $stats = [
     'total' => $db->count('users', "role = 'owner'"),

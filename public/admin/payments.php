@@ -30,7 +30,7 @@ admin_flash_messages();
             <label class="form-label fw-semibold">Trạng thái</label>
             <select name="status" class="form-select">
                 <option value="">Tất cả</option>
-                <?php foreach (['pending' => 'Chờ thanh toán', 'processing' => 'Chờ xác nhận', 'paid' => 'Đã thanh toán', 'failed' => 'Thất bại', 'cancelled' => 'Đã hủy', 'refunded' => 'Hoàn tiền'] as $value => $label): ?>
+                <?php foreach (['pending' => 'Chờ theo dõi', 'held' => 'Đang giữ', 'released' => 'Đã giải ngân', 'refunded' => 'Đã hoàn tiền'] as $value => $label): ?>
                     <option value="<?php echo admin_e($value); ?>" <?php echo ($data['status'] ?? '') === $value ? 'selected' : ''; ?>><?php echo admin_e($label); ?></option>
                 <?php endforeach; ?>
             </select>
@@ -64,7 +64,10 @@ admin_flash_messages();
             </thead>
             <tbody>
                 <?php foreach ($data['payments'] as $payment): ?>
-                    <?php $status = (string)($payment['payment_status'] ?? 'pending'); ?>
+                    <?php
+                    $status = (string)($payment['payment_status'] ?? 'pending');
+                    $escrowStatus = (string)($payment['status'] ?? 'pending');
+                    ?>
                     <tr>
                         <td class="wb-title"><?php echo admin_e($payment['payment_code'] ?? ('#' . (int)$payment['id'])); ?></td>
                         <td><?php echo admin_e($payment['booking_code'] ?? ('#' . (int)($payment['booking_id'] ?? 0))); ?></td>
@@ -72,7 +75,10 @@ admin_flash_messages();
                         <td class="wb-title"><?php echo admin_e(substr((string)($payment['motel_title'] ?? 'N/A'), 0, 50)); ?></td>
                         <td class="wb-price"><?php echo admin_money($payment['amount'] ?? 0); ?></td>
                         <td><?php echo admin_e($payment['payment_method'] ?? $payment['method'] ?? 'N/A'); ?></td>
-                        <td><span class="wb-pill <?php echo admin_pill_class($status); ?>"><?php echo admin_status_label($status); ?></span></td>
+                        <td>
+                            <span class="wb-pill <?php echo admin_pill_class($status); ?>"><?php echo admin_status_label($status); ?></span>
+                            <div class="wb-muted mt-1">Giữ tiền: <?php echo admin_status_label($escrowStatus); ?></div>
+                        </td>
                         <td class="text-end">
                             <a href="<?php echo ADMIN_URL . 'payment_detail.php?id=' . (int)$payment['id']; ?>" class="btn btn-sm btn-primary"><i class="fa fa-eye"></i> Xem</a>
                             <?php if (in_array($status, ['pending', 'processing'], true)): ?>

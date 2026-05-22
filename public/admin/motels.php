@@ -72,7 +72,8 @@ admin_flash_messages();
                     <th>Chủ phòng</th>
                     <th>Giá</th>
                     <th>Diện tích</th>
-                    <th>Quận</th>
+                    <th>Địa chỉ</th>
+                    <th>Report</th>
                     <th>Trạng thái</th>
                     <th></th>
                 </tr>
@@ -86,7 +87,11 @@ admin_flash_messages();
                         <td><?php echo admin_e($motel['owner_name'] ?? 'N/A'); ?></td>
                         <td class="wb-price"><?php echo admin_money($motel['price'] ?? 0); ?></td>
                         <td><?php echo admin_e((string)($motel['area'] ?? 'N/A')); ?> m²</td>
-                        <td><?php echo admin_e($motel['district_name'] ?? 'N/A'); ?></td>
+                        <td>
+                            <div><?php echo admin_e($motel['street_address'] ?? $motel['address'] ?? 'N/A'); ?></div>
+                            <div class="wb-muted"><?php echo admin_e(trim(($motel['district_name'] ?? '') . ', ' . ($motel['province_name'] ?? ''), ', ')); ?></div>
+                        </td>
+                        <td><?php echo (int)($motel['report_count'] ?? 0); ?></td>
                         <td><span class="wb-pill <?php echo admin_pill_class($status); ?>"><?php echo admin_status_label($status); ?></span></td>
                         <td class="text-end">
                             <a href="<?php echo ADMIN_URL . 'motel_detail.php?id=' . (int)$motel['id']; ?>" class="btn btn-sm btn-primary"><i class="fa fa-eye"></i> Xem</a>
@@ -107,7 +112,7 @@ admin_flash_messages();
                                     <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fa fa-ban"></i></button>
                                 </form>
                             <?php endif; ?>
-                            <?php if ($status !== 'hidden'): ?>
+                            <?php if ($status === 'approved'): ?>
                                 <form method="POST" class="d-inline" onsubmit="return confirm('Ẩn phòng này?');">
                                     <?php echo Csrf::field('admin_motel_action'); ?>
                                     <input type="hidden" name="action" value="hide">

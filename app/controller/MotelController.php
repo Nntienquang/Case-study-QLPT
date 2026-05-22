@@ -23,7 +23,7 @@ class MotelController
     public function listMotels()
     {
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $status = isset($_GET['status']) ? $_GET['status'] : '';
+        $status = Motel::filterStatus((string)($_GET['status'] ?? ''));
 
         $motels = $this->motel->getAll($page, ITEMS_PER_PAGE, $status);
         $total = $this->motel->getTotal($status);
@@ -79,18 +79,21 @@ class MotelController
         $id = (int)$_POST['id'];
         $motel = $this->motel->getById($id);
 
-        if ($this->motel->approve($id)) {
+        if (!$motel || !in_array((string)$motel['status'], ['pending', 'hidden', 'rejected'], true)) {
+            $_SESSION['error'] = 'Phòng này không ở trạng thái có thể duyệt hoặc phục hồi.';
+        } elseif ($this->motel->approve($id)) {
             if ($this->activityLog && $motel) {
+                $isRestore = in_array((string)$motel['status'], ['hidden', 'rejected'], true);
                 $this->activityLog->log(
                     $_SESSION['user_id'],
-                    'approve_motel',
+                    $isRestore ? 'restore_motel' : 'approve_motel',
                     'motel',
                     $id,
                     ['old' => $motel['status'], 'new' => 'approved'],
-                    "Duyệt phòng trọ: {$motel['title']}"
+                    $isRestore ? "Phục hồi phòng trọ: {$motel['title']}" : "Duyệt phòng trọ: {$motel['title']}"
                 );
             }
-            $_SESSION['success'] = 'Duyệt phòng thành công';
+            $_SESSION['success'] = 'Đã cập nhật kiểm duyệt phòng.';
         } else {
             $_SESSION['error'] = 'Có lỗi xảy ra';
         }
@@ -112,7 +115,9 @@ class MotelController
         $id = (int)$_POST['id'];
         $motel = $this->motel->getById($id);
 
-        if ($this->motel->hide($id)) {
+        if (!$motel || (string)$motel['status'] !== 'approved') {
+            $_SESSION['error'] = 'Chỉ ẩn phòng đã duyệt.';
+        } elseif ($this->motel->hide($id)) {
             if ($this->activityLog && $motel) {
                 $this->activityLog->log(
                     $_SESSION['user_id'],
@@ -176,7 +181,7 @@ class MotelController
         $reason = trim((string)($_POST['rejection_reason'] ?? ''));
         $motel = $this->motel->getById($id);
 
-        if (!$motel || $reason === '') {
+        if (!$motel || (string)$motel['status'] !== 'pending' || $reason === '') {
             $_SESSION['error'] = 'Vui lòng nhập lý do từ chối tin phòng.';
             header('Location: ' . ADMIN_URL . 'motels.php');
             exit;

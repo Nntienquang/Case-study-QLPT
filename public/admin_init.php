@@ -31,6 +31,7 @@ require_once __DIR__ . '/../core/AdminRevenue.php';
 require_once __DIR__ . '/../core/Report.php';
 require_once __DIR__ . '/../core/ActivityLog.php';
 require_once __DIR__ . '/../core/EmailNotification.php';
+require_once __DIR__ . '/../core/OwnerModeration.php';
 require_once __DIR__ . '/../core/OwnerStatusMiddleware.php';
 
 // Include Controllers
@@ -60,16 +61,34 @@ $auth->checkTimeout();
 
 if ($is_logged_in && ($_SESSION['status'] ?? '') === 'blocked') {
     $auth->logout();
+    if (defined('ADMIN_JSON_API')) {
+        http_response_code(403);
+        header('Content-Type: application/json; charset=UTF-8');
+        echo json_encode(['error' => 'Tài khoản không thể truy cập khu vực admin.']);
+        exit;
+    }
     header('Location: ' . BASE_URL . 'login.php');
     exit;
 }
 
 if ($is_logged_in && ($_SESSION['user_role'] ?? $_SESSION['role'] ?? '') !== 'admin') {
+    if (defined('ADMIN_JSON_API')) {
+        http_response_code(403);
+        header('Content-Type: application/json; charset=UTF-8');
+        echo json_encode(['error' => 'Bạn không có quyền truy cập API admin.']);
+        exit;
+    }
     header('Location: ' . BASE_URL . 'login.php?area=admin');
     exit;
 }
 
 if ($is_logged_in && (int)($_SESSION['force_password_change'] ?? 0) === 1) {
+    if (defined('ADMIN_JSON_API')) {
+        http_response_code(403);
+        header('Content-Type: application/json; charset=UTF-8');
+        echo json_encode(['error' => 'Vui lòng đổi mật khẩu trước khi tiếp tục.']);
+        exit;
+    }
     header('Location: ' . BASE_URL . 'change-password.php');
     exit;
 }

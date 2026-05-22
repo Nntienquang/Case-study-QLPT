@@ -5,6 +5,7 @@
 
 class Booking {
     private $db;
+    private const FILTER_STATUSES = ['pending', 'paid', 'accepted', 'completed', 'rejected', 'cancelled'];
     
     public function __construct($database) {
         $this->db = $database;
@@ -14,33 +15,47 @@ class Booking {
      * Get all bookings with pagination
      */
     public function getAll($page = 1, $limit = ITEMS_PER_PAGE, $status = '') {
+        $page = max(1, (int)$page);
+        $limit = max(1, (int)$limit);
         $offset = ($page - 1) * $limit;
+        $status = self::filterStatus((string)$status);
         
         $sql = "SELECT b.*, u.name as user_name, u.email as user_email, m.title as motel_title
                 FROM bookings b
                 LEFT JOIN users u ON b.user_id = u.id
                 LEFT JOIN motels m ON b.motel_id = m.id";
         
-        if ($status) {
-            $status = $this->db->getConnection()->real_escape_string($status);
-            $sql .= " WHERE b.status = '$status'";
+        if ($status !== '') {
+            $sql .= ' WHERE b.status = ?';
         }
         
         $sql .= " ORDER BY b.created_at DESC LIMIT $offset, $limit";
         
-        return $this->db->getRows($sql);
+        $stmt = $this->db->getConnection()->prepare($sql);
+        if (!$stmt) {
+            return [];
+        }
+        if ($status !== '') {
+            $stmt->bind_param('s', $status);
+        }
+        $stmt->execute();
+        $bookings = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $bookings;
     }
     
     /**
      * Get total count
      */
     public function getTotal($status = '') {
-        $where = '';
-        if ($status) {
-            $status = $this->db->getConnection()->real_escape_string($status);
-            $where = "WHERE status = '$status'";
-        }
-        return $this->db->count('bookings', $where);
+        $status = self::filterStatus((string)$status);
+        return $status === ''
+            ? $this->db->count('bookings')
+            : $this->db->count('bookings', 'status = ?', [$status]);
+    }
+
+    public static function filterStatus(string $status): string {
+        return in_array($status, self::FILTER_STATUSES, true) ? $status : '';
     }
     
     /**

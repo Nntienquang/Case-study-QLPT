@@ -29,6 +29,13 @@ admin_flash_messages();
             <input type="hidden" name="id" value="<?php echo (int)($review['id'] ?? 0); ?>">
             <button type="submit" class="btn btn-outline-danger mt-2"><i class="fa fa-trash"></i> Xóa</button>
         </form>
+        <form method="POST" action="<?php echo ADMIN_URL; ?>reviews.php">
+            <?php echo Csrf::field('admin_review_action'); ?>
+            <input type="hidden" name="action" value="status">
+            <input type="hidden" name="id" value="<?php echo (int)($review['id'] ?? 0); ?>">
+            <input type="hidden" name="status" value="<?php echo ($review['status'] ?? 'visible') === 'hidden' ? 'visible' : 'hidden'; ?>">
+            <button type="submit" class="btn btn-outline-secondary mt-2"><i class="bi <?php echo ($review['status'] ?? 'visible') === 'hidden' ? 'bi-eye' : 'bi-eye-slash'; ?>"></i> <?php echo ($review['status'] ?? 'visible') === 'hidden' ? 'Phục hồi' : 'Ẩn'; ?></button>
+        </form>
     </div>
 </div>
 

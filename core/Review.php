@@ -37,12 +37,21 @@ class Review {
      */
     public function getById($id) {
         $id = (int)$id;
-        $sql = "SELECT r.*, u.name as user_name, u.email, m.title as motel_title
-                FROM reviews r
-                LEFT JOIN users u ON r.user_id = u.id
-                LEFT JOIN motels m ON r.motel_id = m.id
-                WHERE r.id = $id";
-        return $this->db->getRow($sql);
+        $stmt = $this->db->getConnection()->prepare(
+            "SELECT r.*, u.name as user_name, u.email, m.title as motel_title
+             FROM reviews r
+             LEFT JOIN users u ON r.user_id = u.id
+             LEFT JOIN motels m ON r.motel_id = m.id
+             WHERE r.id = ?"
+        );
+        if (!$stmt) {
+            return false;
+        }
+        $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $review = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $review ?: false;
     }
     
     /**
@@ -50,7 +59,30 @@ class Review {
      */
     public function delete($id) {
         $id = (int)$id;
-        return $this->db->delete('reviews', "id = $id");
+        $stmt = $this->db->getConnection()->prepare('DELETE FROM reviews WHERE id = ?');
+        if (!$stmt) {
+            return false;
+        }
+        $stmt->bind_param('i', $id);
+        $deleted = $stmt->execute();
+        $stmt->close();
+        return $deleted;
+    }
+
+    public function setStatus($id, string $status) {
+        $id = (int)$id;
+        if (!in_array($status, ['visible', 'hidden'], true)) {
+            return false;
+        }
+
+        $stmt = $this->db->getConnection()->prepare('UPDATE reviews SET status = ? WHERE id = ?');
+        if (!$stmt) {
+            return false;
+        }
+        $stmt->bind_param('si', $status, $id);
+        $updated = $stmt->execute();
+        $stmt->close();
+        return $updated;
     }
 }
 

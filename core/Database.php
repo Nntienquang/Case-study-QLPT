@@ -112,19 +112,55 @@ class Database {
     }
     
     /**
-     * Count rows
+     * Count rows with an optional prepared WHERE clause.
+     *
+     * Existing callers may still pass a leading "WHERE"; new callers should
+     * pass only the clause and the matching values.
      */
-    public function count($table, $where = '') {
-        $sql = "SELECT COUNT(*) as count FROM $table";
-        if ($where) {
-            $sql .= " WHERE $where";
+    public function count($table, $whereClause = '', array $params = []) {
+        if (!preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', (string)$table)) {
+            return 0;
         }
-        $result = $this->conn->query($sql);
-        if ($result) {
-            $row = $result->fetch_assoc();
-            return $row['count'];
+
+        $sql = "SELECT COUNT(*) AS total FROM `{$table}`";
+        $whereClause = trim((string)$whereClause);
+        $whereClause = preg_replace('/^WHERE\s+/i', '', $whereClause);
+        if ($whereClause !== '') {
+            $sql .= " WHERE {$whereClause}";
         }
-        return 0;
+
+        $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            return 0;
+        }
+
+        if ($params !== []) {
+            $types = '';
+            foreach ($params as $param) {
+                if (is_int($param)) {
+                    $types .= 'i';
+                } elseif (is_float($param)) {
+                    $types .= 'd';
+                } else {
+                    $types .= 's';
+                }
+            }
+
+            $bindValues = [$types];
+            foreach ($params as $key => $value) {
+                $bindValues[] = &$params[$key];
+            }
+            call_user_func_array([$stmt, 'bind_param'], $bindValues);
+        }
+
+        if (!$stmt->execute()) {
+            $stmt->close();
+            return 0;
+        }
+
+        $row = $stmt->get_result()->fetch_assoc() ?: [];
+        $stmt->close();
+        return (int)($row['total'] ?? 0);
     }
     
     /**

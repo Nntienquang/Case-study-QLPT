@@ -1,5 +1,6 @@
 <?php
 require_once '../config/database.php';
+require_once __DIR__ . '/includes/track_page_view.php';
 
 $slug = trim((string)($_GET['slug'] ?? ''));
 if ($slug === '') {

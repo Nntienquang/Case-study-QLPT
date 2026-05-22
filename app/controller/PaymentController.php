@@ -16,7 +16,7 @@ class PaymentController
     public function listPayments(): array
     {
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $status = isset($_GET['status']) ? (string)$_GET['status'] : '';
+        $status = Payment::filterStatus((string)($_GET['status'] ?? ''));
 
         $payments = $this->payment->getAll($page, ITEMS_PER_PAGE, $status);
         $total = $this->payment->getTotal($status);

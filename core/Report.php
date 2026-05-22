@@ -9,6 +9,7 @@ class Report
 {
     private $db;
     private $table = 'reports';
+    private const FILTER_STATUSES = ['pending', 'investigating', 'resolved', 'rejected', 'closed'];
     
     public function __construct($database)
     {
@@ -48,7 +49,10 @@ class Report
      */
     public function getAll($page = 1, $limit = ITEMS_PER_PAGE, $status = '')
     {
+        $page = max(1, (int)$page);
+        $limit = max(1, (int)$limit);
         $offset = ($page - 1) * $limit;
+        $status = self::filterStatus((string)$status);
         
         $query = "SELECT r.*, 
                          u.name as reporter_name, u.email as reporter_email,
@@ -61,14 +65,23 @@ class Report
                   LEFT JOIN motels m ON r.motel_id = m.id
                   LEFT JOIN users a ON r.handled_by = a.id";
         
-        if ($status) {
-            $status = $this->db->getConnection()->real_escape_string($status);
-            $query .= " WHERE r.status = '{$status}'";
+        if ($status !== '') {
+            $query .= ' WHERE r.status = ?';
         }
         
         $query .= " ORDER BY r.created_at DESC LIMIT {$offset}, {$limit}";
         
-        return $this->db->getRows($query);
+        $stmt = $this->db->getConnection()->prepare($query);
+        if (!$stmt) {
+            return [];
+        }
+        if ($status !== '') {
+            $stmt->bind_param('s', $status);
+        }
+        $stmt->execute();
+        $reports = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $reports;
     }
     
     /**
@@ -79,12 +92,15 @@ class Report
      */
     public function getTotal($status = '')
     {
-        $where = '';
-        if ($status) {
-            $status = $this->db->getConnection()->real_escape_string($status);
-            $where = "WHERE status = '{$status}'";
-        }
-        return $this->db->count($this->table, $where);
+        $status = self::filterStatus((string)$status);
+        return $status === ''
+            ? $this->db->count($this->table)
+            : $this->db->count($this->table, 'status = ?', [$status]);
+    }
+
+    public static function filterStatus(string $status): string
+    {
+        return in_array($status, self::FILTER_STATUSES, true) ? $status : '';
     }
     
     /**

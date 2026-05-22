@@ -33,20 +33,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             exit;
         }
 
-        $existing = $db->getRow("SELECT * FROM reports WHERE id = {$id}");
-        $statusEsc = $conn->real_escape_string($status);
-        $noteEsc = $conn->real_escape_string($adminNote);
+        $existingStmt = $conn->prepare('SELECT * FROM reports WHERE id = ? LIMIT 1');
+        if ($existingStmt) {
+            $existingStmt->bind_param('i', $id);
+            $existingStmt->execute();
+            $existing = $existingStmt->get_result()->fetch_assoc();
+            $existingStmt->close();
+        } else {
+            $existing = false;
+        }
         $adminId = (int)$_SESSION['user_id'];
-        if ($existing && $db->query("UPDATE reports SET status = '{$statusEsc}', admin_note = '{$noteEsc}', handled_by = {$adminId}, handled_at = NOW() WHERE id = {$id}")) {
+        $updateStmt = $conn->prepare('UPDATE reports SET status = ?, admin_note = ?, handled_by = ?, handled_at = NOW() WHERE id = ?');
+        if ($updateStmt) {
+            $updateStmt->bind_param('ssii', $status, $adminNote, $adminId, $id);
+        }
+        if ($existing && $updateStmt && $updateStmt->execute()) {
             $activityLog->log($adminId, 'update_report_status', 'report', $id, ['old' => $existing['status'], 'new' => $status], "Cập nhật báo cáo từ {$existing['status']} thành {$status}. Ghi chú: {$adminNote}");
             $_SESSION['success'] = 'Cập nhật trạng thái báo cáo thành công';
             header('Location: reports.php');
             exit;
         }
+        if ($updateStmt) {
+            $updateStmt->close();
+        }
     }
 }
 
-$report = $db->getRow(
+$reportStmt = $conn->prepare(
     "SELECT r.*,
             u_reporter.name AS reporter_name, u_reporter.email AS reporter_email, u_reporter.phone AS reporter_phone, u_reporter.created_at AS reporter_joined,
             u_reported.name AS reported_name, u_reported.email AS reported_email, u_reported.phone AS reported_phone, u_reported.created_at AS reported_joined,
@@ -57,8 +70,15 @@ $report = $db->getRow(
      LEFT JOIN users u_reported ON r.reported_user_id = u_reported.id
      LEFT JOIN motels m ON r.motel_id = m.id
      LEFT JOIN users u_handler ON r.handled_by = u_handler.id
-     WHERE r.id = {$id}"
+     WHERE r.id = ?"
 );
+$report = false;
+if ($reportStmt) {
+    $reportStmt->bind_param('i', $id);
+    $reportStmt->execute();
+    $report = $reportStmt->get_result()->fetch_assoc();
+    $reportStmt->close();
+}
 
 if (!$report) {
     $_SESSION['error'] = 'Báo cáo không tồn tại';

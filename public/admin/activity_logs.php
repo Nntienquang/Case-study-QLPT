@@ -17,30 +17,63 @@ $limit = ITEMS_PER_PAGE;
 $offset = ($page - 1) * $limit;
 $conn = $db->getConnection();
 
-$where = '1=1';
+$bindLogFilters = static function (mysqli_stmt $stmt, string $types, array &$params): void {
+    if ($types === '' || $params === []) {
+        return;
+    }
+    $bind = [$types];
+    foreach ($params as $key => $value) {
+        $bind[] = &$params[$key];
+    }
+    call_user_func_array([$stmt, 'bind_param'], $bind);
+};
+$validDate = static function (string $value): string {
+    $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+    return $date && $date->format('Y-m-d') === $value ? $value : '';
+};
+$dateFrom = $validDate((string)$dateFrom);
+$dateTo = $validDate((string)$dateTo);
+$whereParts = ['1=1'];
+$whereParams = [];
+$whereTypes = '';
 if ($adminId > 0) {
-    $where .= " AND l.admin_id = {$adminId}";
+    $whereParts[] = 'l.admin_id = ?';
+    $whereParams[] = $adminId;
+    $whereTypes .= 'i';
 }
 if ($entityType !== '') {
-    $entityEsc = $conn->real_escape_string($entityType);
-    $where .= " AND l.entity_type = '{$entityEsc}'";
+    $whereParts[] = 'l.entity_type = ?';
+    $whereParams[] = $entityType;
+    $whereTypes .= 's';
 }
 if ($actionFilter !== '') {
-    $actionEsc = $conn->real_escape_string($actionFilter);
-    $where .= " AND l.action = '{$actionEsc}'";
+    $whereParts[] = 'l.action = ?';
+    $whereParams[] = $actionFilter;
+    $whereTypes .= 's';
 }
 if ($dateFrom !== '') {
-    $fromEsc = $conn->real_escape_string($dateFrom);
-    $where .= " AND DATE(l.created_at) >= '{$fromEsc}'";
+    $whereParts[] = 'DATE(l.created_at) >= ?';
+    $whereParams[] = $dateFrom;
+    $whereTypes .= 's';
 }
 if ($dateTo !== '') {
-    $toEsc = $conn->real_escape_string($dateTo);
-    $where .= " AND DATE(l.created_at) <= '{$toEsc}'";
+    $whereParts[] = 'DATE(l.created_at) <= ?';
+    $whereParams[] = $dateTo;
+    $whereTypes .= 's';
 }
+$where = implode(' AND ', $whereParts);
 
-$total = (int)($db->getRow("SELECT COUNT(*) AS total FROM activity_logs l WHERE {$where}")['total'] ?? 0);
+$total = 0;
+$countStmt = $conn->prepare("SELECT COUNT(*) AS total FROM activity_logs l WHERE {$where}");
+if ($countStmt) {
+    $bindLogFilters($countStmt, $whereTypes, $whereParams);
+    $countStmt->execute();
+    $total = (int)(($countStmt->get_result()->fetch_assoc() ?: [])['total'] ?? 0);
+    $countStmt->close();
+}
 $totalPages = (int)ceil($total / $limit);
-$logs = $db->getRows(
+$logs = [];
+$logsStmt = $conn->prepare(
     "SELECT l.*, u.name AS admin_name, u.email AS admin_email
      FROM activity_logs l
      LEFT JOIN users u ON l.admin_id = u.id
@@ -48,6 +81,12 @@ $logs = $db->getRows(
      ORDER BY l.created_at DESC
      LIMIT {$offset}, {$limit}"
 );
+if ($logsStmt) {
+    $bindLogFilters($logsStmt, $whereTypes, $whereParams);
+    $logsStmt->execute();
+    $logs = $logsStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $logsStmt->close();
+}
 
 $stats = $db->getRow(
     "SELECT COUNT(*) AS total,

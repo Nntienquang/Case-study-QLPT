@@ -1,9 +1,4 @@
 <?php
-/**
- * UserApproval Controller - Duyệt tài khoản Owner/Staff
- * 
- * Admin duyệt hoặc từ chối tài khoản mới của Owner/Staff
- */
 
 class UserApprovalController
 {
@@ -11,7 +6,7 @@ class UserApprovalController
     private $user;
     private $activityLog;
     private $emailNotification;
-    
+
     public function __construct($db, $activityLog = null, $emailNotification = null)
     {
         $this->db = $db;
@@ -19,350 +14,236 @@ class UserApprovalController
         $this->activityLog = $activityLog;
         $this->emailNotification = $emailNotification;
     }
-    
-    /**
-     * Lấy danh sách Owner/Staff chờ duyệt
-     */
-    public function listPendingUsers()
+
+    public function listPendingUsers(): array
     {
-        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $role = isset($_GET['role']) ? $_GET['role'] : 'owner'; // owner, admin
-        
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $role = (string)($_GET['role'] ?? 'owner');
+        $role = in_array($role, ['owner', 'admin'], true) ? $role : 'owner';
         $limit = ITEMS_PER_PAGE;
         $offset = ($page - 1) * $limit;
-        
         $conn = $this->db->getConnection();
-        $role = $conn->real_escape_string($role);
-        
-        // Lấy danh sách pending users
-        $query = "SELECT * FROM users 
-                  WHERE role = '{$role}' AND status = 'pending'
-                  ORDER BY created_at DESC
-                  LIMIT {$offset}, {$limit}";
-        
-        $users = $this->db->getRows($query);
-        
-        // Đếm tổng
-        $count_query = "SELECT COUNT(*) as total FROM users 
-                       WHERE role = '{$role}' AND status = 'pending'";
-        $count_result = $this->db->getRow($count_query);
-        $total = $count_result['total'] ?? 0;
-        $total_pages = ceil($total / $limit);
-        
+
+        $stmt = $conn->prepare("SELECT * FROM users WHERE role = ? AND status = 'pending' ORDER BY created_at DESC LIMIT {$offset}, {$limit}");
+        $users = [];
+        if ($stmt) {
+            $stmt->bind_param('s', $role);
+            $stmt->execute();
+            $users = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmt->close();
+        }
+
+        $total = $this->db->count('users', "role = ? AND status = 'pending'", [$role]);
+
         return [
             'users' => $users,
             'total' => $total,
             'page' => $page,
-            'total_pages' => $total_pages,
-            'role' => $role
+            'total_pages' => (int)ceil($total / $limit),
+            'role' => $role,
         ];
     }
-    
-    /**
-     * Lấy danh sách tất cả users (approved, rejected, blocked)
-     */
-    public function listAllUsers()
+
+    public function listAllUsers(): array
     {
-        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $status = isset($_GET['status']) ? $_GET['status'] : '';
-        $role = isset($_GET['role']) ? $_GET['role'] : '';
-        
+        $page = max(1, (int)($_GET['page'] ?? 1));
+        $status = (string)($_GET['status'] ?? '');
+        $role = (string)($_GET['role'] ?? '');
+        $status = in_array($status, ['approved', 'pending', 'rejected', 'blocked'], true) ? $status : '';
+        $role = in_array($role, ['admin', 'owner', 'user'], true) ? $role : '';
         $limit = ITEMS_PER_PAGE;
         $offset = ($page - 1) * $limit;
-        
         $conn = $this->db->getConnection();
-        
-        $query = "SELECT * FROM users WHERE 1=1";
-        
-        if ($status) {
-            $status = $conn->real_escape_string($status);
-            $query .= " AND status = '{$status}'";
+
+        $whereParts = ['1=1'];
+        $params = [];
+        $types = '';
+        if ($status !== '') {
+            $whereParts[] = 'status = ?';
+            $params[] = $status;
+            $types .= 's';
         }
-        
-        if ($role) {
-            $role = $conn->real_escape_string($role);
-            $query .= " AND role = '{$role}'";
+        if ($role !== '') {
+            $whereParts[] = 'role = ?';
+            $params[] = $role;
+            $types .= 's';
         }
-        
-        // Add pagination
-        $query .= " ORDER BY created_at DESC LIMIT {$offset}, {$limit}";
-        
-        $users = $this->db->getRows($query);
-        
-        // Count total
-        $count_query = "SELECT COUNT(*) as total FROM users WHERE 1=1";
-        if ($status) {
-            $count_query .= " AND status = '{$status}'";
+
+        $where = implode(' AND ', $whereParts);
+        $stmt = $conn->prepare("SELECT * FROM users WHERE {$where} ORDER BY created_at DESC LIMIT {$offset}, {$limit}");
+        $users = [];
+        if ($stmt) {
+            $this->bindParams($stmt, $types, $params);
+            $stmt->execute();
+            $users = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            $stmt->close();
         }
-        if ($role) {
-            $count_query .= " AND role = '{$role}'";
-        }
-        
-        $count_result = $this->db->getRow($count_query);
-        $total = $count_result['total'] ?? 0;
-        $total_pages = ceil($total / $limit);
-        
+
+        $total = $this->db->count('users', $where, $params);
+
         return [
             'users' => $users,
             'total' => $total,
             'page' => $page,
-            'total_pages' => $total_pages,
+            'total_pages' => (int)ceil($total / $limit),
             'status' => $status,
-            'role' => $role
+            'role' => $role,
         ];
     }
-    
-    /**
-     * Xem chi tiết user
-     */
-    public function viewUser()
+
+    public function viewUser(): array
     {
-        if (!isset($_GET['id'])) {
-            header('Location: ' . ADMIN_URL . 'user_approvals.php');
-            exit;
-        }
-        
-        $id = (int)$_GET['id'];
+        $id = (int)($_GET['id'] ?? 0);
         $user = $this->user->getById($id);
-        
         if (!$user) {
-            $_SESSION['error'] = 'Người dùng không tồn tại';
+            $_SESSION['error'] = 'User not found.';
             header('Location: ' . ADMIN_URL . 'user_approvals.php');
             exit;
         }
-        
+
         return ['user' => $user];
     }
-    
-    /**
-     * Duyệt tài khoản
-     */
-    public function approveUser()
+
+    public function approveUser(): void
     {
-        if (!isset($_GET['id'])) {
-            $_SESSION['error'] = 'Dữ liệu không hợp lệ';
-            header('Location: ' . ADMIN_URL . 'user_approvals.php');
-            exit;
-        }
-        
-        $id = (int)$_GET['id'];
-        $admin_id = $_SESSION['user_id'];
+        $id = (int)($_GET['id'] ?? 0);
+        $adminId = (int)($_SESSION['user_id'] ?? 0);
         $user = $this->user->getById($id);
-        
         if (!$user) {
-            $_SESSION['error'] = 'Người dùng không tồn tại';
-            header('Location: ' . ADMIN_URL . 'user_approvals.php');
-            exit;
+            $this->redirectWithError('user_approvals.php', 'User not found.');
         }
-        
-        // Update status
+
         $conn = $this->db->getConnection();
-        $query = "UPDATE users SET status = 'approved', approved_by = {$admin_id}, approved_at = NOW() WHERE id = {$id}";
-        
-        if ($this->db->query($query)) {
-            // Log activity
-            if ($this->activityLog) {
-                $this->activityLog->log(
-                    $admin_id,
-                    'approve_user',
-                    'user',
-                    $id,
-                    [],
-                    "Duyệt tài khoản {$user['role']}: {$user['name']} ({$user['email']})"
-                );
-            }
-            
-            // Send email notification
+        $stmt = $conn->prepare("UPDATE users SET status = 'approved', approved_by = ?, approved_at = NOW() WHERE id = ?");
+        if ($stmt) {
+            $stmt->bind_param('ii', $adminId, $id);
+        }
+
+        if ($stmt && $stmt->execute()) {
+            $this->log($adminId, 'approve_user', $id, "Approve {$user['role']} account: {$user['name']} ({$user['email']})");
             if ($this->emailNotification) {
                 $this->emailNotification->sendOwnerApprovalNotification($id);
             }
-            
-            $_SESSION['success'] = "Đã duyệt tài khoản {$user['name']}";
+            $_SESSION['success'] = 'Account approved.';
         } else {
-            $_SESSION['error'] = 'Có lỗi xảy ra';
+            $_SESSION['error'] = 'Cannot approve account.';
         }
-        
+        if ($stmt) {
+            $stmt->close();
+        }
+
         header('Location: ' . ADMIN_URL . 'user_approvals.php');
         exit;
     }
-    
-    /**
-     * Từ chối tài khoản
-     */
-    public function rejectUser()
+
+    public function rejectUser(): void
     {
-        if (!isset($_GET['id']) || !isset($_POST['rejection_reason'])) {
-            $_SESSION['error'] = 'Dữ liệu không hợp lệ';
-            header('Location: ' . ADMIN_URL . 'user_approvals.php');
-            exit;
-        }
-        
-        $id = (int)$_GET['id'];
-        $rejection_reason = $_POST['rejection_reason'];
-        $admin_id = $_SESSION['user_id'];
-        
+        $id = (int)($_GET['id'] ?? 0);
+        $reason = trim((string)($_POST['rejection_reason'] ?? ''));
+        $adminId = (int)($_SESSION['user_id'] ?? 0);
         $user = $this->user->getById($id);
-        
-        if (!$user) {
-            $_SESSION['error'] = 'Người dùng không tồn tại';
-            header('Location: ' . ADMIN_URL . 'user_approvals.php');
-            exit;
+        if (!$user || $reason === '') {
+            $this->redirectWithError('user_approvals.php', 'Rejection data is invalid.');
         }
-        
-        // Update status
+
         $conn = $this->db->getConnection();
-        $rejection_reason_esc = $conn->real_escape_string($rejection_reason);
-        $query = "UPDATE users SET status = 'rejected', approved_by = {$admin_id}, approved_at = NOW(), rejection_reason = '{$rejection_reason_esc}' WHERE id = {$id}";
-        
-        if ($this->db->query($query)) {
-            // Log activity
-            if ($this->activityLog) {
-                $this->activityLog->log(
-                    $admin_id,
-                    'reject_user',
-                    'user',
-                    $id,
-                    [],
-                    "Từ chối tài khoản {$user['role']}: {$user['name']}. Lý do: {$rejection_reason}"
-                );
-            }
-            
-            // Send email notification
-            if ($this->emailNotification) {
-                $this->emailNotification->sendOwnerRejectionNotification($id, $rejection_reason);
-            }
-            
-            $_SESSION['success'] = "Đã từ chối tài khoản {$user['name']}";
-        } else {
-            $_SESSION['error'] = 'Có lỗi xảy ra';
+        $stmt = $conn->prepare("UPDATE users SET status = 'rejected', approved_by = ?, approved_at = NOW(), rejection_reason = ? WHERE id = ?");
+        if ($stmt) {
+            $stmt->bind_param('isi', $adminId, $reason, $id);
         }
-        
+
+        if ($stmt && $stmt->execute()) {
+            $this->log($adminId, 'reject_user', $id, "Reject {$user['role']} account: {$user['name']}. Reason: {$reason}");
+            if ($this->emailNotification) {
+                $this->emailNotification->sendOwnerRejectionNotification($id, $reason);
+            }
+            $_SESSION['success'] = 'Account rejected.';
+        } else {
+            $_SESSION['error'] = 'Cannot reject account.';
+        }
+        if ($stmt) {
+            $stmt->close();
+        }
+
         header('Location: ' . ADMIN_URL . 'user_approvals.php');
         exit;
     }
-    
-    /**
-     * Khóa tài khoản
-     */
-    public function blockUser()
+
+    public function blockUser(): void
     {
-        if (!isset($_GET['id'])) {
-            $_SESSION['error'] = 'Dữ liệu không hợp lệ';
-            header('Location: ' . ADMIN_URL . 'users.php');
-            exit;
-        }
-        
-        $id = (int)$_GET['id'];
-        $admin_id = $_SESSION['user_id'];
+        $this->setBlockedStatus((int)($_GET['id'] ?? 0), 'blocked');
+    }
+
+    public function unblockUser(): void
+    {
+        $this->setBlockedStatus((int)($_GET['id'] ?? 0), 'approved');
+    }
+
+    public function getStats(): array
+    {
+        return [
+            'pending_owners' => $this->db->count('users', "role = 'owner' AND status = 'pending'"),
+            'pending_staff' => $this->db->count('users', "role = 'admin' AND status = 'pending'"),
+            'approved' => $this->db->count('users', "status = 'approved'"),
+            'rejected' => $this->db->count('users', "status = 'rejected'"),
+            'blocked' => $this->db->count('users', "status = 'blocked'"),
+        ];
+    }
+
+    private function setBlockedStatus(int $id, string $status): void
+    {
+        $adminId = (int)($_SESSION['user_id'] ?? 0);
         $user = $this->user->getById($id);
-        
-        if (!$user) {
-            $_SESSION['error'] = 'Người dùng không tồn tại';
-            header('Location: ' . ADMIN_URL . 'users.php');
-            exit;
+        if (!$user || ($status === 'blocked' && $id === $adminId)) {
+            $this->redirectWithError('users.php', 'Account status cannot be updated.');
         }
-        
-        // Prevent blocking self
-        if ($id == $admin_id) {
-            $_SESSION['error'] = 'Không thể khóa tài khoản của chính mình';
-            header('Location: ' . ADMIN_URL . 'users.php');
-            exit;
+
+        $conn = $this->db->getConnection();
+        $stmt = $conn->prepare('UPDATE users SET status = ? WHERE id = ?');
+        if ($stmt) {
+            $stmt->bind_param('si', $status, $id);
         }
-        
-        // Update status
-        $query = "UPDATE users SET status = 'blocked' WHERE id = {$id}";
-        
-        if ($this->db->query($query)) {
-            // Log activity
-            if ($this->activityLog) {
-                $this->activityLog->log(
-                    $admin_id,
-                    'block_user',
-                    'user',
-                    $id,
-                    [],
-                    "Khóa tài khoản: {$user['name']} ({$user['email']})"
-                );
-            }
-            
-            $_SESSION['success'] = "Đã khóa tài khoản {$user['name']}";
+
+        if ($stmt && $stmt->execute()) {
+            $action = $status === 'blocked' ? 'block_user' : 'unblock_user';
+            $this->log($adminId, $action, $id, "Set account {$user['email']} to {$status}");
+            $_SESSION['success'] = 'Account status updated.';
         } else {
-            $_SESSION['error'] = 'Có lỗi xảy ra';
+            $_SESSION['error'] = 'Cannot update account status.';
         }
-        
+        if ($stmt) {
+            $stmt->close();
+        }
+
         header('Location: ' . ADMIN_URL . 'users.php');
         exit;
     }
-    
-    /**
-     * Mở khóa tài khoản
-     */
-    public function unblockUser()
+
+    private function bindParams(mysqli_stmt $stmt, string $types, array &$params): void
     {
-        if (!isset($_GET['id'])) {
-            $_SESSION['error'] = 'Dữ liệu không hợp lệ';
-            header('Location: ' . ADMIN_URL . 'users.php');
-            exit;
+        if ($types === '' || $params === []) {
+            return;
         }
-        
-        $id = (int)$_GET['id'];
-        $admin_id = $_SESSION['user_id'];
-        $user = $this->user->getById($id);
-        
-        if (!$user) {
-            $_SESSION['error'] = 'Người dùng không tồn tại';
-            header('Location: ' . ADMIN_URL . 'users.php');
-            exit;
+
+        $bindValues = [$types];
+        foreach ($params as $key => $value) {
+            $bindValues[] = &$params[$key];
         }
-        
-        // Update status back to approved
-        $query = "UPDATE users SET status = 'approved' WHERE id = {$id}";
-        
-        if ($this->db->query($query)) {
-            // Log activity
-            if ($this->activityLog) {
-                $this->activityLog->log(
-                    $admin_id,
-                    'unblock_user',
-                    'user',
-                    $id,
-                    [],
-                    "Mở khóa tài khoản: {$user['name']} ({$user['email']})"
-                );
-            }
-            
-            $_SESSION['success'] = "Đã mở khóa tài khoản {$user['name']}";
-        } else {
-            $_SESSION['error'] = 'Có lỗi xảy ra';
-        }
-        
-        header('Location: ' . ADMIN_URL . 'users.php');
-        exit;
+        call_user_func_array([$stmt, 'bind_param'], $bindValues);
     }
-    
-    /**
-     * Lấy thống kê
-     */
-    public function getStats()
+
+    private function log(int $adminId, string $action, int $userId, string $message): void
     {
-        $stats = [];
-        
-        // Pending owners
-        $stats['pending_owners'] = $this->db->count('users', "role = 'owner' AND status = 'pending'");
-        
-        // Pending staff
-        $stats['pending_staff'] = $this->db->count('users', "role = 'admin' AND status = 'pending'");
-        
-        // Approved
-        $stats['approved'] = $this->db->count('users', "status = 'approved'");
-        
-        // Rejected
-        $stats['rejected'] = $this->db->count('users', "status = 'rejected'");
-        
-        // Blocked
-        $stats['blocked'] = $this->db->count('users', "status = 'blocked'");
-        
-        return $stats;
+        if ($this->activityLog) {
+            $this->activityLog->log($adminId, $action, 'user', $userId, [], $message);
+        }
+    }
+
+    private function redirectWithError(string $path, string $message): void
+    {
+        $_SESSION['error'] = $message;
+        header('Location: ' . ADMIN_URL . $path);
+        exit;
     }
 }
-?>
+

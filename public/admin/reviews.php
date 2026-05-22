@@ -11,14 +11,19 @@ $activityLog = new ActivityLog($db);
 $controller = new ReviewController($db, $activityLog);
 $action = $_POST['action'] ?? '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'delete') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array($action, ['delete', 'status'], true)) {
     if (!Csrf::validateRequest('admin_review_action')) {
         $_SESSION['error'] = 'Phiên thao tác không hợp lệ, vui lòng thử lại.';
         header('Location: ' . ADMIN_URL . 'reviews.php');
         exit;
     }
 
-    $controller->deleteReview();
+    if ($action === 'delete') {
+        $controller->deleteReview();
+    }
+    if ($action === 'status') {
+        $controller->updateReviewStatus();
+    }
 }
 
 $data = $controller->listReviews();
@@ -43,6 +48,7 @@ admin_flash_messages();
                     <th>Điểm</th>
                     <th>Nhận xét</th>
                     <th>Ngày tạo</th>
+                    <th>Trạng thái</th>
                     <th></th>
                 </tr>
             </thead>
@@ -55,8 +61,16 @@ admin_flash_messages();
                         <td><span class="wb-pill warning"><?php echo (int)($review['rating'] ?? 0); ?>/5</span></td>
                         <td><?php echo admin_e(substr((string)($review['comment'] ?? 'N/A'), 0, 70)); ?></td>
                         <td><?php echo !empty($review['created_at']) ? date('d/m/Y', strtotime((string)$review['created_at'])) : ''; ?></td>
+                        <td><span class="wb-pill <?php echo admin_pill_class((string)($review['status'] ?? 'visible')); ?>"><?php echo admin_status_label((string)($review['status'] ?? 'visible')); ?></span></td>
                         <td class="text-end">
                             <a href="<?php echo ADMIN_URL . 'review_detail.php?id=' . (int)$review['id']; ?>" class="btn btn-sm btn-primary"><i class="fa fa-eye"></i> Xem</a>
+                            <form method="POST" class="d-inline">
+                                <?php echo Csrf::field('admin_review_action'); ?>
+                                <input type="hidden" name="action" value="status">
+                                <input type="hidden" name="id" value="<?php echo (int)$review['id']; ?>">
+                                <input type="hidden" name="status" value="<?php echo ($review['status'] ?? 'visible') === 'hidden' ? 'visible' : 'hidden'; ?>">
+                                <button type="submit" class="btn btn-sm btn-outline-secondary" title="<?php echo ($review['status'] ?? 'visible') === 'hidden' ? 'Phục hồi' : 'Ẩn'; ?>"><i class="bi <?php echo ($review['status'] ?? 'visible') === 'hidden' ? 'bi-eye' : 'bi-eye-slash'; ?>"></i></button>
+                            </form>
                             <form method="POST" class="d-inline" onsubmit="return confirm('Xóa đánh giá này?');">
                                 <?php echo Csrf::field('admin_review_action'); ?>
                                 <input type="hidden" name="action" value="delete">

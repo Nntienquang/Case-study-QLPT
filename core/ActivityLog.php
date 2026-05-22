@@ -30,21 +30,26 @@ class ActivityLog
     {
         $conn = $this->db->getConnection();
         $admin_id = (int)$admin_id;
-        $action = $conn->real_escape_string($action);
-        $entity_type = $conn->real_escape_string($entity_type);
+        $action = (string)$action;
+        $entity_type = (string)$entity_type;
         $entity_id = (int)$entity_id;
-        $old_value = isset($changes['old']) ? "'" . $conn->real_escape_string(json_encode($changes['old'])) . "'" : 'NULL';
-        $new_value = isset($changes['new']) ? "'" . $conn->real_escape_string(json_encode($changes['new'])) . "'" : 'NULL';
-        $description = $conn->real_escape_string($description);
+        $old_value = isset($changes['old']) ? json_encode($changes['old'], JSON_UNESCAPED_UNICODE) : null;
+        $new_value = isset($changes['new']) ? json_encode($changes['new'], JSON_UNESCAPED_UNICODE) : null;
+        $description = (string)$description;
         $ip_address = $this->getClientIP();
-        $user_agent = $conn->real_escape_string($_SERVER['HTTP_USER_AGENT'] ?? '');
-        
-        $query = "INSERT INTO {$this->table} 
-                  (admin_id, action, entity_type, entity_id, old_values, new_values, description, ip_address, user_agent)
-                  VALUES 
-                  ({$admin_id}, '{$action}', '{$entity_type}', {$entity_id}, {$old_value}, {$new_value}, '{$description}', '{$ip_address}', '{$user_agent}')";
-        
-        return $this->db->query($query);
+        $user_agent = (string)($_SERVER['HTTP_USER_AGENT'] ?? '');
+        $stmt = $conn->prepare(
+            "INSERT INTO {$this->table}
+             (admin_id, action, entity_type, entity_id, old_values, new_values, description, ip_address, user_agent)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        );
+        if (!$stmt) {
+            return false;
+        }
+        $stmt->bind_param('ississsss', $admin_id, $action, $entity_type, $entity_id, $old_value, $new_value, $description, $ip_address, $user_agent);
+        $logged = $stmt->execute();
+        $stmt->close();
+        return $logged;
     }
     
     /**

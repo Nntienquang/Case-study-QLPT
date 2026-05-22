@@ -22,7 +22,7 @@ class ReportController
     public function listReports()
     {
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $status = isset($_GET['status']) ? $_GET['status'] : '';
+        $status = Report::filterStatus((string)($_GET['status'] ?? ''));
         
         $reports = $this->report->getAll($page, ITEMS_PER_PAGE, $status);
         $total = $this->report->getTotal($status);

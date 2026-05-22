@@ -23,7 +23,7 @@ class BookingController
     public function listBookings()
     {
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-        $status = isset($_GET['status']) ? $_GET['status'] : '';
+        $status = Booking::filterStatus((string)($_GET['status'] ?? ''));
 
         $bookings = $this->booking->getAll($page, ITEMS_PER_PAGE, $status);
         $total = $this->booking->getTotal($status);

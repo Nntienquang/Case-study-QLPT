@@ -5,6 +5,7 @@
 
 class Motel {
     private $db;
+    private const FILTER_STATUSES = ['pending', 'approved', 'rejected', 'hidden'];
     
     public function __construct($database) {
         $this->db = $database;
@@ -14,34 +15,50 @@ class Motel {
      * Get all motels with pagination
      */
     public function getAll($page = 1, $limit = ITEMS_PER_PAGE, $status = '') {
+        $page = max(1, (int)$page);
+        $limit = max(1, (int)$limit);
         $offset = ($page - 1) * $limit;
+        $status = self::filterStatus((string)$status);
         
-        $sql = "SELECT m.*, u.name as owner_name, c.name as category_name, d.name as district_name
+        $sql = "SELECT m.*, u.name as owner_name, c.name as category_name,
+                       COALESCE(NULLIF(m.district_name, ''), d.name) as district_name,
+                       (SELECT COUNT(*) FROM reports r WHERE r.motel_id = m.id) AS report_count
                 FROM motels m
                 LEFT JOIN users u ON m.user_id = u.id
                 LEFT JOIN categories c ON m.category_id = c.id
                 LEFT JOIN districts d ON m.district_id = d.id";
         
-        if ($status) {
-            $status = $this->db->getConnection()->real_escape_string($status);
-            $sql .= " WHERE m.status = '$status'";
+        if ($status !== '') {
+            $sql .= ' WHERE m.status = ?';
         }
         
         $sql .= " ORDER BY m.created_at DESC LIMIT $offset, $limit";
         
-        return $this->db->getRows($sql);
+        $stmt = $this->db->getConnection()->prepare($sql);
+        if (!$stmt) {
+            return [];
+        }
+        if ($status !== '') {
+            $stmt->bind_param('s', $status);
+        }
+        $stmt->execute();
+        $motels = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $stmt->close();
+        return $motels;
     }
     
     /**
      * Get total count
      */
     public function getTotal($status = '') {
-        $where = '';
-        if ($status) {
-            $status = $this->db->getConnection()->real_escape_string($status);
-            $where = "WHERE status = '$status'";
-        }
-        return $this->db->count('motels', $where);
+        $status = self::filterStatus((string)$status);
+        return $status === ''
+            ? $this->db->count('motels')
+            : $this->db->count('motels', 'status = ?', [$status]);
+    }
+
+    public static function filterStatus(string $status): string {
+        return in_array($status, self::FILTER_STATUSES, true) ? $status : '';
     }
     
     /**

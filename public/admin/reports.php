@@ -31,12 +31,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
 
         if ($id > 0 && in_array($status, $validStatuses, true)) {
-            $report = $db->getRow("SELECT * FROM reports WHERE id = {$id}");
-            $statusEsc = $conn->real_escape_string($status);
-            $noteEsc = $conn->real_escape_string($adminNote);
-            if ($report && $db->query("UPDATE reports SET status = '{$statusEsc}', admin_note = '{$noteEsc}', handled_by = {$adminId}, handled_at = NOW() WHERE id = {$id}")) {
+            $reportStmt = $conn->prepare('SELECT * FROM reports WHERE id = ? LIMIT 1');
+            $reportStmt->bind_param('i', $id);
+            $reportStmt->execute();
+            $report = $reportStmt->get_result()->fetch_assoc();
+            $reportStmt->close();
+
+            $updateStmt = $conn->prepare('UPDATE reports SET status = ?, admin_note = ?, handled_by = ?, handled_at = NOW() WHERE id = ?');
+            if ($updateStmt) {
+                $updateStmt->bind_param('ssii', $status, $adminNote, $adminId, $id);
+            }
+            if ($report && $updateStmt && $updateStmt->execute()) {
                 $activityLog->log($adminId, 'update_report_status', 'report', $id, ['old' => $report['status'], 'new' => $status], "Cập nhật báo cáo từ {$report['status']} thành {$status}");
                 $_SESSION['success'] = 'Cập nhật trạng thái báo cáo thành công';
+            }
+            if ($updateStmt) {
+                $updateStmt->close();
             }
         }
     }
@@ -44,10 +54,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if ($_POST['action'] === 'delete') {
         $id = (int)($_POST['id'] ?? 0);
         if ($id > 0) {
-            $report = $db->getRow("SELECT * FROM reports WHERE id = {$id}");
-            if ($report && $db->query("DELETE FROM reports WHERE id = {$id}")) {
+            $reportStmt = $conn->prepare('SELECT * FROM reports WHERE id = ? LIMIT 1');
+            $reportStmt->bind_param('i', $id);
+            $reportStmt->execute();
+            $report = $reportStmt->get_result()->fetch_assoc();
+            $reportStmt->close();
+
+            $deleteStmt = $conn->prepare('DELETE FROM reports WHERE id = ?');
+            if ($deleteStmt) {
+                $deleteStmt->bind_param('i', $id);
+            }
+            if ($report && $deleteStmt && $deleteStmt->execute()) {
                 $activityLog->log((int)$_SESSION['user_id'], 'delete_report', 'report', $id, [], "Xóa báo cáo: {$report['reason']}");
                 $_SESSION['success'] = 'Xóa báo cáo thành công';
+            }
+            if ($deleteStmt) {
+                $deleteStmt->close();
             }
         }
     }
@@ -57,24 +79,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 }
 
 $page = max(1, (int)($_GET['page'] ?? 1));
-$status = $_GET['status'] ?? '';
-$type = $_GET['type'] ?? '';
+$status = Report::filterStatus((string)($_GET['status'] ?? ''));
+$reportTypes = [
+    'spam' => 'Spam',
+    'inappropriate' => 'Nội dung không phù hợp',
+    'fraud' => 'Gian lận',
+    'unsafe' => 'Không an toàn',
+    'false_info' => 'Thông tin sai',
+    'other' => 'Khác',
+];
+$type = (string)($_GET['type'] ?? '');
+$type = array_key_exists($type, $reportTypes) ? $type : '';
 $limit = ITEMS_PER_PAGE;
 $offset = ($page - 1) * $limit;
 
 $where = '1=1';
 if ($status !== '') {
-    $statusEsc = $conn->real_escape_string($status);
-    $where .= " AND r.status = '{$statusEsc}'";
+    $where .= ' AND r.status = ?';
 }
 if ($type !== '') {
-    $typeEsc = $conn->real_escape_string($type);
-    $where .= " AND r.report_type = '{$typeEsc}'";
+    $where .= ' AND r.report_type = ?';
 }
 
-$total = (int)($db->getRow('SELECT COUNT(*) AS total FROM reports r WHERE ' . $where)['total'] ?? 0);
+$countStmt = $conn->prepare('SELECT COUNT(*) AS total FROM reports r WHERE ' . $where);
+if ($status !== '' && $type !== '') {
+    $countStmt->bind_param('ss', $status, $type);
+} elseif ($status !== '') {
+    $countStmt->bind_param('s', $status);
+} elseif ($type !== '') {
+    $countStmt->bind_param('s', $type);
+}
+$countStmt->execute();
+$total = (int)(($countStmt->get_result()->fetch_assoc() ?: [])['total'] ?? 0);
+$countStmt->close();
 $totalPages = (int)ceil($total / $limit);
-$reports = $db->getRows(
+$reportListStmt = $conn->prepare(
     "SELECT r.*,
             u_reporter.name AS reporter_name, u_reporter.email AS reporter_email,
             u_reported.name AS reported_name, u_reported.email AS reported_email,
@@ -89,21 +128,22 @@ $reports = $db->getRows(
      ORDER BY r.created_at DESC
      LIMIT {$offset}, {$limit}"
 );
+if ($status !== '' && $type !== '') {
+    $reportListStmt->bind_param('ss', $status, $type);
+} elseif ($status !== '') {
+    $reportListStmt->bind_param('s', $status);
+} elseif ($type !== '') {
+    $reportListStmt->bind_param('s', $type);
+}
+$reportListStmt->execute();
+$reports = $reportListStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$reportListStmt->close();
 
 $stats = [
     'total' => $db->count('reports'),
     'pending' => $db->count('reports', "status = 'pending'"),
     'investigating' => $db->count('reports', "status = 'investigating'"),
     'resolved' => $db->count('reports', "status = 'resolved'"),
-];
-
-$reportTypes = [
-    'spam' => 'Spam',
-    'inappropriate' => 'Nội dung không phù hợp',
-    'fraud' => 'Gian lận',
-    'unsafe' => 'Không an toàn',
-    'false_info' => 'Thông tin sai',
-    'other' => 'Khác',
 ];
 
 admin_layout_start('Báo cáo vi phạm', 'Tiếp nhận, xác minh và xử lý báo cáo từ người dùng về phòng trọ hoặc tài khoản.', 'reports');

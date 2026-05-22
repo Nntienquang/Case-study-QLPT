@@ -13,12 +13,19 @@ if (!isset($_GET['id'])) {
 }
 
 $id = (int)$_GET['id'];
-$log = $db->getRow(
+$logStmt = $db->getConnection()->prepare(
     "SELECT l.*, u.id AS admin_id, u.name AS admin_name, u.email AS admin_email, u.phone AS admin_phone
      FROM activity_logs l
      LEFT JOIN users u ON l.admin_id = u.id
-     WHERE l.id = {$id}"
+     WHERE l.id = ?"
 );
+$log = false;
+if ($logStmt) {
+    $logStmt->bind_param('i', $id);
+    $logStmt->execute();
+    $log = $logStmt->get_result()->fetch_assoc();
+    $logStmt->close();
+}
 
 if (!$log) {
     $_SESSION['error'] = 'Nhật ký không tồn tại';

@@ -5,6 +5,7 @@
 @require_once '../core/PathHelper.php';
 
 session_start();
+require_once __DIR__ . '/includes/track_page_view.php';
 
 if (isset($_SESSION['user_id'])) {
     $role = $_SESSION['role'] ?? $_SESSION['user_role'] ?? 'user';

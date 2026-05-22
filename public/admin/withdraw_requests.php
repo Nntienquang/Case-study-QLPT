@@ -22,6 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array(($_POST['action'] ?? ''), 
     $id = (int)($_POST['id'] ?? 0);
     $action = (string)$_POST['action'];
     $adminId = (int)($_SESSION['user_id'] ?? 0);
+    $activityLog = new ActivityLog($db);
 
     $conn->begin_transaction();
     try {
@@ -75,6 +76,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array(($_POST['action'] ?? ''), 
         $stmt->execute();
         $stmt->close();
 
+        $activityLog->log(
+            $adminId,
+            $action === 'approve' ? 'approve_withdraw' : 'reject_withdraw',
+            'withdraw_request',
+            $id,
+            ['old' => 'pending', 'new' => $newStatus],
+            ($action === 'approve' ? 'Duyệt' : 'Từ chối') . " yêu cầu rút tiền #{$id} của owner #{$ownerId}"
+        );
+
         $conn->commit();
         $_SESSION['success'] = $action === 'approve' ? 'Đã duyệt yêu cầu rút tiền.' : 'Đã từ chối và hoàn tiền về ví owner.';
     } catch (Throwable $e) {
@@ -86,10 +96,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && in_array(($_POST['action'] ?? ''), 
 }
 
 $status = (string)($_GET['status'] ?? '');
-$where = '';
-if (in_array($status, ['pending', 'approved', 'rejected'], true)) {
-    $where = "WHERE wr.status = '" . $conn->real_escape_string($status) . "'";
+if (!in_array($status, ['pending', 'approved', 'rejected'], true)) {
+    $status = '';
 }
+$where = $status !== '' ? 'WHERE wr.status = ?' : '';
 
 $stats = [
     'pending' => 0,
@@ -108,7 +118,7 @@ while ($row = $result->fetch_assoc()) {
     }
 }
 
-$requests = $db->getRows("
+$requestStmt = $conn->prepare("
     SELECT wr.*, u.name, u.email, u.phone, u.bank_name, u.bank_account_no, u.bank_account_name, COALESCE(w.balance, 0) AS current_balance
     FROM withdraw_requests wr
     LEFT JOIN users u ON u.id = wr.user_id
@@ -116,6 +126,12 @@ $requests = $db->getRows("
     {$where}
     ORDER BY wr.created_at DESC, wr.id DESC
 ");
+if ($status !== '') {
+    $requestStmt->bind_param('s', $status);
+}
+$requestStmt->execute();
+$requests = $requestStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$requestStmt->close();
 
 admin_layout_start('Duyệt rút tiền', 'Kiểm tra thông tin ngân hàng và xử lý yêu cầu rút tiền của chủ phòng.', 'withdraw_requests');
 admin_flash_messages();

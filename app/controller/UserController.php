@@ -24,23 +24,47 @@ class UserController
         $offset = ($page - 1) * $limit;
 
         $whereParts = ['1=1'];
+        $params = [];
+        $types = '';
         if ($role !== '' && in_array($role, ['admin', 'owner', 'user'], true)) {
-            $roleEsc = $conn->real_escape_string($role);
-            $whereParts[] = "role = '{$roleEsc}'";
+            $whereParts[] = 'role = ?';
+            $params[] = $role;
+            $types .= 's';
+        } else {
+            $role = '';
         }
         if ($status !== '' && in_array($status, ['approved', 'pending', 'blocked', 'rejected'], true)) {
-            $statusEsc = $conn->real_escape_string($status);
-            $whereParts[] = "status = '{$statusEsc}'";
+            $whereParts[] = 'status = ?';
+            $params[] = $status;
+            $types .= 's';
+        } else {
+            $status = '';
         }
         if ($search !== '') {
-            $searchEsc = $conn->real_escape_string($search);
-            $whereParts[] = "(name LIKE '%{$searchEsc}%' OR email LIKE '%{$searchEsc}%' OR phone LIKE '%{$searchEsc}%')";
+            $like = '%' . $search . '%';
+            $whereParts[] = '(name LIKE ? OR email LIKE ? OR phone LIKE ?)';
+            array_push($params, $like, $like, $like);
+            $types .= 'sss';
         }
 
         $where = implode(' AND ', $whereParts);
-        $total = (int)($this->db->getRow("SELECT COUNT(*) AS total FROM users WHERE {$where}")['total'] ?? 0);
+        $countStmt = $conn->prepare("SELECT COUNT(*) AS total FROM users WHERE {$where}");
+        if (!$countStmt) {
+            return ['users' => [], 'total' => 0, 'page' => $page, 'total_pages' => 1, 'role' => $role, 'status' => $status, 'search' => $search];
+        }
+        $this->bindParams($countStmt, $types, $params);
+        $countStmt->execute();
+        $total = (int)(($countStmt->get_result()->fetch_assoc() ?: [])['total'] ?? 0);
+        $countStmt->close();
         $totalPages = max(1, (int)ceil($total / $limit));
-        $users = $this->db->getRows("SELECT * FROM users WHERE {$where} ORDER BY created_at DESC, id DESC LIMIT {$offset}, {$limit}");
+        $listStmt = $conn->prepare("SELECT * FROM users WHERE {$where} ORDER BY created_at DESC, id DESC LIMIT {$offset}, {$limit}");
+        if (!$listStmt) {
+            return ['users' => [], 'total' => $total, 'page' => $page, 'total_pages' => $totalPages, 'role' => $role, 'status' => $status, 'search' => $search];
+        }
+        $this->bindParams($listStmt, $types, $params);
+        $listStmt->execute();
+        $users = $listStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        $listStmt->close();
 
         return [
             'users' => $users,
@@ -233,6 +257,12 @@ class UserController
         }
 
         $user = $this->user->getById($id);
+        if (($user['role'] ?? '') === 'admin' && $this->db->count('users', "role = ? AND status <> ?", ['admin', 'blocked']) <= 1) {
+            $_SESSION['error'] = 'Không thể xóa admin cuối cùng còn hoạt động.';
+            header('Location: ' . ADMIN_URL . 'users.php');
+            exit;
+        }
+
         if ($user && $this->user->delete($id)) {
             $this->log('delete_user', $id, [], "Xóa tài khoản {$user['email']}");
             $_SESSION['success'] = 'Đã xóa tài khoản.';
@@ -313,6 +343,19 @@ class UserController
     private function safeStatus(string $status): string
     {
         return in_array($status, ['approved', 'pending', 'blocked', 'rejected'], true) ? $status : 'approved';
+    }
+
+    private function bindParams(mysqli_stmt $stmt, string $types, array &$params): void
+    {
+        if ($types === '' || $params === []) {
+            return;
+        }
+
+        $bindValues = [$types];
+        foreach ($params as $key => $value) {
+            $bindValues[] = &$params[$key];
+        }
+        call_user_func_array([$stmt, 'bind_param'], $bindValues);
     }
 
     private function log(string $action, int $entityId, array $changes, string $description): void

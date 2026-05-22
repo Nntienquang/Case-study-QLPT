@@ -8,6 +8,7 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once '../config/database.php';
 require_once '../config/constants.php';
 require_once '../core/PathHelper.php';
+require_once __DIR__ . '/includes/track_page_view.php';
 
 $current_user_id = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
 
