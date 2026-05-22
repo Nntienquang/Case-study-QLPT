@@ -16,17 +16,22 @@ $auth = new AuthController($db->getConnection());
 
 function auth_redirect_for_role(string $role): string
 {
+    // Admin thì vẫn vào thẳng trang quản trị
     if ($role === 'admin') {
         return './admin/index.php';
     }
+    
     if ($role === 'owner') {
+        // Nếu owner chưa được duyệt xác minh, bắt buộc vào trang hồ sơ để nạp giấy tờ
+        // Nếu ĐÃ DUYỆT rồi thì cho ra trang chủ (index.php) giống như User bình thường
         return ($_SESSION['owner_verification_status'] ?? 'pending_verification') === 'approved'
-            ? './owner/dashboard.php'
+            ? './index.php'
             : './owner/profile.php?verify=1';
     }
 
+    // User bình thường ra trang chủ
     return './index.php';
-}
+}   
 
 function login_client_ip(): string
 {
@@ -375,6 +380,7 @@ $useTurnstile = $showCaptcha && login_turnstile_enabled();
 ?>
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -382,8 +388,10 @@ $useTurnstile = $showCaptcha && login_turnstile_enabled();
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <link href="assets/css/modern.css?v=auth-password-ui-3" rel="stylesheet">
 </head>
+
 <body class="auth-dark">
-    <div class="three-stage auth-scene" data-three-scene data-scene="housing" data-accent="#2563eb" data-accent2="#14b8a6"></div>
+    <div class="three-stage auth-scene" data-three-scene data-scene="housing" data-accent="#2563eb"
+        data-accent2="#14b8a6"></div>
 
     <main class="auth-3d-page">
         <a href="index.php" class="auth-home-link"><i class="fas fa-arrow-left"></i> Trang chủ</a>
@@ -409,7 +417,7 @@ $useTurnstile = $showCaptcha && login_turnstile_enabled();
                 </div>
 
                 <?php if ($message !== ''): ?>
-                    <div class="msg <?php echo htmlspecialchars($type); ?>"><?php echo htmlspecialchars($message); ?></div>
+                <div class="msg <?php echo htmlspecialchars($type); ?>"><?php echo htmlspecialchars($message); ?></div>
                 <?php endif; ?>
 
                 <form method="POST" autocomplete="off">
@@ -417,19 +425,14 @@ $useTurnstile = $showCaptcha && login_turnstile_enabled();
 
 
 
-                  <label>Email</label>
+                    <label>Email</label>
 
-<div class="input-group">
-    <i class="fa fa-envelope"></i>
+                    <div class="input-group">
+                        <i class="fa fa-envelope"></i>
 
-    <input 
-        type="email"
-        name="email"
-        placeholder="admin123@gmail.com"
-        value="<?php echo htmlspecialchars($_COOKIE['remember_email'] ?? $email); ?>"
-        required
-    >
-</div>
+                        <input type="email" name="email" placeholder="admin123@gmail.com"
+                            value="<?php echo htmlspecialchars($_COOKIE['remember_email'] ?? $email); ?>" required>
+                    </div>
 
                     <?php PasswordInput::render([
                         'name' => 'password',
@@ -439,45 +442,45 @@ $useTurnstile = $showCaptcha && login_turnstile_enabled();
                     ]); ?>
 
                     <?php if ($showCaptcha && $useTurnstile): ?>
-                        <label>Mã xác minh</label>
-                        <div class="captcha-widget">
-                            <div class="cf-turnstile" data-sitekey="<?php echo htmlspecialchars(login_turnstile_site_key(), ENT_QUOTES, 'UTF-8'); ?>"></div>
+                    <label>Mã xác minh</label>
+                    <div class="captcha-widget">
+                        <div class="cf-turnstile"
+                            data-sitekey="<?php echo htmlspecialchars(login_turnstile_site_key(), ENT_QUOTES, 'UTF-8'); ?>">
                         </div>
+                    </div>
                     <?php elseif ($showCaptcha): ?>
-                        <label>Mã xác minh</label>
-                        <div class="captcha-widget">
-                            <img class="captcha-image" src="captcha.php?key=login_captcha&v=<?php echo time(); ?>" alt="Mã xác minh">
-                            <button type="button" class="captcha-refresh" aria-label="Đổi mã xác minh" onclick="refreshCaptcha(this)">
-                                <i class="fa fa-rotate-right"></i>
-                            </button>
-                            <div class="input-group captcha-input">
-                                <i class="fa fa-shield-halved"></i>
-                                <input type="text" name="captcha" autocomplete="off" placeholder="Nhập mã" required>
-                            </div>
+                    <label>Mã xác minh</label>
+                    <div class="captcha-widget">
+                        <img class="captcha-image" src="captcha.php?key=login_captcha&v=<?php echo time(); ?>"
+                            alt="Mã xác minh">
+                        <button type="button" class="captcha-refresh" aria-label="Đổi mã xác minh"
+                            onclick="refreshCaptcha(this)">
+                            <i class="fa fa-rotate-right"></i>
+                        </button>
+                        <div class="input-group captcha-input">
+                            <i class="fa fa-shield-halved"></i>
+                            <input type="text" name="captcha" autocomplete="off" placeholder="Nhập mã" required>
                         </div>
+                    </div>
                     <?php endif; ?>
 
-                   <div style="display:flex;align-items:center;gap:8px;margin:15px 0;color:#111827;font-weight:500;">
+                    <div style="display:flex;align-items:center;gap:8px;margin:15px 0;color:#111827;font-weight:500;">
 
-    <input 
-        type="checkbox" 
-        name="remember_me"
-        style="
+                        <input type="checkbox" name="remember_me" style="
             width:auto;
             height:auto;
             margin:0;
             transform:scale(1.1);
             cursor:pointer;
-        "
-    >
+        ">
 
-    <span>Ghi nhớ đăng nhập</span>
+                        <span>Ghi nhớ đăng nhập</span>
 
-</div>
+                    </div>
 
-<button type="submit">
-    <i class="fas fa-arrow-right-to-bracket"></i> Đăng nhập
-</button>
+                    <button type="submit">
+                        <i class="fas fa-arrow-right-to-bracket"></i> Đăng nhập
+                    </button>
                 </form>
 
                 <div class="links">
@@ -492,14 +495,15 @@ $useTurnstile = $showCaptcha && login_turnstile_enabled();
     <script type="module" src="assets/js/three-interface.js"></script>
     <script src="assets/js/password-toggle.js?v=auth-password-ui-3"></script>
     <?php if ($useTurnstile): ?>
-        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <?php endif; ?>
     <script>
-        function refreshCaptcha(button) {
-            const image = button.parentElement.querySelector('.captcha-image');
-            image.src = image.src.split('&v=')[0] + '&v=' + Date.now();
-            button.parentElement.querySelector('input[name="captcha"]').value = '';
-        }
+    function refreshCaptcha(button) {
+        const image = button.parentElement.querySelector('.captcha-image');
+        image.src = image.src.split('&v=')[0] + '&v=' + Date.now();
+        button.parentElement.querySelector('input[name="captcha"]').value = '';
+    }
     </script>
 </body>
+
 </html>

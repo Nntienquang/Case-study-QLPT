@@ -226,306 +226,526 @@ $move_in_total = (int)$motel['price'] + $service_fee + $deposit_amount;
 ?>
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo htmlspecialchars($motel['title']); ?> - QuanLyPhongTro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body { background: #f8f9fa; }
-        .navbar { background: linear-gradient(135deg, #667eea, #764ba2); }
-        .navbar-brand { font-size: 22px; font-weight: 700; color: white !important; }
-        .header { background: white; padding: 30px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 30px; }
-        .main-image { background: linear-gradient(135deg, #667eea, #764ba2); height: 400px; display: flex; align-items: center; justify-content: center; color: white; border-radius: 12px; margin-bottom: 30px; overflow: hidden; }
-        .main-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .thumb-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; margin-top: -18px; margin-bottom: 30px; }
-        .thumb-strip img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; border: 1px solid #e5e7eb; }
-        .main-image i { font-size: 100px; }
-        .title-section { display: flex; justify-content: space-between; align-items: start; margin-bottom: 30px; }
-        .motel-title { font-size: 32px; font-weight: 700; color: #333; margin-bottom: 10px; }
-        .motel-price { font-size: 28px; font-weight: 700; color: #667eea; }
-        .motel-location { color: #666; font-size: 16px; }
-        .info-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .info-card h5 { font-weight: 700; margin-bottom: 20px; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
-        .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; }
-        .info-item { padding: 15px; background: #f8f9fa; border-radius: 6px; text-align: center; }
-        .info-item-label { font-weight: 600; color: #333; margin-bottom: 8px; }
-        .info-item-value { color: #667eea; font-size: 18px; font-weight: 700; }
-        .utilities-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
-        .utility-badge { background: #e3f2fd; color: #1976d2; padding: 10px; border-radius: 6px; text-align: center; font-size: 13px; font-weight: 600; }
-        .description { line-height: 1.8; color: #666; margin-bottom: 20px; }
-        .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); border: none; padding: 12px 30px; font-weight: 600; }
-        .btn-primary:hover { color: white; }
-        .btn-heart { background: white; border: 2px solid #667eea; color: #667eea; padding: 12px 30px; font-weight: 600; }
-        .btn-heart.active { background: #667eea; color: white; }
-        .review-item { background: white; padding: 20px; border-radius: 12px; margin-bottom: 15px; }
-        .review-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .review-author { font-weight: 600; color: #333; }
-        .review-rating { color: #ffc107; }
-        .review-text { color: #666; line-height: 1.6; }
-        .review-date { color: #999; font-size: 13px; }
-        .owner-card { background: white; padding: 25px; border-radius: 12px; border-left: 4px solid #667eea; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .owner-name { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
-        .btn-contact { background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
-        .cost-row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #e5e7eb; color: #4b5563; }
-        .cost-row strong { color: #0f172a; }
-        .cost-total { font-size: 20px; font-weight: 800; color: #2563eb; }
-        .verified-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; background: #eef2ff; color: #4338ca; font-weight: 700; font-size: 12px; }
-    </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="../assets/css/modern.css" rel="stylesheet">
+    <style>
+    body {
+        background: #f6f8fb;
+        color: #172033;
+        font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    .btn-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: #475467;
+        text-decoration: none;
+        font-weight: 700;
+        padding: 8px 16px;
+        border-radius: 12px;
+        background: #fff;
+        border: 1px solid #e5eaf2;
+        margin-bottom: 24px;
+        transition: all 0.2s;
+    }
+
+    .btn-back:hover {
+        background: #f8fafc;
+        color: #101828;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+    }
+
+    /* Tối ưu Carousel Ảnh */
+    .carousel-inner {
+        border-radius: 24px;
+        overflow: hidden;
+        height: 500px;
+        background: #e5eaf2;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+        margin-bottom: 32px;
+    }
+
+    .carousel-item img {
+        width: 100%;
+        height: 500px;
+        object-fit: cover;
+    }
+
+    .carousel-control-prev-icon,
+    .carousel-control-next-icon {
+        background-color: rgba(16, 24, 40, 0.5);
+        border-radius: 50%;
+        padding: 20px;
+    }
+
+    /* Card Thông tin */
+    .detail-card {
+        background: #fff;
+        border-radius: 20px;
+        padding: 32px;
+        border: 1px solid #e5eaf2;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.04);
+        margin-bottom: 24px;
+    }
+
+    .detail-card h5 {
+        font-weight: 900;
+        font-size: 20px;
+        color: #101828;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .detail-card h5 i {
+        color: #0e7490;
+    }
+
+    .motel-title {
+        font-size: 32px;
+        font-weight: 950;
+        color: #101828;
+        line-height: 1.3;
+        margin-bottom: 12px;
+    }
+
+    .motel-location {
+        color: #475467;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .motel-price-box {
+        background: #ecfeff;
+        padding: 16px 24px;
+        border-radius: 16px;
+        border: 1px solid #cffafe;
+        display: inline-block;
+        margin-top: 20px;
+    }
+
+    .motel-price {
+        color: #0e7490;
+        font-size: 28px;
+        font-weight: 950;
+    }
+
+    /* Grid Thông số & Phí */
+    .specs-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 16px;
+    }
+
+    .spec-item {
+        padding: 16px;
+        background: #f8fafc;
+        border-radius: 14px;
+        border: 1px solid #f1f5f9;
+    }
+
+    .spec-label {
+        color: #667085;
+        font-size: 13px;
+        font-weight: 700;
+        margin-bottom: 6px;
+    }
+
+    .spec-value {
+        color: #101828;
+        font-size: 18px;
+        font-weight: 900;
+    }
+
+    .fee-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px dashed #e5eaf2;
+    }
+
+    .fee-item:last-child {
+        border-bottom: none;
+    }
+
+    .fee-item strong {
+        color: #0f766e;
+    }
+
+    /* Tiện ích */
+    .utility-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .utility-tag {
+        padding: 10px 16px;
+        border-radius: 999px;
+        background: #f8fafc;
+        border: 1px solid #e5eaf2;
+        color: #344054;
+        font-weight: 700;
+        font-size: 14px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* Map */
+    #motelMap {
+        height: 400px;
+        border-radius: 16px;
+        z-index: 1;
+    }
+
+    /* Nút & Layout bên phải */
+    .btn-modern {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-weight: 800;
+        padding: 14px 24px;
+        border-radius: 14px;
+        transition: all 0.3s;
+        border: none;
+    }
+
+    .btn-primary-modern {
+        background: #101828;
+        color: #fff;
+    }
+
+    .btn-outline-modern {
+        background: #fff;
+        color: #101828;
+        border: 2px solid #e5eaf2;
+    }
+
+    .btn-heart-modern {
+        background: #fff;
+        color: #ef4444;
+        border: 2px solid #fee2e2;
+    }
+
+    .btn-heart-modern.active {
+        background: #ef4444;
+        color: #fff;
+    }
+
+    .booking-card {
+        position: sticky;
+        top: 100px;
+        background: #fff;
+        border-radius: 20px;
+        padding: 32px;
+        border: 1px solid #e5eaf2;
+        box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+    }
+
+    .cost-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px dashed #e5eaf2;
+        color: #475467;
+        font-size: 15px;
+    }
+
+    .cost-row strong {
+        color: #101828;
+        font-weight: 800;
+    }
+
+    .cost-total {
+        font-size: 24px;
+        font-weight: 950;
+        color: #0e7490;
+    }
+
+    .owner-box {
+        background: #f8fafc;
+        border-radius: 16px;
+        padding: 20px;
+        margin-top: 24px;
+        border: 1px solid #e5eaf2;
+    }
+
+    .verified-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: #ecfeff;
+        color: #0e7490;
+        font-weight: 800;
+        font-size: 12px;
+    }
+
+    @media (max-width: 991px) {
+        .carousel-inner {
+            height: 300px;
+        }
+
+        .carousel-item img {
+            height: 300px;
+        }
+    }
+    </style>
 </head>
+
 <body>
     <?php qlpt_render_public_nav(['base' => '../', 'active' => 'rooms']); ?>
-    <?php /*
-    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
-        <div class="container-lg">
-            <a class="navbar-brand" href="../index.php">
-                <i class="fas fa-home"></i> QuanLyPhongTro
-            </a>
-        </div>
-    </nav>
-    */ ?>
 
-    <div class="container-lg" style="padding: 30px 0;">
+    <div class="container-lg" style="padding: 100px 0 60px;">
         <?php if ($message): ?>
-            <div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show">
-                <?php echo htmlspecialchars($message); ?>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
+        <div class="alert alert-<?php echo $message_type; ?> alert-dismissible fade show" style="border-radius: 16px;">
+            <?php echo htmlspecialchars($message); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
         <?php endif; ?>
 
-        <a href="search.php" style="color: #667eea; text-decoration: none; margin-bottom: 20px; display: inline-block;">
-            <i class="fas fa-arrow-left"></i> Quay lại
-        </a>
+        <a href="search.php" class="btn-back"><i class="fas fa-arrow-left"></i> Quay lại </a>
+
+        <div id="motelImageSlider" class="carousel slide" data-bs-ride="carousel">
+            <?php if (count($motel_images) > 1): ?>
+            <div class="carousel-indicators">
+                <?php foreach ($motel_images as $index => $image): ?>
+                <button type="button" data-bs-target="#motelImageSlider" data-bs-slide-to="<?php echo $index; ?>"
+                    class="<?php echo $index === 0 ? 'active' : ''; ?>"></button>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+
+            <div class="carousel-inner">
+                <?php if (!empty($motel_images)): ?>
+                <?php foreach ($motel_images as $index => $image): ?>
+                <div class="carousel-item <?php echo $index === 0 ? 'active' : ''; ?>">
+                    <img src="<?php echo htmlspecialchars(qlpt_public_asset_url($image['image_url'])); ?>"
+                        alt="Hình ảnh phòng trọ">
+                </div>
+                <?php endforeach; ?>
+                <?php else: ?>
+                <div class="carousel-item active d-flex align-items-center justify-content-center bg-light"
+                    style="height: 100%;">
+                    <i class="fas fa-image fa-4x text-muted"></i>
+                </div>
+                <?php endif; ?>
+            </div>
+
+            <?php if (count($motel_images) > 1): ?>
+            <button class="carousel-control-prev" type="button" data-bs-target="#motelImageSlider" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon"></span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#motelImageSlider" data-bs-slide="next">
+                <span class="carousel-control-next-icon"></span>
+            </button>
+            <?php endif; ?>
+        </div>
 
         <div class="row">
             <div class="col-lg-8">
-                <div class="main-image">
-                    <?php if (!empty($motel_images)): ?>
-                        <img src="<?php echo htmlspecialchars(qlpt_public_asset_url($motel_images[0]['image_url'] ?? '')); ?>" alt="<?php echo htmlspecialchars($motel['title']); ?>">
-                    <?php else: ?>
-                        <i class="fas fa-image"></i>
+                <div class="detail-card">
+                    <h1 class="motel-title"><?php echo htmlspecialchars($motel['title']); ?></h1>
+                    <div class="motel-location">
+                        <i class="fas fa-location-dot" style="color: #ef4444;"></i>
+                        <?php echo htmlspecialchars($motel['address']); ?>
+                    </div>
+                    <div class="motel-price-box">
+                        <div class="motel-price"><?php echo number_format($motel['price']); ?> <small>VNĐ/tháng</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-card">
+                    <h5><i class="fas fa-layer-group"></i> Tổng quan</h5>
+                    <div class="specs-grid">
+                        <div class="spec-item">
+                            <div class="spec-label">Diện tích</div>
+                            <div class="spec-value"><?php echo (int)$motel['area']; ?> m²</div>
+                        </div>
+                        <div class="spec-item">
+                            <div class="spec-label">Sức chứa tối đa</div>
+                            <div class="spec-value">
+                                <?php echo !empty($motel['max_people']) ? $motel['max_people'] . ' người' : 'Không giới hạn'; ?>
+                            </div>
+                        </div>
+                        <div class="spec-item">
+                            <div class="spec-label">Phòng ngủ / Tắm</div>
+                            <div class="spec-value"><?php echo $motel['bedrooms']; ?> /
+                                <?php echo $motel['bathrooms']; ?></div>
+                        </div>
+                        <div class="spec-item">
+                            <div class="spec-label">Ngày trống phòng</div>
+                            <div class="spec-value text-success">
+                                <i class="fas fa-calendar-check"></i>
+                                <?php echo !empty($motel['available_from']) ? date('d/m/Y', strtotime($motel['available_from'])) : 'Vào ở ngay'; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-card">
+                    <h5><i class="fas fa-file-invoice-dollar"></i> Chi tiết các loại phí</h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="fee-item"><span>Điện:</span>
+                                <strong><?php echo number_format($motel['electricity_unit_price']); ?> đ/kWh</strong>
+                            </div>
+                            <div class="fee-item"><span>Nước:</span>
+                                <strong><?php echo number_format($motel['water_fee_per_person']); ?>
+                                    đ/người/tháng</strong>
+                            </div>
+                            <div class="fee-item"><span>Internet:</span>
+                                <strong><?php echo $motel['internet_fee'] > 0 ? number_format($motel['internet_fee']) . ' đ/tháng' : 'Miễn phí'; ?></strong>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="fee-item"><span>Gửi xe:</span>
+                                <strong><?php echo $motel['parking_fee'] > 0 ? number_format($motel['parking_fee']) . ' đ/xe' : 'Miễn phí'; ?></strong>
+                            </div>
+                            <div class="fee-item"><span>Phí dịch vụ chung:</span>
+                                <strong><?php echo number_format($motel['service_fee']); ?> đ/tháng</strong>
+                            </div>
+                            <div class="fee-item"><span>Phí khác:</span>
+                                <strong><?php echo $motel['other_fee'] > 0 ? number_format($motel['other_fee']) . ' đ' : 'Không có'; ?></strong>
+                            </div>
+                        </div>
+                    </div>
+                    <?php if (!empty($motel['service_note'])): ?>
+                    <div class="mt-3 p-3 bg-light rounded text-muted small"><i class="fas fa-info-circle"></i> Ghi chú
+                        phí: <?php echo htmlspecialchars($motel['service_note']); ?></div>
                     <?php endif; ?>
                 </div>
-                <?php if (count($motel_images) > 1): ?>
-                    <div class="thumb-strip">
-                        <?php foreach (array_slice($motel_images, 1) as $image): ?>
-                            <img src="<?php echo htmlspecialchars(qlpt_public_asset_url($image['image_url'] ?? '')); ?>" alt="<?php echo htmlspecialchars($motel['title']); ?>">
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
 
-                <div class="title-section">
-                    <div>
-                        <h1 class="motel-title"><?php echo htmlspecialchars($motel['title']); ?></h1>
-                        <p class="motel-location">
-                            <i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($motel['address']); ?>
-                        </p>
-                    </div>
-                    <div class="motel-price"><?php echo number_format($motel['price']); ?> VNĐ/tháng</div>
-                </div>
-
-                <!-- Information -->
-                <div class="info-card">
-                    <h5><i class="fas fa-info-circle"></i> Thông tin chi tiết</h5>
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <div class="info-item-label">Diện tích</div>
-                            <div class="info-item-value"><?php echo (int)$motel['area']; ?> m²</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-item-label">Phòng ngủ</div>
-                            <div class="info-item-value"><?php echo $motel['bedrooms']; ?></div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-item-label">Phòng tắm</div>
-                            <div class="info-item-value"><?php echo $motel['bathrooms']; ?></div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-item-label">Danh mục</div>
-                            <div class="info-item-value"><?php echo htmlspecialchars($motel['category_name']); ?></div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-item-label">Ngày có thể vào</div>
-                            <div class="info-item-value"><?php echo !empty($motel['available_from']) ? date('d/m/Y', strtotime($motel['available_from'])) : 'Liên hệ'; ?></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Description -->
-                <div class="info-card">
-                    <h5><i class="fas fa-align-left"></i> Mô tả</h5>
-                    <p class="description"><?php echo nl2br(htmlspecialchars($motel['description'])); ?></p>
-                </div>
-
-                <!-- Utilities -->
                 <?php if (count($utilities_array) > 0): ?>
-                    <div class="info-card">
-                        <h5><i class="fas fa-star"></i> Tiện nghi</h5>
-                        <div class="utilities-list">
-                            <?php foreach ($utilities_array as $util): ?>
-                                <div class="utility-badge">
-                                    <i class="fas fa-check"></i> <?php echo ucfirst(str_replace('_', ' ', $util)); ?>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
+                <div class="detail-card">
+                    <h5><i class="fas fa-sparkles"></i> Tiện nghi có sẵn</h5>
+                    <div class="utility-tags">
+                        <?php foreach ($utilities_array as $util): ?>
+                        <span class="utility-tag"><i class="fas fa-check-circle"></i>
+                            <?php echo ucfirst(str_replace('_', ' ', $util)); ?></span>
+                        <?php endforeach; ?>
                     </div>
+                </div>
                 <?php endif; ?>
 
-                <!-- Reviews -->
-                <div class="info-card">
-                    <h5><i class="fas fa-star"></i> Đánh giá</h5>
-                    <?php if (count($reviews) > 0): ?>
-                        <?php foreach ($reviews as $review): ?>
-                            <div class="review-item">
-                                <div class="review-header">
-                                    <div>
-                                        <div class="review-author"><?php echo htmlspecialchars($review['reviewer_name']); ?></div>
-                                        <div class="review-date"><?php echo date('d/m/Y', strtotime($review['created_at'])); ?></div>
-                                    </div>
-                                    <div class="review-rating">
-                                        <?php for ($i = 0; $i < $review['rating']; $i++): ?>
-                                            <i class="fas fa-star"></i>
-                                        <?php endfor; ?>
-                                    </div>
-                                </div>
-                                <p class="review-text"><?php echo htmlspecialchars($review['comment']); ?></p>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <p style="color: #999;">Chưa có đánh giá nào</p>
-                    <?php endif; ?>
-                    <?php if ($can_write_review): ?>
-                        <form method="POST" class="review-item mt-3 border-top pt-3">
-                            <h6 class="fw-bold mb-2"><i class="fas fa-pen"></i> Viết đánh giá của bạn</h6>
-                            <p class="small text-muted mb-2">Chỉ hiển thị khi bạn có đơn đặt được chấp nhận / đã cọc / hoàn tất cho phòng này.</p>
-                            <div class="mb-2">
-                                <label class="form-label">Số sao (1–5)</label>
-                                <select name="rating" class="form-select" required>
-                                    <?php for ($s = 5; $s >= 1; $s--): ?>
-                                        <option value="<?php echo $s; ?>"><?php echo $s; ?> sao</option>
-                                    <?php endfor; ?>
-                                </select>
-                            </div>
-                            <div class="mb-2">
-                                <label class="form-label">Bình luận</label>
-                                <textarea name="review_comment" class="form-control" rows="3" minlength="5" required placeholder="Chia sẻ trải nghiệm thực tế..."></textarea>
-                            </div>
-                            <button type="submit" name="submit_review" class="btn btn-primary">Gửi đánh giá</button>
-                        </form>
-                    <?php elseif ($has_user_review): ?>
-                        <p class="small text-success mt-2 mb-0"><i class="fas fa-check-circle"></i> Bạn đã gửi đánh giá cho phòng này.</p>
-                    <?php else: ?>
-                        <p class="small text-muted mt-2 mb-0">Khi đơn đặt phòng được chấp nhận hoặc hoàn tất, bạn có thể đánh giá tại đây.</p>
-                    <?php endif; ?>
+                <div class="detail-card">
+                    <h5><i class="fas fa-align-left"></i> Mô tả chi tiết</h5>
+                    <div style="line-height: 1.8; color: #475467; font-size: 16px;">
+                        <?php echo nl2br(htmlspecialchars($motel['description'])); ?>
+                    </div>
                 </div>
+
+                <?php if (!empty($motel['lat']) && !empty($motel['lng'])): ?>
+                <div class="detail-card">
+                    <h5><i class="fas fa-map"></i> Vị trí trên bản đồ</h5>
+                    <div id="motelMap"></div>
+                </div>
+                <?php endif; ?>
+
             </div>
 
             <div class="col-lg-4">
-                <!-- Booking Card -->
-                <div class="info-card" style="position: sticky; top: 80px;">
-                    <h5 style="margin-bottom: 20px;">Đặt phòng ngay</h5>
+                <div class="booking-card">
+                    <h4 class="fw-bold mb-4">Dự tính chi phí tháng đầu</h4>
                     <div class="mb-4">
-                        <div class="cost-row"><span>Tiền thuê tháng đầu</span><strong><?php echo number_format((int)$motel['price']); ?> VNĐ</strong></div>
-                        <div class="cost-row"><span>Tiền cọc (<?php echo $deposit_months; ?> tháng)</span><strong><?php echo number_format($deposit_amount); ?> VNĐ</strong></div>
-                        <div class="cost-row"><span>Phí dịch vụ/tháng</span><strong><?php echo number_format($service_fee); ?> VNĐ</strong></div>
-                        <div class="d-flex justify-content-between align-items-center pt-3">
-                            <span>Ước tính cần chuẩn bị</span>
-                            <span class="cost-total"><?php echo number_format($move_in_total); ?> VNĐ</span>
+                        <div class="cost-row"><span>Tiền thuê (tháng
+                                đầu)</span><strong><?php echo number_format((int)$motel['price']); ?> đ</strong></div>
+                        <div class="cost-row"><span>Tiền cọc (<?php echo $deposit_months; ?>
+                                tháng)</span><strong><?php echo number_format($deposit_amount); ?> đ</strong></div>
+                        <div class="cost-row"><span>Phí dịch vụ
+                                chung</span><strong><?php echo number_format($service_fee); ?> đ</strong></div>
+                        <div class="d-flex justify-content-between align-items-center pt-4">
+                            <span class="fw-bold text-dark">Ước tính cần chuẩn bị</span>
+                            <span class="cost-total"><?php echo number_format($move_in_total); ?> đ</span>
                         </div>
                     </div>
-                    <div class="d-grid gap-2">
+
+                    <div class="d-flex flex-column gap-3">
                         <?php if ($is_renter): ?>
-                            <a href="checkout.php?id=<?php echo $motel['id']; ?>" class="btn btn-primary">
-                                <i class="fas fa-calendar-plus"></i> Đặt phòng
-                            </a>
-                            <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#viewingForm">
-                                <i class="fas fa-calendar-check"></i> Đặt lịch xem
-                            </button>
-                            <button class="btn btn-heart <?php echo $is_favorite ? 'active' : ''; ?>" onclick="toggleFavorite(<?php echo $motel['id']; ?>, this)">
-                                <i class="fas fa-heart"></i> Yêu thích
-                            </button>
+                        <a href="checkout.php?id=<?php echo $motel['id']; ?>"
+                            class="btn-modern btn-primary-modern w-100 text-decoration-none">Gửi yêu cầu Booking</a>
+                        <div class="d-flex gap-2">
+                            <button class="btn-modern btn-outline-modern flex-grow-1" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#viewingForm"><i class="fas fa-calendar"></i>
+                                Đặt lịch xem</button>
+                            <button class="btn-modern btn-heart-modern <?php echo $is_favorite ? 'active' : ''; ?>"
+                                onclick="toggleFavorite(<?php echo $motel['id']; ?>, this)"><i
+                                    class="fas fa-heart"></i></button>
+                        </div>
                         <?php else: ?>
-                            <?php if (!$is_logged_in): ?>
-                                <a href="../login.php" class="btn btn-primary"><i class="fas fa-sign-in-alt"></i> Đăng nhập để đặt phòng</a>
-                            <?php else: ?>
-                                <div class="alert alert-light border mb-0">
-                                    Bạn đang xem bằng tài khoản <?php echo htmlspecialchars($user_role); ?>. Các thao tác đặt phòng chỉ mở cho người thuê.
-                                </div>
-                            <?php endif; ?>
+                        <?php if (!$is_logged_in): ?>
+                        <a href="../login.php" class="btn-modern btn-primary-modern w-100 text-decoration-none">Đăng
+                            nhập để thuê</a>
+                        <?php else: ?>
+                        <div class="alert alert-secondary text-center small rounded-4">Tính năng đặt phòng chỉ dành cho
+                            Người thuê.</div>
+                        <?php endif; ?>
                         <?php endif; ?>
                     </div>
-                    <?php if ($is_renter): ?>
-                        <form method="POST" class="collapse mt-3" id="viewingForm">
-                            <div class="mb-2">
-                                <label class="form-label">Thời gian muốn xem</label>
-                                <input type="datetime-local" name="preferred_time" class="form-control" required>
-                            </div>
-                            <div class="mb-2">
-                                <label class="form-label">Ghi chú</label>
-                                <textarea name="note" class="form-control" rows="3" placeholder="Ví dụ: Mình muốn xem phòng sau 18h"></textarea>
-                            </div>
-                            <button type="submit" name="schedule_viewing" class="btn btn-primary w-100">Gửi lịch xem</button>
-                        </form>
-                    <?php endif; ?>
-                </div>
 
-                <!-- Owner Card -->
-                <div class="owner-card">
-                    <div class="owner-name">
-                        <i class="fas fa-user-circle" style="color: #667eea;"></i> <?php echo htmlspecialchars($motel['owner_name']); ?>
-                    </div>
-                    <?php if (!empty($motel['verified_at'])): ?>
-                        <div class="verified-badge mb-2"><i class="fas fa-shield-alt"></i> Chủ nhà đã xác minh</div>
-                    <?php endif; ?>
-                    <p style="color: #666; margin-bottom: 15px;">Chủ nhà / Người cho thuê</p>
-                    <?php if ($is_renter): ?>
-                        <button class="btn-contact w-100 mb-2" type="button" data-bs-toggle="collapse" data-bs-target="#contactOwnerForm">
-                            <i class="fas fa-envelope"></i> Nhắn tin cho chủ trọ
-                        </button>
-                        <div class="collapse" id="contactOwnerForm">
-                            <form method="POST" class="mt-2">
-                                <label class="form-label small">Nội dung (tối thiểu 5 ký tự)</label>
-                                <textarea name="contact_message" class="form-control mb-2" rows="4" minlength="5" required placeholder="Ví dụ: Cho em hỏi thêm về giờ giấc, hợp đồng..."></textarea>
-                                <button type="submit" name="contact_owner" class="btn btn-primary w-100">Gửi tin nhắn</button>
-                            </form>
+                    <div class="owner-box">
+                        <div class="text-muted fw-bold small mb-2 text-uppercase tracking-wide">Chủ phòng / Người quản
+                            lý</div>
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <div
+                                style="width: 48px; height: 48px; border-radius: 50%; background: #0e7490; color: white; display: grid; place-items: center; font-size: 20px; font-weight: bold;">
+                                <?php echo strtoupper(substr($motel['owner_name'], 0, 1)); ?>
+                            </div>
+                            <div>
+                                <div class="fw-black fs-5 text-dark">
+                                    <?php echo htmlspecialchars($motel['owner_name']); ?></div>
+                                <?php if (!empty($motel['verified_at'])): ?>
+                                <div class="verified-badge mt-1"><i class="fas fa-check-circle"></i> Đã xác minh CCCD
+                                </div>
+                                <?php endif; ?>
+                            </div>
                         </div>
-                    <?php endif; ?>
-                </div>
 
-                <!-- Stats -->
-                <div class="info-card">
-                    <div style="display: flex; justify-content: space-around; text-align: center;">
-                        <div>
-                            <div style="font-size: 24px; font-weight: 700; color: #667eea;"><?php echo $motel['count_view']; ?></div>
-                            <div style="color: #666; font-size: 13px;">Lượt xem</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 24px; font-weight: 700; color: #667eea;">5â˜…</div>
-                            <div style="color: #666; font-size: 13px;">Đánh giá</div>
-                        </div>
+                        <a href="owner-profile.php?id=<?php echo $motel['user_id']; ?>"
+                            class="btn-modern btn-outline-modern w-100 py-2 fs-6 text-decoration-none">
+                            <i class="fas fa-external-link-alt"></i> Xem hồ sơ chủ trọ
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        function toggleFavorite(motelId, button) {
-            fetch('../ajax/toggle-favorite.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ motel_id: motelId })
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    button.classList.toggle('active');
-                }
-            });
-        }
+    document.addEventListener("DOMContentLoaded", function() {
+        <?php if (!empty($motel['lat']) && !empty($motel['lng'])): ?>
+        var lat = <?php echo $motel['lat']; ?>;
+        var lng = <?php echo $motel['lng']; ?>;
+        var map = L.map('motelMap').setView([lat, lng], 15);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        L.marker([lat, lng]).addTo(map)
+            .bindPopup(
+                '<b><?php echo htmlspecialchars($motel['title'], ENT_QUOTES); ?></b><br>Khu vực phòng trọ.')
+            .openPopup();
+        <?php endif; ?>
+    });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
+
 </html>
