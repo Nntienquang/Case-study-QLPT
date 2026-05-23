@@ -1,7 +1,6 @@
-﻿<?php
+<?php
 @require_once '../../config/database.php';
 @require_once '../../core/Database.php';
-@require_once '../components/PublicNav.php';
 
 session_start();
 
@@ -18,20 +17,21 @@ $limit = 12;
 $offset = ($page - 1) * $limit;
 
 // Get total
-$stmt = $db->prepare("SELECT COUNT(*) as count FROM favorites WHERE user_id = ?");
+$stmt = $db->prepare("SELECT COUNT(*) as count FROM wishlists WHERE user_id = ?");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $total = $stmt->get_result()->fetch_assoc()['count'];
 $total_pages = ceil($total / $limit);
 $stmt->close();
 
-// Get favorites
+// Get wishlists
 $stmt = $db->prepare("
-    SELECT m.id, m.title, m.price, m.address, m.count_view
-    FROM favorites f
-    JOIN motels m ON f.motel_id = m.id
-    WHERE f.user_id = ?
-    ORDER BY f.id DESC
+    SELECT m.id, m.title, m.price, m.area, m.address, m.count_view,
+           (SELECT image_url FROM motel_images WHERE motel_id = m.id LIMIT 1) as cover_image
+    FROM wishlists w
+    JOIN motels m ON w.motel_id = m.id
+    WHERE w.user_id = ?
+    ORDER BY w.id DESC
     LIMIT ? OFFSET ?
 ");
 $stmt->bind_param("iii", $user_id, $limit, $offset);
@@ -47,72 +47,197 @@ $stmt->close();
     <title>Phòng đã lưu - QuanLyPhongTro</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="../assets/css/modern.css" rel="stylesheet">
+    <link href="../assets/css/workbench.css" rel="stylesheet">
     <style>
         body { background: #f8f9fa; }
-        .navbar { background: linear-gradient(135deg, #667eea, #764ba2); }
-        .navbar-brand { font-size: 22px; font-weight: 700; color: white !important; }
         .main-content { padding: 30px; }
-        .motel-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: 0.3s; }
-        .motel-card:hover { transform: translateY(-5px); box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
-        .motel-image { height: 200px; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; color: white; position: relative; }
-        .motel-image i { font-size: 50px; }
-        .remove-btn { position: absolute; top: 10px; right: 10px; background: white; border: none; color: #d32f2f; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 18px; }
-        .motel-body { padding: 20px; }
-        .motel-title { font-size: 16px; font-weight: 600; margin-bottom: 10px; }
-        .motel-price { font-size: 20px; font-weight: 700; color: #667eea; margin-bottom: 10px; }
-        .motel-info { color: #666; font-size: 13px; margin-bottom: 15px; }
-        .btn-view { background: linear-gradient(135deg, #667eea, #764ba2); border: none; color: white; padding: 8px 15px; border-radius: 6px; cursor: pointer; text-decoration: none; }
-        .btn-view:hover { color: white; }
-        .empty-state { text-align: center; padding: 60px 30px; background: white; border-radius: 12px; }
+        
+        .motel-card {
+            background: #fff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #eee;
+        }
+        .motel-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .motel-image-wrapper {
+            position: relative;
+            height: 220px;
+            overflow: hidden;
+            background: #e9ecef;
+        }
+        .motel-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+        .motel-card:hover .motel-image {
+            transform: scale(1.05);
+        }
+        .motel-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+            color: #adb5bd;
+            font-size: 3rem;
+        }
+        .btn-favorite {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.9);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ff4757;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 2;
+        }
+        .btn-favorite:hover {
+            transform: scale(1.1);
+            background: #fff;
+        }
+        .motel-body {
+            padding: 20px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .motel-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #2b2b2b;
+            margin-bottom: 8px;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .motel-price {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #e53935;
+            margin-bottom: 12px;
+        }
+        .motel-meta {
+            display: flex;
+            gap: 15px;
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-bottom: 12px;
+        }
+        .motel-address {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .btn-view {
+            margin-top: auto;
+            background: #f8f9fa;
+            color: #495057;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .btn-view:hover {
+            background: #e9ecef;
+            color: #212529;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        }
+        .empty-icon {
+            font-size: 80px;
+            color: #f1f3f5;
+            margin-bottom: 25px;
+        }
     </style>
-    <link href="../assets/css/modern.css" rel="stylesheet">
 </head>
-<body>
-    <?php qlpt_render_public_nav(['base' => '../', 'active' => 'rooms']); ?>
-    <?php /*
-    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
-        <div class="container-lg">
-            <a class="navbar-brand" href="../index.php">
-                <i class="fas fa-home"></i> QuanLyPhongTro
-            </a>
-        </div>
-    </nav>
-    */ ?>
+<body class="workbench">
+    <?php 
+    @require_once __DIR__ . '/../components/PublicNav.php'; 
+    qlpt_render_public_nav(['base' => '../', 'active' => 'user']); 
+    ?>
 
-    <div class="container-lg" style="padding: 30px 0;">
-        <div class="row">
-            <div class="col-lg-3">
+    <main class="wb-shell">
+        <div class="container-lg wb-layout">
+            <aside class="wb-sidebar">
                 <?php
                 $userNavActive = 'favorites';
+                $userNavVariant = 'workbench';
                 require __DIR__ . '/_nav_sidebar.php';
                 ?>
-            </div>
+            </aside>
 
-            <div class="col-lg-9">
+            <section>
                 <div class="main-content">
-                    <h1 style="font-size: 28px; font-weight: 700; margin-bottom: 30px;">
-                        <i class="fas fa-heart"></i> Phòng đã lưu
-                    </h1>
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h1 class="fw-bold m-0 fs-3">
+                            <i class="fas fa-heart text-danger me-2"></i> Phòng đã lưu
+                        </h1>
+                        <span class="badge bg-danger rounded-pill px-3 py-2 fs-6"><?php echo $total; ?> phòng</span>
+                    </div>
 
                     <?php if (count($motels) > 0): ?>
-                        <div class="row">
+                        <div class="row g-4">
                             <?php foreach ($motels as $motel): ?>
-                                <div class="col-md-6 col-lg-4 mb-4">
+                                <div class="col-md-6 col-lg-4" id="motel-card-<?php echo $motel['id']; ?>">
                                     <div class="motel-card">
-                                        <div class="motel-image">
-                                            <i class="fas fa-image"></i>
-                                            <button class="remove-btn" onclick="removeFavorite(<?php echo $motel['id']; ?>)">
-                                                <i class="fas fa-times"></i>
+                                        <div class="motel-image-wrapper">
+                                            <button class="btn-favorite" onclick="toggleFavorite(<?php echo $motel['id']; ?>)" title="Bỏ lưu">
+                                                <i class="fas fa-heart"></i>
                                             </button>
+                                            <?php if (!empty($motel['cover_image'])): ?>
+                                                <img src="../<?php echo htmlspecialchars($motel['cover_image']); ?>" class="motel-image" alt="Hình ảnh phòng">
+                                            <?php else: ?>
+                                                <div class="motel-placeholder"><i class="fas fa-image"></i></div>
+                                            <?php endif; ?>
                                         </div>
                                         <div class="motel-body">
                                             <div class="motel-title"><?php echo htmlspecialchars($motel['title']); ?></div>
-                                            <div class="motel-price"><?php echo number_format($motel['price']); ?> VNĐ</div>
-                                            <div class="motel-info">
-                                                <div style="margin-bottom: 8px;"><i class="fas fa-map-marker-alt"></i> <?php echo htmlspecialchars($motel['address']); ?></div>
-                                                <div><i class="fas fa-eye"></i> <?php echo $motel['count_view']; ?> lượt xem</div>
+                                            <div class="motel-price"><?php echo number_format($motel['price']); ?> đ/tháng</div>
+                                            
+                                            <div class="motel-meta">
+                                                <span><i class="fas fa-vector-square me-1"></i> <?php echo htmlspecialchars($motel['area'] ?? '--'); ?> m²</span>
+                                                <span><i class="fas fa-eye me-1"></i> <?php echo $motel['count_view']; ?> xem</span>
                                             </div>
-                                            <a href="motel-detail.php?id=<?php echo $motel['id']; ?>" class="btn-view" style="display: block; text-align: center;">
+                                            
+                                            <div class="motel-address" title="<?php echo htmlspecialchars($motel['address']); ?>">
+                                                <i class="fas fa-map-marker-alt text-muted me-1"></i> <?php echo htmlspecialchars($motel['address']); ?>
+                                            </div>
+                                            
+                                            <a href="../motel-detail.php?id=<?php echo $motel['id']; ?>" class="btn-view">
                                                 Xem chi tiết
                                             </a>
                                         </div>
@@ -122,7 +247,7 @@ $stmt->close();
                         </div>
 
                         <?php if ($total_pages > 1): ?>
-                            <nav class="mt-4">
+                            <nav class="mt-5">
                                 <ul class="pagination justify-content-center">
                                     <?php for ($i = 1; $i <= $total_pages; $i++): ?>
                                         <li class="page-item <?php echo $i == $page ? 'active' : ''; ?>">
@@ -134,35 +259,57 @@ $stmt->close();
                         <?php endif; ?>
                     <?php else: ?>
                         <div class="empty-state">
-                            <div style="font-size: 60px; color: #ddd; margin-bottom: 20px;"><i class="fas fa-heart"></i></div>
-                            <p style="color: #999; margin-bottom: 20px;">Bạn chưa lưu phòng nào</p>
-                            <a href="search.php" class="btn btn-primary">
-                                <i class="fas fa-search"></i> Tìm phòng
+                            <div class="empty-icon"><i class="fas fa-heart-crack"></i></div>
+                            <h4 class="fw-bold mb-3">Bạn chưa lưu phòng nào</h4>
+                            <p class="text-muted mb-4">Hãy lưu lại những phòng bạn thích để xem lại sau nhé.</p>
+                            <a href="../index.php" class="btn btn-primary px-4 py-2 rounded-pill shadow-sm">
+                                <i class="fas fa-search me-2"></i> Khám phá phòng ngay
                             </a>
                         </div>
                     <?php endif; ?>
                 </div>
-            </div>
+            </section>
         </div>
-    </div>
-
-    <script>
-        function removeFavorite(motelId) {
-            if (confirm('Xóa khỏi yêu thích?')) {
-                fetch('../ajax/toggle-favorite.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ motel_id: motelId })
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        location.reload();
-                    }
-                });
-            }
-        }
-    </script>
+    </main>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    function toggleFavorite(motelId) {
+        if (!confirm('Bạn có chắc muốn bỏ lưu phòng này?')) return;
+        
+        fetch('../ajax/toggle-favorite.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ motel_id: motelId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove card from UI
+                const card = document.getElementById('motel-card-' + motelId);
+                if (card) {
+                    card.style.transition = 'all 0.3s ease';
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.9)';
+                    setTimeout(() => {
+                        card.remove();
+                        // Check if list is empty
+                        const remaining = document.querySelectorAll('.motel-card').length;
+                        if (remaining === 0) {
+                            window.location.reload();
+                        }
+                    }, 300);
+                }
+            } else {
+                alert(data.message || 'Có lỗi xảy ra!');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Có lỗi xảy ra!');
+        });
+    }
+    </script>
 </body>
 </html>

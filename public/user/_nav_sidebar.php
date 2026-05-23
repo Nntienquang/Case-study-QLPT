@@ -15,7 +15,6 @@ $navActive = static function (string $key) use ($userNavActive): string {
 
 $items = [
     ['key' => 'dashboard', 'href' => 'dashboard.php', 'icon' => 'fas fa-home', 'label' => 'Tổng quan'],
-    ['key' => 'search', 'href' => 'search.php', 'icon' => 'fas fa-search', 'label' => 'Tìm phòng'],
     ['key' => 'saved_searches', 'href' => 'saved-searches.php', 'icon' => 'fas fa-bell', 'label' => 'Bộ lọc đã lưu'],
     ['key' => 'bookings', 'href' => 'my-bookings.php', 'icon' => 'fas fa-calendar-check', 'label' => 'Đơn đặt của tôi'],
     ['key' => 'favorites', 'href' => 'saved-motels.php', 'icon' => 'fas fa-heart', 'label' => 'Phòng đã lưu'],
@@ -28,6 +27,7 @@ $items = [
 ];
 
 if ($variant === 'workbench') {
+    echo '<style> body.workbench .wb-shell { padding-top: 100px !important; } body.workbench .wb-sidebar { top: 90px !important; } </style>' . "\n";
     echo '<div class="wb-side-title">Người thuê</div>' . "\n";
     foreach ($items as $it) {
         $extra = $it['extraClass'] ?? '';

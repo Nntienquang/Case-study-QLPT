@@ -250,7 +250,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         body { background: #f8f9fa; font-family: 'Segoe UI', sans-serif; }
         .navbar { background: linear-gradient(135deg, #667eea, #764ba2); }
         .navbar-brand { font-size: 22px; font-weight: 700; color: white !important; }
-        .main-content { padding: 30px 0; }
+        .main-content { padding: 100px 0 30px; }
         .form-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .form-section { margin-bottom: 40px; }
         .form-section h5 { font-weight: 700; color: #333; margin-bottom: 25px; border-bottom: 2px solid #667eea; padding-bottom: 15px; }

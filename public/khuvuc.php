@@ -12,21 +12,10 @@ $isLoggedUser = isset($_SESSION['user_id']) && ($_SESSION['role'] ?? '') === 'us
 $db = new Database($conn);
 $user_id = $isLoggedUser ? (int)$_SESSION['user_id'] : 0;
 
-// Get all districts for filter
-$stmt = $db->prepare('SELECT id, name FROM districts ORDER BY name');
-$stmt->execute();
-$districts_list = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-$stmt->close();
-
-$district_id = $_GET['district_id'] ?? '';
 $motels = [];
 
 // Get motels with location data
-$sql = 'SELECT id, title, address, lat, lng, price, district_id FROM motels WHERE status = "approved" AND lat IS NOT NULL AND lng IS NOT NULL';
-if ($district_id !== '') {
-    $sql .= ' AND district_id = ' . (int)$district_id;
-}
-$sql .= ' ORDER BY created_at DESC';
+$sql = 'SELECT id, title, address, lat, lng, price, district_id FROM motels WHERE status = "approved" AND lat IS NOT NULL AND lng IS NOT NULL ORDER BY created_at DESC';
 
 $stmt = $db->prepare($sql);
 $stmt->execute();
@@ -367,31 +356,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['ac
             <p>Khám phá vị trí các phòng trọ và căn hộ một cách trực quan trên bản đồ.</p>
         </div>
 
-        <div class="filter-card">
-            <div class="row align-items-end g-3">
-                <div class="col-md-8 col-sm-12">
-                    <label for="districtSelect" class="filter-label">Chọn Quận / Huyện</label>
-                    <select id="districtSelect" class="form-select">
-                        <option value="">Tất cả khu vực</option>
-                        <?php foreach ($districts_list as $dist): ?>
-                        <option value="<?php echo $dist['id']; ?>"
-                            <?php echo (string)$district_id === (string)$dist['id'] ? 'selected' : ''; ?>>
-                            <?php echo htmlspecialchars($dist['name']); ?>
-                        </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="col-md-2 col-sm-6">
-                    <button class="btn-action btn-search" onclick="applyFilter()">
-                        <i class="fas fa-search"></i> Lọc
-                    </button>
-                </div>
-                <div class="col-md-2 col-sm-6">
-                    <button class="btn-action btn-reset" onclick="resetFilter()">
-                        <i class="fas fa-redo"></i> Đặt lại
-                    </button>
-                </div>
-            </div>
+        <div class="filter-card text-center py-4">
+            <h4 class="mb-0" style="color: #101828; font-weight: 800;">
+                <i class="fas fa-map-marked-alt text-primary me-2" style="color: #0e7490 !important;"></i>
+                Đang hiển thị <span id="visibleCount" style="color: #0e7490; font-size: 28px; margin: 0 8px;">0</span> phòng trọ trong khu vực này
+            </h4>
+            <p class="text-muted mt-2 mb-0">Di chuyển hoặc thu phóng bản đồ để cập nhật số lượng phòng trọ trong khu vực bạn quan tâm</p>
         </div>
 
         <div class="map-container">
@@ -433,16 +403,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['ac
     }
 
     // Load and display motels
-    function loadMotels(districtId = '') {
+    function loadMotels() {
         showLoading(true);
 
-        const url = new URL(window.location.href);
-        const params = new URLSearchParams();
-        if (districtId) {
-            params.append('district_id', districtId);
-        }
-
-        fetch(`khuvuc.php?action=get_motels&${params}`, {
+        fetch(`khuvuc.php?action=get_motels`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -485,6 +449,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['ac
                 }
 
                 showLoading(false);
+                updateVisibleCount(); // Update initial count
             })
             .catch(err => {
                 console.error('Error loading motels:', err);
@@ -492,6 +457,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['ac
                 alert('Lỗi khi tải dữ liệu. Vui lòng thử lại.');
             });
     }
+
+    // Update the count of visible motels
+    function updateVisibleCount() {
+        const bounds = map.getBounds();
+        let count = 0;
+        
+        Object.values(markers).forEach(marker => {
+            if (bounds.contains(marker.getLatLng())) {
+                count++;
+            }
+        });
+        
+        document.getElementById('visibleCount').textContent = count;
+    }
+
+    // Listen to map move/zoom events
+    map.on('moveend', updateVisibleCount);
+    map.on('zoomend', updateVisibleCount);
 
     // Create popup content HTML
     function createPopupContent(motel) {
@@ -557,29 +540,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['ac
         return text.replace(/[&<>"']/g, m => map[m]);
     }
 
-    // Apply filter
-    function applyFilter() {
-        const districtId = document.getElementById('districtSelect').value;
-        const url = new URL(window.location.href);
-        url.searchParams.set('district_id', districtId);
-        window.history.pushState({}, '', url);
-        loadMotels(districtId);
-    }
-
-    // Reset filter
-    function resetFilter() {
-        document.getElementById('districtSelect').value = '';
-        const url = new URL(window.location.href);
-        url.searchParams.delete('district_id');
-        window.history.pushState({}, '', url);
-        loadMotels('');
-    }
-
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const districtId = urlParams.get('district_id') || '';
-        loadMotels(districtId);
+        loadMotels();
     });
     </script>
 </body>

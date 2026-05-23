@@ -2,7 +2,7 @@
 @require_once '../../config/database.php';
 @require_once '../../core/Database.php';
 @require_once '../../core/Csrf.php';
-@require_once '../components/PublicNav.php';
+
 
 session_start();
 
@@ -164,29 +164,25 @@ function tenant_booking_status_label(string $status): string
         .empty-state { text-align: center; padding: 60px 30px; background: white; border-radius: 12px; }
     </style>
     <link href="../assets/css/modern.css" rel="stylesheet">
+    <link href="../assets/css/workbench.css" rel="stylesheet">
 </head>
-<body>
-    <?php qlpt_render_public_nav(['base' => '../', 'active' => 'rooms']); ?>
-    <?php /*
-    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
-        <div class="container-lg">
-            <a class="navbar-brand" href="../index.php">
-                <i class="fas fa-home"></i> QuanLyPhongTro
-            </a>
-        </div>
-    </nav>
-    */ ?>
+<body class="workbench">
+    <?php 
+    @require_once __DIR__ . '/../components/PublicNav.php'; 
+    qlpt_render_public_nav(['base' => '../', 'active' => 'user']); 
+    ?>
 
-    <div class="container-lg" style="padding: 30px 0;">
-        <div class="row">
-            <div class="col-lg-3">
+    <main class="wb-shell">
+        <div class="container-lg wb-layout">
+            <aside class="wb-sidebar">
                 <?php
                 $userNavActive = 'bookings';
+                $userNavVariant = 'workbench';
                 require __DIR__ . '/_nav_sidebar.php';
                 ?>
-            </div>
+            </aside>
 
-            <div class="col-lg-9">
+            <section>
                 <div class="main-content">
                     <h1 style="font-size: 28px; font-weight: 700; margin-bottom: 10px;">
                         <i class="fas fa-calendar-check"></i> Đơn đặt của tôi
@@ -263,10 +259,9 @@ function tenant_booking_status_label(string $status): string
                         </div>
                     <?php endif; ?>
                 </div>
-            </div>
+                        </section>
         </div>
-    </div>
-
+    </main>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

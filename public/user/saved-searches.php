@@ -1,7 +1,7 @@
 <?php
 @require_once '../../config/database.php';
 @require_once '../../core/Database.php';
-@require_once '../components/PublicNav.php';
+
 
 session_start();
 
@@ -93,32 +93,25 @@ function search_url(array $search): string
         .empty-state { text-align: center; padding: 44px 20px; color: #667085; }
         @media (max-width: 991px) { .search-card { grid-template-columns: 1fr; } }
     </style>
+    <link href="../assets/css/workbench.css" rel="stylesheet">
 </head>
-<body>
-    <?php qlpt_render_public_nav(['base' => '../', 'active' => 'rooms']); ?>
-    <?php /*
-    <nav class="navbar app-nav navbar-expand-lg sticky-top">
-        <div class="container-lg">
-            <a class="navbar-brand fw-bold" href="../index.php"><i class="fas fa-house-chimney"></i> QuanLyPhongTro</a>
-            <div class="ms-auto d-flex gap-2">
-                <a class="btn btn-outline-primary btn-sm" href="notifications.php"><i class="fas fa-bell"></i> Thông báo</a>
-                <a class="btn btn-outline-secondary btn-sm" href="../logout.php">Đăng xuất</a>
-            </div>
-        </div>
-    </nav>
-    */ ?>
+<body class="workbench">
+    <?php 
+    @require_once __DIR__ . '/../components/PublicNav.php'; 
+    qlpt_render_public_nav(['base' => '../', 'active' => 'user']); 
+    ?>
 
-    <main class="app-shell">
-        <div class="container-lg">
-            <div class="row">
-                <div class="col-lg-3 mb-4 mb-lg-0">
-                    <?php
-                    $userNavActive = 'saved_searches';
-                    require __DIR__ . '/_nav_sidebar.php';
-                    ?>
-                </div>
+    <main class="wb-shell">
+        <div class="container-lg wb-layout">
+            <aside class="wb-sidebar">
+                <?php
+                $userNavActive = 'saved_searches';
+                $userNavVariant = 'workbench';
+                require __DIR__ . '/_nav_sidebar.php';
+                ?>
+            </aside>
 
-                <div class="col-lg-9">
+            <section>
                 <div class="content-card">
                     <h1 class="fw-bold mb-2">Bộ lọc đã lưu</h1>
                     <p class="text-muted mb-0">Mở lại bộ lọc nhanh, bật/tắt thông báo phòng mới phù hợp.</p>

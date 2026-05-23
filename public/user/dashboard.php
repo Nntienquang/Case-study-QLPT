@@ -153,18 +153,10 @@ $featuredMotels = user_dash_rows(
     <link href="../assets/css/workbench.css" rel="stylesheet">
 </head>
 <body class="workbench">
-    <header class="wb-topbar">
-        <div class="container-lg wb-topbar-inner">
-            <a class="wb-brand" href="../index.php">
-                <span class="wb-brand-mark"><i class="fas fa-house-chimney"></i></span>
-                <span>QuanLyPhongTro</span>
-            </a>
-            <div class="wb-user">
-                <span><?php echo user_dash_e($userName); ?></span>
-                <a class="btn btn-outline-secondary btn-sm" href="../logout.php">Đăng xuất</a>
-            </div>
-        </div>
-    </header>
+    <?php 
+    @require_once __DIR__ . '/../components/PublicNav.php'; 
+    qlpt_render_public_nav(['base' => '../', 'active' => 'user']); 
+    ?>
 
     <main class="wb-shell">
         <div class="container-lg wb-layout">

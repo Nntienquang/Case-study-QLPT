@@ -1,7 +1,7 @@
 <?php
 @require_once '../../config/database.php';
 @require_once '../../core/Database.php';
-@require_once '../components/PublicNav.php';
+
 
 session_start();
 
@@ -99,28 +99,25 @@ $stmt->close();
         .empty-state { text-align: center; padding: 50px 20px; color: #667085; }
         @media (max-width: 768px) { .panel, .notification-card { grid-template-columns: 1fr; flex-direction: column; align-items: flex-start; } }
     </style>
+    <link href="../assets/css/workbench.css" rel="stylesheet">
 </head>
-<body>
-    <?php qlpt_render_public_nav(['base' => '../', 'active' => 'rooms']); ?>
-    <?php /*
-    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
-        <div class="container-lg">
-            <a class="navbar-brand" href="../index.php">
-                <i class="fas fa-home"></i> QuanLyPhongTro
-            </a>
-        </div>
-    </nav>
-    */ ?>
+<body class="workbench">
+    <?php 
+    @require_once __DIR__ . '/../components/PublicNav.php'; 
+    qlpt_render_public_nav(['base' => '../', 'active' => 'user']); 
+    ?>
 
-    <div class="container-lg" style="padding: 24px 0 48px;">
-        <div class="row">
-            <div class="col-lg-3 mb-4 mb-lg-0">
+    <main class="wb-shell">
+        <div class="container-lg wb-layout">
+            <aside class="wb-sidebar">
                 <?php
                 $userNavActive = 'notifications';
+                $userNavVariant = 'workbench';
                 require __DIR__ . '/_nav_sidebar.php';
                 ?>
-            </div>
-            <div class="col-lg-9">
+            </aside>
+
+            <section>
                 <div class="main-content">
                     <div class="panel">
                         <div>
@@ -175,10 +172,9 @@ $stmt->close();
                         </div>
                     <?php endif; ?>
                 </div>
-            </div>
+                        </section>
         </div>
-    </div>
-
+    </main>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
