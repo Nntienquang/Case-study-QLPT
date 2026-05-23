@@ -30,6 +30,7 @@ $max_price = $_GET['max_price'] ?? '';
 $area_min = $_GET['area_min'] ?? '';
 $available_from = $_GET['available_from'] ?? '';
 $sort = $_GET['sort'] ?? 'featured';
+$near_uni = isset($_GET['near_uni']) ? (int)$_GET['near_uni'] : 0;
 $utilities_filter = $_GET['utilities'] ?? []; 
 $flash_sale = isset($_GET['flash_sale']) ? (int)$_GET['flash_sale'] : 0;
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
@@ -138,6 +139,14 @@ if ($available_from !== '') {
 }
 if ($flash_sale === 1) {
     $where .= ' AND m.is_flash_sale = 1';
+}
+if ($near_uni === 1) {
+    $nearUniKeyword = '%Đại học Vinh%';
+    $where .= ' AND (m.ward_name IN (\'Bến Thủy\', \'Trường Thi\', \'Trung Đô\') OR m.address LIKE ? OR m.title LIKE ? OR m.description LIKE ?)';
+    $params[] = $nearUniKeyword;
+    $params[] = $nearUniKeyword;
+    $params[] = $nearUniKeyword;
+    $types .= 'sss';
 }
 if (!empty($utilities_filter) && is_array($utilities_filter)) {
     $util_count = count($utilities_filter);
