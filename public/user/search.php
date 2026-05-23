@@ -25,6 +25,7 @@ $area_min = $_GET['area_min'] ?? '';
 $available_from = $_GET['available_from'] ?? '';
 $sort = $_GET['sort'] ?? 'featured';
 $utilities_filter = $_GET['utilities'] ?? []; 
+$flash_sale = isset($_GET['flash_sale']) ? (int)$_GET['flash_sale'] : 0;
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $limit = 12;
 $offset = ($page - 1) * $limit;
@@ -110,6 +111,9 @@ if ($available_from !== '') {
     $params[] = $available_from;
     $types .= 's';
 }
+if ($flash_sale === 1) {
+    $where .= ' AND m.is_flash_sale = 1';
+}
 if (!empty($utilities_filter) && is_array($utilities_filter)) {
     $util_count = count($utilities_filter);
     $placeholders = implode(',', array_fill(0, $util_count, '?'));
@@ -157,7 +161,7 @@ $stmt->close();
 $favorite_ids = [];
 if ($motels && isset($_SESSION['user_id'])) {
     $motel_ids = implode(',', array_map(fn($m) => (int)$m['id'], $motels));
-    $fav_stmt = $db->prepare("SELECT motel_id FROM favorites WHERE user_id = ? AND motel_id IN ($motel_ids)");
+    $fav_stmt = $db->prepare("SELECT motel_id FROM wishlists WHERE user_id = ? AND motel_id IN ($motel_ids)");
     $uid = (int)$_SESSION['user_id'];
     $fav_stmt->bind_param('i', $uid);
     $fav_stmt->execute();
@@ -299,8 +303,11 @@ unset($baseQuery['page'], $baseQuery['save_search']);
         transform: scale(1.08);
     }
 
-    .favorite-btn.active {
+    .favorite-btn.active, .btn-wishlist.active {
         color: #dc2626 !important;
+    }
+    .btn-wishlist:not(.active) {
+        color: #cbd5e1 !important;
     }
 
     .motel-body {
@@ -511,6 +518,15 @@ unset($baseQuery['page'], $baseQuery['save_search']);
                             </div>
 
                             <div class="mb-3">
+                                <div class="form-check form-switch mt-2">
+                                    <input class="form-check-input" type="checkbox" name="flash_sale" value="1" id="flash_sale_toggle" <?php echo $flash_sale === 1 ? 'checked' : ''; ?>>
+                                    <label class="form-check-label fw-bold text-danger" for="flash_sale_toggle">
+                                        <i class="fas fa-fire"></i> Chỉ hiện Flash Sale
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
                                 <label class="form-label fw-bold text-dark small text-uppercase">Sắp xếp</label>
                                 <select name="sort" class="form-select bg-light">
                                     <option value="featured" <?php echo $sort === 'featured' ? 'selected' : ''; ?>>Đề
@@ -552,47 +568,47 @@ unset($baseQuery['page'], $baseQuery['save_search']);
                                 }
                             ?>
                         <div class="col-md-6 col-xl-4">
-                            <article class="motel-card">
-                                <div class="motel-image"
-                                    style="background-image: url('<?php echo htmlspecialchars($motelImage); ?>');">
-                                    <button
-                                        class="favorite-btn <?php echo in_array((int)$motel['id'], $favorite_ids, true) ? 'active' : ''; ?>"
-                                        onclick="toggleFavorite(<?php echo (int)$motel['id']; ?>, this)" type="button">
-                                        <i class="fas fa-heart"></i>
-                                    </button>
-                                    <span
-                                        class="position-absolute bottom-0 start-0 m-3 badge bg-dark bg-opacity-75 p-2 px-3 rounded-pill fw-bold border border-secondary border-opacity-50">
-                                        <i class="fas fa-shield-heart text-info me-1"></i> Đã duyệt
-                                    </span>
+                            <article class="room-card border-0 shadow-sm rounded-3 overflow-hidden d-flex flex-column h-100 bg-white">
+                                <div class="room-photo position-relative" style="aspect-ratio: 4/3; background: #f3f4f6;">
+                                    <img src="<?php echo htmlspecialchars($motelImage); ?>" alt="Ảnh phòng" class="w-100 h-100" style="object-fit: cover; color: transparent;">
+                                    
+                                    <?php if (!empty($motel['badge_label'])): ?>
+                                        <span class="badge bg-danger position-absolute top-0 start-0 m-2 z-3 px-2 py-1 shadow-sm"><?php echo htmlspecialchars($motel['badge_label']); ?></span>
+                                    <?php elseif (!empty($motel['is_flash_sale'])): ?>
+                                        <span class="badge-flash-sale position-absolute top-0 start-0 m-2 z-3 shadow-sm">Flash Sale</span>
+                                    <?php endif; ?>
+                                    
+                                    <button class="btn-wishlist position-absolute z-3 d-flex align-items-center justify-content-center border-0 <?php echo in_array((int)$motel['id'], $favorite_ids, true) ? 'active' : ''; ?>" style="top:12px; right:12px; width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.8); box-shadow:0 4px 8px rgba(0,0,0,0.15); cursor:pointer;" onclick="toggleFavorite(<?php echo (int)$motel['id']; ?>, this)" aria-label="Yêu thích"><i class="fas fa-heart"></i></button>
                                 </div>
-                                <div class="motel-body">
-                                    <div class="score-row">
-                                        <span class="score-pill"><?php echo (int)$motel['match_score']; ?>% phù
-                                            hợp</span>
+                                <div class="room-body p-3 d-flex flex-column flex-grow-1">
+                                    <div class="score-row mb-2 d-flex gap-2">
+                                        <span class="badge bg-info text-dark rounded-pill"><?php echo (int)$motel['match_score']; ?>% phù hợp</span>
                                         <?php if (!empty($motel['verified_at'])): ?>
-                                        <span class="score-pill verified-pill"><i class="fas fa-check-circle"></i>
-                                            Verified</span>
+                                            <span class="badge bg-primary rounded-pill"><i class="fas fa-check-circle"></i> Verified</span>
                                         <?php endif; ?>
                                     </div>
-
-                                    <div class="motel-title"><?php echo htmlspecialchars($motel['title']); ?></div>
-
-                                    <div class="motel-price"><?php echo number_format((int)$motel['price']); ?> đ<span
-                                            class="fs-6 text-muted fw-normal">/tháng</span></div>
-
-                                    <div class="meta-line"><i
-                                            class="fas fa-map-marker-alt"></i><span><?php echo htmlspecialchars($motel['address']); ?></span>
+                                    
+                                    <h3 class="room-title fw-bold mb-2" style="font-size: 1.1rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                        <?php echo htmlspecialchars($motel['title']); ?>
+                                    </h3>
+                                    
+                                    <div class="room-price mb-2">
+                                        <span class="text-price fs-5"><?php echo number_format((int)$motel['price']); ?> đ/tháng</span>
+                                        <?php if (!empty($motel['old_price']) && $motel['old_price'] > $motel['price']): ?>
+                                            <span class="text-old-price ms-2 text-muted text-decoration-line-through small"><?php echo number_format((int)$motel['old_price']); ?> đ</span>
+                                        <?php endif; ?>
                                     </div>
-                                    <div class="meta-line"><i
-                                            class="fas fa-cube"></i><span><?php echo htmlspecialchars($motel['category_name'] ?? 'Phòng trọ'); ?>
-                                            &bull; <?php echo (float)$motel['area']; ?> m²</span></div>
-
-                                    <div class="card-bottom-anchor">
-                                        <div class="meta-line pb-2"><i class="fas fa-wallet text-secondary"></i><span
-                                                class="fw-bold text-dark">Vào ở cần:
-                                                <?php echo number_format($moveInCost); ?> đ</span></div>
-                                        <a href="motel-detail.php?id=<?php echo (int)$motel['id']; ?>"
-                                            class="btn-view">Xem chi tiết</a>
+                                    
+                                    <div class="room-meta text-muted small mb-3">
+                                        <div class="mb-1"><i class="fas fa-location-dot"></i> <?php echo htmlspecialchars($motel['address'] ?: 'Chưa cập nhật địa chỉ'); ?></div>
+                                        <div><i class="fas fa-cube"></i> <?php echo htmlspecialchars($motel['category_name'] ?? 'Phòng trọ'); ?> &bull; <?php echo (float)$motel['area']; ?> m²</div>
+                                    </div>
+                                    
+                                    <div class="room-card-footer mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+                                        <div class="saving-note text-muted small fw-bold">
+                                            <i class="fas fa-wallet text-secondary"></i> Cần: <?php echo number_format($moveInCost); ?> đ
+                                        </div>
+                                        <a href="motel-detail.php?id=<?php echo (int)$motel['id']; ?>" class="btn btn-primary btn-sm rounded-3 fw-bold">Xem phòng</a>
                                     </div>
                                 </div>
                             </article>

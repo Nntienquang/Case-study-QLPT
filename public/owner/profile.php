@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 @require_once '../../config/database.php';
 @require_once '../../config/constants.php';
 @require_once '../../core/Database.php';
@@ -32,6 +32,11 @@ $stmt->bind_param("i", $owner_id);
 $stmt->execute();
 $user = $stmt->get_result()->fetch_assoc();
 $stmt->close();
+
+if (!$user) {
+    header('Location: ../logout.php');
+    exit;
+}
 
 // Xử lý cập nhật hồ sơ
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 @require_once '../../config/database.php';
 @require_once '../../config/constants.php';
 @require_once '../../core/Database.php';
@@ -76,44 +76,7 @@ if ($is_renter && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['schedul
     }
 }
 
-if ($is_renter && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_review'])) {
-    $rating = (int)($_POST['rating'] ?? 0);
-    $comment = trim((string)($_POST['review_comment'] ?? ''));
-    $stmt = $db->prepare('SELECT id FROM reviews WHERE user_id = ? AND motel_id = ?');
-    $stmt->bind_param('ii', $user_id, $motel_id);
-    $stmt->execute();
-    $dup = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
-    $stmt = $db->prepare("SELECT id FROM bookings WHERE user_id = ? AND motel_id = ? AND status IN ('accepted','paid','completed') LIMIT 1");
-    $stmt->bind_param('ii', $user_id, $motel_id);
-    $stmt->execute();
-    $eligible = (bool)$stmt->get_result()->fetch_assoc();
-    $stmt->close();
-    if ($dup) {
-        $message = 'Bạn đã đánh giá phòng này rồi.';
-        $message_type = 'danger';
-    } elseif (!$eligible) {
-        $message = 'Chỉ có thể đánh giá sau khi đơn đặt phòng được chấp nhận hoặc hoàn tất.';
-        $message_type = 'danger';
-    } elseif ($rating < 1 || $rating > 5) {
-        $message = 'Vui lòng chọn từ 1 đến 5 sao.';
-        $message_type = 'danger';
-    } elseif (mb_strlen($comment) < 5) {
-        $message = 'Bình luận cần ít nhất 5 ký tự.';
-        $message_type = 'danger';
-    } else {
-        $stmt = $db->prepare('INSERT INTO reviews (user_id, motel_id, rating, comment) VALUES (?, ?, ?, ?)');
-        $stmt->bind_param('iiis', $user_id, $motel_id, $rating, $comment);
-        if ($stmt->execute()) {
-            $message = 'Cảm ơn bạn đã đánh giá!';
-            $message_type = 'success';
-        } else {
-            $message = 'Không thể lưu đánh giá lúc này.';
-            $message_type = 'danger';
-        }
-        $stmt->close();
-    }
-}
+
 
 if ($is_renter && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['contact_owner'])) {
     $body = trim((string)($_POST['contact_message'] ?? ''));
@@ -173,11 +136,19 @@ if ($is_renter && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['contact
     }
 }
 
-// Increment view count
-$stmt = $db->prepare("UPDATE motels SET count_view = count_view + 1 WHERE id = ?");
-$stmt->bind_param("i", $motel_id);
-$stmt->execute();
-$stmt->close();
+// Increment view count with anti-spam
+if (!isset($_SESSION['viewed_motels'])) {
+    $_SESSION['viewed_motels'] = [];
+}
+
+if (!in_array($motel_id, $_SESSION['viewed_motels'])) {
+    $stmt = $db->prepare("UPDATE motels SET count_view = count_view + 1 WHERE id = ?");
+    $stmt->bind_param("i", $motel_id);
+    $stmt->execute();
+    $stmt->close();
+    
+    $_SESSION['viewed_motels'][] = $motel_id;
+}
 
 // Check if favorite
 $is_favorite = false;
@@ -559,14 +530,29 @@ $move_in_total = (int)$motel['price'] + $service_fee + $deposit_amount;
         <div class="row">
             <div class="col-lg-8">
                 <div class="detail-card">
-                    <h1 class="motel-title"><?php echo htmlspecialchars($motel['title']); ?></h1>
-                    <div class="motel-location">
+                    <h1 class="motel-title">
+                        <?php if (!empty($motel['is_flash_sale'])): ?>
+                            <span class="badge bg-danger align-middle me-2 fs-6"><i class="fas fa-fire"></i> Flash Sale</span>
+                        <?php endif; ?>
+                        <?php echo htmlspecialchars($motel['title']); ?>
+                    </h1>
+                    <div class="motel-location mb-3">
                         <i class="fas fa-location-dot" style="color: #ef4444;"></i>
                         <?php echo htmlspecialchars($motel['address']); ?>
                     </div>
-                    <div class="motel-price-box">
-                        <div class="motel-price"><?php echo number_format($motel['price']); ?> <small>VNĐ/tháng</small>
+                    
+                    <div class="d-flex flex-wrap align-items-center gap-3">
+                        <div class="motel-price-box m-0">
+                            <div class="motel-price"><?php echo number_format($motel['price']); ?> <small>VNĐ/tháng</small></div>
                         </div>
+                        <?php if (!empty($motel['old_price']) && $motel['old_price'] > $motel['price']): ?>
+                            <div class="text-decoration-line-through text-muted fs-4 fw-bold ms-3">
+                                <?php echo number_format($motel['old_price']); ?> VNĐ
+                            </div>
+                            <div class="badge bg-success fs-6 ms-2 pb-1">
+                                <i class="fas fa-arrow-down"></i> Giảm <?php echo number_format($motel['old_price'] - $motel['price']); ?> đ
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -657,22 +643,80 @@ $move_in_total = (int)$motel['price'] + $service_fee + $deposit_amount;
                 </div>
                 <?php endif; ?>
 
+                <div class="detail-card">
+                    <h5><i class="fas fa-star text-warning"></i> Đánh giá từ người thuê</h5>
+                    <div id="reviews-list">
+                        <?php if (empty($reviews)): ?>
+                            <p class="text-muted">Chưa có đánh giá nào.</p>
+                        <?php else: ?>
+                            <?php foreach ($reviews as $rev): ?>
+                                <div class="border-bottom py-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <strong><?php echo htmlspecialchars($rev['reviewer_name']); ?></strong>
+                                        <span class="text-warning">
+                                            <?php for ($i = 1; $i <= 5; $i++) { echo $i <= $rev['rating'] ? '★' : '☆'; } ?>
+                                        </span>
+                                    </div>
+                                    <p class="mb-1 text-muted"><?php echo nl2br(htmlspecialchars($rev['comment'])); ?></p>
+                                    <small class="text-muted"><?php echo date('d/m/Y', strtotime($rev['created_at'])); ?></small>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <?php if ($can_write_review): ?>
+                        <div class="mt-4 pt-4 border-top">
+                            <h6>Viết đánh giá của bạn</h6>
+                            <form id="reviewForm" onsubmit="submitReview(event)">
+                                <input type="hidden" id="reviewMotelId" value="<?php echo $motel_id; ?>">
+                                <div class="mb-3">
+                                    <label class="form-label">Chất lượng phòng (1-5 sao)</label>
+                                    <select class="form-select" id="reviewRating" required>
+                                        <option value="">Chọn số sao...</option>
+                                        <option value="5">5 sao - Rất tuyệt vời</option>
+                                        <option value="4">4 sao - Tốt</option>
+                                        <option value="3">3 sao - Tạm được</option>
+                                        <option value="2">2 sao - Kém</option>
+                                        <option value="1">1 sao - Quá tệ</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Bình luận</label>
+                                    <textarea class="form-control" id="reviewComment" rows="3" minlength="5" required placeholder="Chia sẻ trải nghiệm của bạn..."></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary" id="btnSubmitReview">Gửi đánh giá</button>
+                            </form>
+                        </div>
+                    <?php elseif ($has_user_review): ?>
+                        <div class="alert alert-success mt-4">Bạn đã đánh giá phòng này. Cảm ơn phản hồi của bạn!</div>
+                    <?php elseif ($is_renter): ?>
+                        <div class="alert alert-info mt-4">Chỉ có thể đánh giá sau khi bạn thuê phòng này (Đơn đặt phòng đã được chấp nhận).</div>
+                    <?php endif; ?>
+                </div>
+
             </div>
 
             <div class="col-lg-4">
                 <div class="booking-card">
                     <h4 class="fw-bold mb-4">Dự tính chi phí tháng đầu</h4>
                     <div class="mb-4">
-                        <div class="cost-row"><span>Tiền thuê (tháng
-                                đầu)</span><strong><?php echo number_format((int)$motel['price']); ?> đ</strong></div>
+                        <div class="cost-row"><span>Tiền thuê (tháng đầu)</span>
+                            <div class="text-end">
+                                <?php if (!empty($motel['old_price']) && $motel['old_price'] > $motel['price']): ?>
+                                    <div class="text-muted text-decoration-line-through small"><?php echo number_format((int)$motel['old_price']); ?> đ</div>
+                                <?php endif; ?>
+                                <strong><?php echo number_format((int)$motel['price']); ?> đ</strong>
+                            </div>
+                        </div>
                         <div class="cost-row"><span>Tiền cọc (<?php echo $deposit_months; ?>
                                 tháng)</span><strong><?php echo number_format($deposit_amount); ?> đ</strong></div>
-                        <div class="cost-row"><span>Phí dịch vụ
-                                chung</span><strong><?php echo number_format($service_fee); ?> đ</strong></div>
+                        <div class="cost-row"><span>Phí dịch vụ chung</span><strong><?php echo number_format($service_fee); ?> đ</strong></div>
+                        
                         <div class="d-flex justify-content-between align-items-center pt-4">
-                            <span class="fw-bold text-dark">Ước tính cần chuẩn bị</span>
-                            <span class="cost-total"><?php echo number_format($move_in_total); ?> đ</span>
+                            <span class="fw-bold text-dark">Tạm tính (chưa Voucher)</span>
+                            <span class="cost-total text-danger"><?php echo number_format($move_in_total); ?> đ</span>
                         </div>
+                        <div class="small text-muted mt-2 text-end"><i class="fas fa-info-circle"></i> Có thể dùng Voucher ở bước Thanh toán</div>
                     </div>
 
                     <div class="d-flex flex-column gap-3">
@@ -728,6 +772,67 @@ $move_in_total = (int)$motel['price'] + $service_fee + $deposit_amount;
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+    function submitReview(e) {
+        e.preventDefault();
+        const motelId = document.getElementById('reviewMotelId').value;
+        const rating = document.getElementById('reviewRating').value;
+        const comment = document.getElementById('reviewComment').value;
+        const btn = document.getElementById('btnSubmitReview');
+        
+        btn.disabled = true;
+        btn.innerHTML = 'Đang gửi...';
+
+        fetch('../ajax/submit-review.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ motel_id: motelId, rating: rating, comment: comment })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const list = document.getElementById('reviews-list');
+                const emptyMsg = list.querySelector('.text-muted');
+                if (emptyMsg && emptyMsg.innerText === 'Chưa có đánh giá nào.') {
+                    emptyMsg.remove();
+                }
+                list.innerHTML = data.html + list.innerHTML;
+                document.getElementById('reviewForm').parentElement.innerHTML = '<div class="alert alert-success mt-4">Bạn đã đánh giá phòng này. Cảm ơn phản hồi của bạn!</div>';
+            } else {
+                alert(data.message || 'Lỗi khi gửi đánh giá.');
+                btn.disabled = false;
+                btn.innerHTML = 'Gửi đánh giá';
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Lỗi kết nối.');
+            btn.disabled = false;
+            btn.innerHTML = 'Gửi đánh giá';
+        });
+    }
+
+    function toggleFavorite(motelId, btn) {
+        fetch('../ajax/toggle-favorite.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ motel_id: motelId })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success !== undefined) {
+                btn.classList.toggle('active');
+            } else if (data.message === 'Not authenticated') {
+                window.location.href = '../login.php';
+            } else {
+                alert('Có lỗi xảy ra, vui lòng thử lại.');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Lỗi kết nối.');
+        });
+    }
+
     document.addEventListener("DOMContentLoaded", function() {
         <?php if (!empty($motel['lat']) && !empty($motel['lng'])): ?>
         var lat = <?php echo $motel['lat']; ?>;

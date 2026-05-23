@@ -13,6 +13,38 @@
     --app-success: #16a34a;
     --app-shadow: 0 14px 40px rgba(15, 23, 42, 0.08);
     --app-radius: 8px;
+
+    /* E-Commerce Variables */
+    --eco-brand: #ff5722; /* Màu cam Shopee */
+    --eco-brand-light: #fff0eb;
+    --eco-price: #ee4d2d; 
+    --eco-discount: #ffb53e;
+    --eco-container: 1200px;
+}
+
+/* E-Commerce Global Classes */
+.container-eco {
+    max-width: var(--eco-container);
+    margin: 0 auto;
+    padding: 0 16px;
+    width: 100%;
+}
+.text-price {
+    color: var(--eco-price) !important;
+    font-weight: 700;
+}
+.text-old-price {
+    text-decoration: line-through;
+    color: var(--app-muted);
+    font-size: 0.9em;
+}
+.badge-flash-sale {
+    background: var(--eco-price);
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 12px;
 }
 
 body {

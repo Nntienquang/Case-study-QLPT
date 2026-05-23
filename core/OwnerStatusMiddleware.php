@@ -72,7 +72,7 @@ class OwnerStatusMiddleware
         return $check;
     }
 
-    public static function verificationMessage(string $status, array $owner = []): string
+    public static function verificationMessage(string $status, ?array $owner = []): string
     {
         return match ($status) {
             'pending_verification' => 'Bạn cần hoàn tất hồ sơ xác minh chủ phòng trước khi sử dụng khu vực owner.',

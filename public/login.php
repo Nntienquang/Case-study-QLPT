@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once '../config/database.php';
 require_once '../config/constants.php';
 require_once '../core/Database.php';
@@ -23,9 +23,9 @@ function auth_redirect_for_role(string $role): string
     
     if ($role === 'owner') {
         // Nếu owner chưa được duyệt xác minh, bắt buộc vào trang hồ sơ để nạp giấy tờ
-        // Nếu ĐÃ DUYỆT rồi thì cho ra trang chủ (index.php) giống như User bình thường
+        // Nếu ĐÃ DUYỆT rồi thì cho ra trang chủ của owner (dashboard.php)
         return ($_SESSION['owner_verification_status'] ?? 'pending_verification') === 'approved'
-            ? './index.php'
+            ? './owner/dashboard.php'
             : './owner/profile.php?verify=1';
     }
 

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 @require_once '../../config/database.php';
 @require_once '../../core/Database.php';
 @require_once '../../core/NotificationHelper.php';
@@ -37,6 +37,12 @@ $stmt->close();
 
 $message = '';
 $message_type = '';
+
+// Lấy danh sách Voucher khả dụng
+$stmt = $db->prepare("SELECT * FROM vouchers WHERE valid_until > NOW() AND used_count < usage_limit");
+$stmt->execute();
+$vouchers = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
 
 // Handle booking
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -97,6 +103,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new RuntimeException('Phòng này đang được giữ chỗ hoặc không còn khả dụng. Vui lòng chọn phòng khác.');
             }
 
+            $voucher_id = !empty($_POST['voucher_id']) ? (int)$_POST['voucher_id'] : null;
+            $discount_applied = 0;
+            $finalTotal = $estimatedTotal;
+
+            if ($voucher_id) {
+                $vStmt = $conn->prepare("SELECT * FROM vouchers WHERE id = ? AND valid_until > NOW() AND used_count < usage_limit FOR UPDATE");
+                $vStmt->bind_param("i", $voucher_id);
+                $vStmt->execute();
+                $voucher = $vStmt->get_result()->fetch_assoc();
+                $vStmt->close();
+
+                if (!$voucher) {
+                    throw new RuntimeException('Voucher không hợp lệ hoặc đã hết lượt sử dụng.');
+                }
+                if ($estimatedTotal < $voucher['min_spend']) {
+                    throw new RuntimeException('Đơn hàng chưa đạt mức tối thiểu để sử dụng Voucher này.');
+                }
+
+                if ($voucher['discount_percent'] > 0) {
+                    $discount_applied = (int)($estimatedTotal * $voucher['discount_percent'] / 100);
+                } else {
+                    $discount_applied = (int)$voucher['discount_amount'];
+                }
+                
+                $finalTotal = $estimatedTotal - $discount_applied;
+                if ($finalTotal < 0) $finalTotal = 0;
+                
+                if ($deposit > $finalTotal) {
+                    $deposit = $finalTotal;
+                }
+            }
+
             $bookingCode = 'BK' . date('ymdHis') . random_int(10, 99);
             $expiresAt = date('Y-m-d H:i:s', strtotime('+30 minutes'));
             $legacyStatus = 'pending';
@@ -106,12 +144,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $conn->prepare("
                 INSERT INTO bookings
                     (booking_code, user_id, owner_id, motel_id, check_in_date, check_out_date, expected_move_in_date,
-                     rental_duration_months, deposit_amount, total_amount, payment_status, booking_status,
-                     note, contact_name, contact_phone, contact_email, checkin_date, status, expires_at, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                     rental_duration_months, deposit_amount, total_amount, voucher_id, discount_applied, final_amount, 
+                     payment_status, booking_status, note, contact_name, contact_phone, contact_email, checkin_date, status, expires_at, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
             ");
             $stmt->bind_param(
-                "siiisssiiisssssssss",
+                "siiisssiiiiissssssssss",
                 $bookingCode,
                 $user_id,
                 $ownerId,
@@ -122,6 +160,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $durationMonths,
                 $deposit,
                 $estimatedTotal,
+                $voucher_id,
+                $discount_applied,
+                $finalTotal,
                 $paymentStatus,
                 $bookingStatus,
                 $note,
@@ -137,6 +178,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $bookingId = (int)$stmt->insert_id;
             $stmt->close();
+            
+            if ($voucher_id) {
+                $vUp = $conn->prepare("UPDATE vouchers SET used_count = used_count + 1 WHERE id = ?");
+                $vUp->bind_param("i", $voucher_id);
+                $vUp->execute();
+                $vUp->close();
+            }
 
             $paymentCode = 'PAY' . date('ymdHis') . random_int(10, 99);
             $method = 'bank_transfer';
@@ -302,9 +350,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <div class="price-item"><span>Phí dịch vụ cố định/tháng</span><span id="monthlyFeePreview"></span></div>
                                 <div class="price-item"><span>Tiền phòng dự kiến theo thời hạn</span><span id="rentTotalPreview"></span></div>
                                 <div class="price-item"><span>Tiền cọc giữ chỗ</span><span id="depositPreview"></span></div>
+                                <div class="price-item text-danger" style="display:none;" id="discountRow"><span>Giảm giá Voucher</span><span id="discountPreview"></span></div>
                                 <div class="price-item total"><span>Tổng chi phí dự kiến</span><span id="estimatedTotalPreview"></span></div>
                             </div>
                         </div>
+
+                        <!-- Mã giảm giá (Voucher) -->
+                        <?php if (!empty($vouchers)): ?>
+                        <div class="form-section">
+                            <h5><i class="fas fa-ticket-alt text-warning"></i> Mã giảm giá (Voucher)</h5>
+                            <div class="mb-3">
+                                <label class="form-label">Chọn Voucher áp dụng</label>
+                                <select id="voucherSelect" name="voucher_id" class="form-select border-warning">
+                                    <option value="">-- Không sử dụng voucher --</option>
+                                    <?php foreach ($vouchers as $v): ?>
+                                        <option value="<?php echo $v['id']; ?>" 
+                                                data-discount-amount="<?php echo $v['discount_amount']; ?>" 
+                                                data-discount-percent="<?php echo $v['discount_percent']; ?>"
+                                                data-min-spend="<?php echo $v['min_spend']; ?>">
+                                            <?php echo htmlspecialchars($v['code']); ?> - 
+                                            <?php if ($v['discount_percent'] > 0) echo $v['discount_percent'] . '%'; ?>
+                                            <?php if ($v['discount_amount'] > 0) echo number_format($v['discount_amount']) . 'đ'; ?>
+                                            (Đơn tối thiểu: <?php echo number_format($v['min_spend']); ?>đ)
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+                        <?php endif; ?>
 
                         <!-- Tiền đặt cọc -->
                         <div class="form-section">
@@ -419,6 +492,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         const checkOutInput = document.getElementById('checkOutDate');
         const durationInput = document.getElementById('rentalDuration');
         const depositInput = document.getElementById('depositAmount');
+        const voucherSelect = document.getElementById('voucherSelect');
         const formatter = new Intl.NumberFormat('vi-VN');
 
         function addMonths(date, months) {
@@ -444,10 +518,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         function refreshEstimate() {
             const months = Math.max(1, parseInt(durationInput.value || '1', 10));
-            const deposit = Math.max(0, parseInt(depositInput.value || '0', 10));
+            let deposit = Math.max(0, parseInt(depositInput.value || '0', 10));
             const monthlyTotal = roomPrice + monthlyFixedFee;
             const rentTotal = monthlyTotal * months;
             const estimatedTotal = rentTotal + deposit;
+            
+            let discount = 0;
+            if (voucherSelect && voucherSelect.value !== '') {
+                const opt = voucherSelect.options[voucherSelect.selectedIndex];
+                const minSpend = parseInt(opt.getAttribute('data-min-spend') || '0', 10);
+                if (estimatedTotal >= minSpend) {
+                    const dAmount = parseInt(opt.getAttribute('data-discount-amount') || '0', 10);
+                    const dPercent = parseInt(opt.getAttribute('data-discount-percent') || '0', 10);
+                    if (dPercent > 0) {
+                        discount = Math.floor(estimatedTotal * dPercent / 100);
+                    } else {
+                        discount = dAmount;
+                    }
+                } else {
+                    voucherSelect.value = '';
+                    alert('Đơn hàng không đạt giá trị tối thiểu để áp dụng Voucher này!');
+                }
+            }
+            
+            let finalTotal = estimatedTotal - discount;
+            if (finalTotal < 0) finalTotal = 0;
+            if (deposit > finalTotal) deposit = finalTotal;
 
             if (checkInInput.value) {
                 const start = new Date(`${checkInInput.value}T00:00:00`);
@@ -460,13 +556,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             document.getElementById('monthlyFeePreview').textContent = money(monthlyFixedFee);
             document.getElementById('rentTotalPreview').textContent = money(rentTotal);
             document.getElementById('depositPreview').textContent = money(deposit);
-            document.getElementById('estimatedTotalPreview').textContent = money(estimatedTotal);
+            
+            const discountRow = document.getElementById('discountRow');
+            if (discount > 0) {
+                discountRow.style.display = 'flex';
+                document.getElementById('discountPreview').textContent = '-' + money(discount);
+            } else {
+                discountRow.style.display = 'none';
+            }
+            
+            document.getElementById('estimatedTotalPreview').textContent = money(finalTotal);
             document.getElementById('depositBreakdown').textContent = money(deposit);
         }
 
         checkInInput.addEventListener('change', refreshEstimate);
         durationInput.addEventListener('change', refreshEstimate);
         depositInput.addEventListener('input', refreshEstimate);
+        if (voucherSelect) {
+            voucherSelect.addEventListener('change', refreshEstimate);
+        }
         refreshEstimate();
     </script>
 </body>

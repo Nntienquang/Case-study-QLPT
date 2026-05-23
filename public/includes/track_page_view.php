@@ -24,7 +24,7 @@ if (
 $pageName = strtolower((string)pathinfo($requestPath, PATHINFO_BASENAME));
 $pageTypes = [
     'index.php' => 'home',
-    'phongtro.php' => 'room_search',
+    'user/search.php' => 'room_search',
     'blog.php' => 'blog',
     'blog_detail.php' => 'blog_article',
     'trogiup.php' => 'help',
@@ -85,3 +85,4 @@ if ($insertStmt->execute()) {
     );
 }
 $insertStmt->close();
+

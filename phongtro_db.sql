@@ -1417,6 +1417,50 @@ ALTER TABLE `wallets`
 --
 ALTER TABLE `withdraw_requests`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+--
+-- Table structure for table `wishlists`
+--
+CREATE TABLE `wishlists` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `motel_id` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_wishlist` (`user_id`, `motel_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Table structure for table `vouchers`
+--
+CREATE TABLE `vouchers` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `code` varchar(20) NOT NULL,
+  `discount_amount` int(11) DEFAULT 0,
+  `discount_percent` int(11) DEFAULT 0,
+  `min_spend` int(11) DEFAULT 0,
+  `valid_from` datetime NOT NULL,
+  `valid_until` datetime NOT NULL,
+  `usage_limit` int(11) DEFAULT 100,
+  `used_count` int(11) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `code` (`code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Bổ sung cột cho motels
+ALTER TABLE `motels`
+ADD COLUMN `old_price` int(11) DEFAULT NULL AFTER `price`,
+ADD COLUMN `is_flash_sale` tinyint(1) NOT NULL DEFAULT 0 AFTER `old_price`,
+ADD COLUMN `badge_label` varchar(50) DEFAULT NULL AFTER `is_flash_sale`,
+ADD COLUMN `amenities_json` text DEFAULT NULL AFTER `badge_label`;
+
+-- Bổ sung cột cho bookings
+ALTER TABLE `bookings`
+ADD COLUMN `voucher_id` int(11) DEFAULT NULL AFTER `total_amount`,
+ADD COLUMN `discount_applied` int(11) DEFAULT 0 AFTER `voucher_id`,
+ADD COLUMN `final_amount` int(11) NOT NULL DEFAULT 0 AFTER `discount_applied`,
+ADD COLUMN `payment_method` enum('cod','banking','momo','vnpay') DEFAULT 'cod' AFTER `payment_status`;
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

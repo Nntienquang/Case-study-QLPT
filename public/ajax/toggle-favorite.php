@@ -1,6 +1,6 @@
 <?php
-@require_once '../config/database.php';
-@require_once '../core/Database.php';
+@require_once '../../config/database.php';
+@require_once '../../core/Database.php';
 
 session_start();
 
@@ -23,7 +23,7 @@ if (!$motel_id) {
 $db = new Database($conn);
 
 // Check if favorite exists
-$stmt = $db->prepare("SELECT id FROM favorites WHERE user_id = ? AND motel_id = ?");
+$stmt = $db->prepare("SELECT id FROM wishlists WHERE user_id = ? AND motel_id = ?");
 $stmt->bind_param("ii", $user_id, $motel_id);
 $stmt->execute();
 $exists = $stmt->get_result()->fetch_assoc();
@@ -31,13 +31,13 @@ $stmt->close();
 
 if ($exists) {
     // Remove favorite
-    $stmt = $db->prepare("DELETE FROM favorites WHERE user_id = ? AND motel_id = ?");
+    $stmt = $db->prepare("DELETE FROM wishlists WHERE user_id = ? AND motel_id = ?");
     $stmt->bind_param("ii", $user_id, $motel_id);
     $result = $stmt->execute();
     $stmt->close();
 } else {
     // Add favorite
-    $stmt = $db->prepare("INSERT INTO favorites (user_id, motel_id) VALUES (?, ?)");
+    $stmt = $db->prepare("INSERT INTO wishlists (user_id, motel_id) VALUES (?, ?)");
     $stmt->bind_param("ii", $user_id, $motel_id);
     $result = $stmt->execute();
     $stmt->close();

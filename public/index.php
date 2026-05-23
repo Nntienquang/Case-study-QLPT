@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 @require_once '../config/database.php';
 @require_once '../config/constants.php';
 @require_once '../core/Database.php';
@@ -28,17 +28,86 @@ $stats = ['rooms' => 0, 'owners' => 0, 'bookings' => 0, 'districts' => 0];
 try {
     $districts = $db->getRows("SELECT id, name FROM districts ORDER BY name LIMIT 8");
     $categories = $db->getRows("SELECT id, name FROM categories ORDER BY name LIMIT 6");
-    $rooms = $db->getRows("
-        SELECT m.id, m.title, m.price, m.address, m.area, m.count_view, m.health_score, m.service_fee, m.deposit_months,
+    $baseQuery = "
+        SELECT m.id, m.title, m.price, m.old_price, m.is_flash_sale, m.badge_label, m.address, m.area, m.count_view, m.health_score, m.service_fee, m.deposit_months,
+               (SELECT ROUND(AVG(rating), 1) FROM reviews r WHERE r.motel_id = m.id) AS avg_rating,
+               (SELECT COUNT(*) FROM reviews r WHERE r.motel_id = m.id) AS review_count,
                (SELECT mi.image_url FROM motel_images mi WHERE mi.motel_id = m.id ORDER BY mi.id ASC LIMIT 1) AS image_url,
-               d.name AS district_name, c.name AS category_name
+               d.name AS district_name, c.name AS category_name, m.ward_name
         FROM motels m
         LEFT JOIN districts d ON m.district_id = d.id
         LEFT JOIN categories c ON m.category_id = c.id
         WHERE m.status = 'approved'
-        ORDER BY m.is_featured DESC, m.health_score DESC, m.created_at DESC
-        LIMIT 6
-    ");
+    ";
+
+    $flash_sale_rooms = $db->getRows($baseQuery . " AND m.is_flash_sale = 1 ORDER BY m.created_at DESC LIMIT 6");
+    $near_uni_rooms = $db->getRows($baseQuery . " AND (m.ward_name IN ('Bến Thủy', 'Trường Thi', 'Trung Đô') OR m.address LIKE '%Đại học Vinh%') ORDER BY m.created_at DESC LIMIT 6");
+    $suggested_rooms = $db->getRows($baseQuery . " ORDER BY RAND() LIMIT 6");
+
+    $dummy_rooms = [
+        [
+            'id' => 9991,
+            'title' => 'Phòng trọ khép kín gần Đại học Vinh',
+            'price' => 1200000,
+            'old_price' => 1500000,
+            'is_flash_sale' => 1,
+            'address' => 'Phường Bến Thủy, TP. Vinh',
+            'area' => 20,
+            'count_view' => 156,
+            'health_score' => 95,
+            'service_fee' => 100000,
+            'deposit_months' => 1,
+            'avg_rating' => 4.8,
+            'review_count' => 24,
+            'image_url' => 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=800&q=80',
+            'district_name' => 'TP. Vinh',
+            'category_name' => 'Phòng trọ',
+            'badge_label' => 'Giảm sâu'
+        ],
+        [
+            'id' => 9992,
+            'title' => 'Căn hộ mini an ninh cực tốt cho sinh viên',
+            'price' => 2500000,
+            'old_price' => null,
+            'is_flash_sale' => 0,
+            'address' => 'Phường Trung Đô, TP. Vinh',
+            'area' => 30,
+            'count_view' => 89,
+            'health_score' => 98,
+            'service_fee' => 150000,
+            'deposit_months' => 1,
+            'avg_rating' => 5.0,
+            'review_count' => 12,
+            'image_url' => 'https://images.unsplash.com/photo-1502672260266-1c1e5240980c?auto=format&fit=crop&w=800&q=80',
+            'district_name' => 'Phường Trung Đô',
+            'category_name' => 'Căn hộ mini',
+            'badge_label' => 'Còn 1 phòng'
+        ],
+        [
+            'id' => 9993,
+            'title' => 'Phòng trọ giá rẻ, giờ giấc tự do, có gác lửng',
+            'price' => 1000000,
+            'old_price' => 1200000,
+            'is_flash_sale' => 1,
+            'address' => 'Phường Trường Thi, TP. Vinh',
+            'area' => 18,
+            'count_view' => 245,
+            'health_score' => 90,
+            'service_fee' => 80000,
+            'deposit_months' => 1,
+            'avg_rating' => 4.5,
+            'review_count' => 56,
+            'image_url' => 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80',
+            'district_name' => 'Phường Trường Thi',
+            'category_name' => 'Phòng trọ',
+            'badge_label' => 'Mới đăng'
+        ]
+    ];
+    
+    $flash_sale_rooms = array_slice(array_merge($flash_sale_rooms, [$dummy_rooms[0], $dummy_rooms[2]]), 0, 6);
+    $near_uni_rooms = array_slice(array_merge($near_uni_rooms, [$dummy_rooms[0], $dummy_rooms[1], $dummy_rooms[2]]), 0, 6);
+    $suggested_rooms = array_slice(array_merge($suggested_rooms, $dummy_rooms), 0, 6);
+
     $stats['rooms'] = (int)($db->getRow("SELECT COUNT(*) AS total FROM motels WHERE status = 'approved'")['total'] ?? 0);
     $stats['owners'] = (int)($db->getRow("SELECT COUNT(*) AS total FROM users WHERE role = 'owner' AND status = 'approved'")['total'] ?? 0);
     $stats['bookings'] = (int)($db->getRow("SELECT COUNT(*) AS total FROM bookings")['total'] ?? 0);
@@ -106,24 +175,11 @@ try {
         color: #fff;
     }
 
-    .nav-links {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
+    
 
-    .nav-links a {
-        color: #475467;
-        text-decoration: none;
-        font-weight: 750;
-        padding: 10px 12px;
-        border-radius: 12px;
-    }
+    
 
-    .nav-links a:hover {
-        color: #101828;
-        background: rgba(16, 24, 40, .06);
-    }
+    
 
     .nav-cta {
         color: #fff !important;
@@ -398,8 +454,19 @@ try {
         background: #fff !important;
     }
 
+    .container-custom {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 24px;
+        width: 100%;
+    }
+
+    body {
+        color: #374151; /* Dark gray for better readability */
+    }
+
     .section {
-        padding: 78px 0;
+        padding: 80px 0;
     }
 
     .section-head {
@@ -533,8 +600,11 @@ try {
 
     .room-photo {
         position: relative;
-        height: 190px;
-        background: #e5eaf2 center/cover no-repeat;
+        aspect-ratio: 4/3;
+        width: 100%;
+        background: #e5eaf2;
+        border-radius: 16px 16px 0 0;
+        overflow: hidden;
     }
 
     .room-photo::after {
@@ -542,6 +612,36 @@ try {
         position: absolute;
         inset: 0;
         background: linear-gradient(180deg, rgba(16, 24, 40, 0) 42%, rgba(16, 24, 40, .62) 100%);
+        pointer-events: none;
+    }
+
+    .btn-wishlist {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        z-index: 10;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        color: #fff;
+        display: grid;
+        place-items: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        padding: 0;
+    }
+    .btn-wishlist:hover {
+        background: rgba(255, 255, 255, 0.9);
+        color: #ef4444;
+        transform: scale(1.1);
+    }
+    .btn-wishlist.active {
+        background: #ef4444;
+        color: #fff;
+        border-color: #ef4444;
     }
 
     .room-badge {
@@ -557,14 +657,23 @@ try {
         font-size: 12px;
     }
 
+    .room-badge i {
+        margin-right: 6px;
+    }
+
     .room-body {
         padding: 20px;
     }
 
-    .room-body h3 {
+    .room-title {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        font-size: 1.1rem;
+        font-weight: 800;
+        margin-bottom: 10px;
         min-height: 48px;
-        font-size: 19px;
-        font-weight: 950;
         line-height: 1.32;
     }
 
@@ -659,9 +768,7 @@ try {
             inset: 10px 0 auto;
         }
 
-        .nav-links {
-            display: none;
-        }
+        
 
         .hero-grid,
         .metrics,
@@ -710,23 +817,9 @@ try {
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
     }
 
-    .nav-links {
-        display: flex;
-        gap: 25px;
-        align-items: center;
-    }
+    
 
-    .nav-item::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        height: 2px;
-        background-color: #1185a1;
-        transform: scaleX(0);
-        transition: transform 0.3s ease;
-    }
+    
 
     .nav-actions {
         display: flex;
@@ -857,29 +950,13 @@ try {
     }
 
 
-    .nav-links {
-        display: flex;
-        gap: 45px;
-        margin-left: auto;
-        margin-right: auto;
-    }
+    
 
 
-    .nav-item {
-        text-decoration: none;
-        color: #1f2937;
-        font-size: 18px;
-        font-weight: 600;
-        padding: 10px 0;
-        transition: color 0.2s ease, transform 0.2s ease;
-        display: inline-block;
-    }
+    
 
 
-    .nav-item:hover {
-        color: #000;
-        transform: translateY(-1px);
-    }
+    
 
 
     .nav-actions {
@@ -916,13 +993,7 @@ try {
         }
 
 
-        .nav-links,
-        .nav-actions {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 15px;
-            width: 100%;
-        }
+        
 
 
         .nav-actions {
@@ -940,87 +1011,10 @@ try {
 </head>
 
 <body>
-    <nav class="home-nav">
-        <div class="nav-container">
-
-
-            <a href="index.php" class="brand">
-                <span class="brand-mark"><i class="fas fa-house-chimney"></i></span>
-                <span class="brand-name">QuanLyPhongTro</span>
-            </a>
-
-
-            <button class="hamburger-btn" id="mobile-menu-btn">
-                <i class="fas fa-bars"></i>
-            </button>
-
-            <div class="menu-content" id="mobile-menu">
-
-                <div class="nav-links">
-                    <a href="user/search.php" class="nav-item">Phòng trọ</a>
-                    <a href="khuvuc.php" class="nav-item">Khu vực</a>
-                    <a href="blog.php" class="nav-item">Tin tức</a>
-                    <a href="trogiup.php" class="nav-item">Trợ giúp</a>
-                </div>
-
-
-
-                <div class="nav-actions">
-                    <?php if (isset($_SESSION['user_id'])): ?>
-                    <div class="user-dropdown">
-                        <button class="user-btn" id="user-menu-btn" onclick="toggleDropdown(event)">
-                            <i class="fas fa-user-circle"></i>
-                            <span><?php echo htmlspecialchars($_SESSION['name'] ?? 'User'); ?></span>
-                            <i class="fas fa-chevron-down"></i>
-                        </button>
-                        <div class="dropdown-menu" id="user-dropdown-menu">
-                            <?php if ($_SESSION['role'] === 'owner'): ?>
-                            <!-- Owner dropdown -->
-                            <a href="owner/dashboard.php" class="dropdown-item">
-                                <i class="fas fa-chart-line"></i> Dashboard
-                            </a>
-                            <a href="owner/listings.php" class="dropdown-item">
-                                <i class="fas fa-home"></i> Phòng của tôi
-                            </a>
-                            <a href="owner/bookings.php" class="dropdown-item">
-                                <i class="fas fa-calendar"></i> Booking
-                            </a>
-                            <a href="owner/revenue.php" class="dropdown-item">
-                                <i class="fas fa-money-bill-wave"></i> Doanh thu
-                            </a>
-                            <a href="owner/profile.php" class="dropdown-item">
-                                <i class="fas fa-user"></i> Hồ sơ
-                            </a>
-                            <?php else: ?>
-                            <!-- User dropdown -->
-                            <a href="user/dashboard.php" class="dropdown-item">
-                                <i class="fas fa-chart-line"></i> Dashboard
-                            </a>
-                            <a href="user/my-bookings.php" class="dropdown-item">
-                                <i class="fas fa-calendar"></i> Booking của tôi
-                            </a>
-                            <a href="user/saved-motels.php" class="dropdown-item">
-                                <i class="fas fa-heart"></i> Yêu thích
-                            </a>
-                            <a href="user/profile.php" class="dropdown-item">
-                                <i class="fas fa-user"></i> Hồ sơ
-                            </a>
-                            <?php endif; ?>
-                            <hr class="dropdown-divider">
-                            <a href="logout.php" class="dropdown-item logout">
-                                <i class="fas fa-sign-out-alt"></i> Đăng xuất
-                            </a>
-                        </div>
-                    </div>
-                    <?php else: ?>
-                    <a href="login.php" class="nav-item login-text">Đăng nhập</a>
-                    <a href="owner-register.php" class="btn-post">Đăng phòng</a>
-                    <?php endif; ?>
-                </div>
-            </div>
-
-        </div>
-    </nav>
+    <?php
+require_once __DIR__ . '/components/PublicNav.php';
+qlpt_render_public_nav(['base' => './', 'active' => '']);
+?>
 
     <header class="hero">
         <div class="hero-media" aria-hidden="true">
@@ -1029,7 +1023,7 @@ try {
             <span></span>
         </div>
 
-        <div class="container-lg hero-content">
+        <div class="container-custom hero-content">
             <div class="hero-grid">
                 <section>
                     <div class="eyebrow"><i class="fas fa-sparkles"></i> Phòng trọ sạch, tin rõ, quản lý gọn</div>
@@ -1120,7 +1114,7 @@ try {
 
     <main>
         <section class="section" id="system">
-            <div class="container-lg">
+            <div class="container-custom">
                 <div class="section-head">
                     <div>
                         <div class="kicker">Trải nghiệm thuê trọ hiện đại</div>
@@ -1153,7 +1147,7 @@ try {
         </section>
 
         <section class="section pt-0" id="trust">
-            <div class="container-lg">
+            <div class="container-custom">
                 <div class="trust-grid">
                     <article class="trust-card">
                         <i class="fas fa-camera"></i>
@@ -1175,7 +1169,7 @@ try {
         </section>
 
         <section class="section" id="areas">
-            <div class="container-lg">
+            <div class="container-custom">
                 <div class="section-head">
                     <div>
                         <div class="kicker">Khu vực</div>
@@ -1198,68 +1192,164 @@ try {
             </div>
         </section>
 
-        <section class="section" id="rooms">
-            <div class="container-lg">
-                <div class="section-head">
+        <?php
+        $sections = [
+            [
+                'id' => 'flash-sale',
+                'kicker' => 'Flash Sale',
+                'title' => 'Phòng đang Hot - Giảm giá sâu',
+                'rooms' => $flash_sale_rooms,
+                'bg_class' => '',
+                'link' => 'user/search.php?flash_sale=1'
+            ],
+            [
+                'id' => 'near-uni',
+                'kicker' => 'Sinh viên',
+                'title' => 'Gần trường ĐH Vinh / Bến Thủy',
+                'rooms' => $near_uni_rooms,
+                'bg_class' => 'bg-light',
+                'link' => 'user/search.php?near_uni=1'
+            ],
+            [
+                'id' => 'suggested',
+                'kicker' => 'Dành cho bạn',
+                'title' => 'Gợi ý phòng trọ phù hợp',
+                'rooms' => $suggested_rooms,
+                'bg_class' => '',
+                'link' => 'user/search.php'
+            ]
+        ];
+        ?>
+
+        <?php foreach ($sections as $sec): ?>
+        <section class="section <?php echo $sec['bg_class']; ?>" id="<?php echo $sec['id']; ?>">
+            <div class="container-eco">
+                <div class="section-head mb-4 d-flex justify-content-between align-items-end">
                     <div>
-                        <div class="kicker">Phòng đã duyệt</div>
-                        <h2 class="section-title">Phòng mới, thông tin rõ ràng.</h2>
+                        <div class="kicker text-danger fw-bold mb-1"><i class="fas fa-fire"></i> <?php echo $sec['kicker']; ?></div>
+                        <h2 class="section-title fw-bold m-0" style="font-size: 2rem;"><?php echo $sec['title']; ?></h2>
                     </div>
-                    <a href="user/search.php" class="btn-home primary">Xem tất cả</a>
+                    <a href="<?php echo $sec['link']; ?>" class="btn btn-outline-primary fw-bold rounded-pill px-4">Xem tất cả</a>
                 </div>
 
-                <?php if ($rooms): ?>
+                <?php if (!empty($sec['rooms'])): ?>
                 <div class="room-grid">
-                    <?php foreach ($rooms as $room): ?>
+                    <?php foreach ($sec['rooms'] as $room): ?>
                     <?php
-                            $moveInCost = (int)$room['price'] + (int)($room['service_fee'] ?? 0) + (int)round((int)$room['price'] * (float)($room['deposit_months'] ?? 1));
                             $roomImage = function_exists('qlpt_relative_public_asset_url')
                                 ? qlpt_relative_public_asset_url($room['image_url'] ?? null, 'uploads/motels/motel_6a096b186de22.jpeg')
                                 : ($room['image_url'] ?: 'uploads/motels/motel_6a096b186de22.jpeg');
-                            ?>
-                    <article class="room-card">
-                        <div class="room-photo"
-                            style="background-image: url('<?php echo htmlspecialchars($roomImage); ?>');">
-                            <span class="room-badge"><i class="fas fa-shield-heart"></i> Đã duyệt</span>
+                    ?>
+                    <article class="room-card border-0 shadow-sm rounded-3 overflow-hidden d-flex flex-column h-100 bg-white">
+                        <div class="room-photo position-relative" style="aspect-ratio: 4/3; background: #f3f4f6;">
+                            <img src="<?php echo htmlspecialchars($roomImage); ?>" alt="Ảnh phòng" class="w-100 h-100" style="object-fit: cover; color: transparent;">
+                            
+                            <?php if (!empty($room['badge_label'])): ?>
+                                <span class="badge bg-danger position-absolute top-0 start-0 m-2 z-3 px-2 py-1 shadow-sm"><?php echo htmlspecialchars($room['badge_label']); ?></span>
+                            <?php elseif (!empty($room['is_flash_sale'])): ?>
+                                <span class="badge-flash-sale position-absolute top-0 start-0 m-2 z-3 shadow-sm">Flash Sale</span>
+                            <?php endif; ?>
+                            
+                            <button class="btn-wishlist position-absolute z-3 d-flex align-items-center justify-content-center text-danger border-0" style="top:12px; right:12px; width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.8); box-shadow:0 4px 8px rgba(0,0,0,0.15); cursor:pointer;" onclick="toggleFavorite(<?php echo (int)$room['id']; ?>, this)" aria-label="Yêu thích"><i class="fas fa-heart"></i></button>
                         </div>
-                        <div class="room-body">
-                            <h3><?php echo htmlspecialchars($room['title']); ?></h3>
-                            <div class="room-price"><?php echo number_format((int)$room['price']); ?> VND/tháng</div>
-                            <div class="room-meta"><i class="fas fa-location-dot"></i>
-                                <?php echo htmlspecialchars($room['address'] ?: 'Chưa cập nhật địa chỉ'); ?></div>
-                            <div class="room-tags">
-                                <?php if (!empty($room['district_name'])): ?><span
-                                    class="room-tag"><?php echo htmlspecialchars($room['district_name']); ?></span><?php endif; ?>
-                                <?php if (!empty($room['category_name'])): ?><span
-                                    class="room-tag"><?php echo htmlspecialchars($room['category_name']); ?></span><?php endif; ?>
-                                <?php if (!empty($room['area'])): ?><span
-                                    class="room-tag"><?php echo (float)$room['area']; ?> m2</span><?php endif; ?>
-                                <span class="room-tag"><?php echo (int)$room['health_score']; ?>/100</span>
+                        <div class="room-body p-3 d-flex flex-column flex-grow-1">
+                            <h3 class="room-title fw-bold mb-2" style="font-size: 1.1rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                                <?php echo htmlspecialchars($room['title']); ?>
+                            </h3>
+                            
+                            <div class="room-price mb-2">
+                                <span class="text-price fs-5"><?php echo number_format((int)$room['price']); ?> đ/tháng</span>
+                                <?php if (!empty($room['old_price']) && $room['old_price'] > $room['price']): ?>
+                                    <span class="text-old-price ms-2 text-muted text-decoration-line-through small"><?php echo number_format((int)$room['old_price']); ?> đ</span>
+                                <?php endif; ?>
                             </div>
-                            <div class="room-meta mb-3"><i class="fas fa-wallet"></i> Vào ở dự kiến:
-                                <?php echo number_format($moveInCost); ?> VND</div>
-                            <div class="room-foot">
-                                <div class="saving-note"><?php echo number_format((int)$room['count_view']); ?> lượt xem
-                                    - chọn nhanh khi còn phòng.</div>
-                                <a href="user/motel-detail.php?id=<?php echo (int)$room['id']; ?>"
-                                    class="btn-home primary">Xem phòng</a>
+                            
+                            <div class="room-meta text-muted small mb-3">
+                                <i class="fas fa-location-dot"></i> <?php echo htmlspecialchars($room['address'] ?: 'Chưa cập nhật địa chỉ'); ?>
+                            </div>
+                            
+                            <!-- Footer ép text trái, nút phải bằng Flexbox -->
+                            <div class="room-card-footer mt-auto pt-3 border-top d-flex justify-content-between align-items-center">
+                                <div class="saving-note text-muted small">
+                                    <i class="fas fa-eye"></i> <?php echo number_format((int)$room['count_view']); ?> lượt xem
+                                </div>
+                                <a href="user/motel-detail.php?id=<?php echo (int)$room['id']; ?>" class="btn btn-primary btn-sm rounded-3 fw-bold">
+                                    Xem phòng
+                                </a>
                             </div>
                         </div>
                     </article>
                     <?php endforeach; ?>
                 </div>
                 <?php else: ?>
-                <div class="empty-market">
+                <div class="empty-market text-center py-5 bg-white rounded-3 shadow-sm border">
                     <h3 class="fw-bold">Chưa có phòng đang hiển thị</h3>
                     <p class="text-muted mb-3">Khi owner đăng tin và admin duyệt, phòng sẽ xuất hiện tại đây.</p>
-                    <a href="owner-register.php" class="btn-home primary">Đăng phòng đầu tiên</a>
+                    <a href="owner-register.php" class="btn btn-primary rounded-3 fw-bold">Đăng phòng đầu tiên</a>
                 </div>
                 <?php endif; ?>
             </div>
         </section>
+        <?php endforeach; ?>
+
+        <section class="section bg-light py-5" id="testimonials">
+            <div class="container-custom">
+                <div class="text-center mb-5 mx-auto" style="max-width: 700px;">
+                    <h2 class="section-title mb-3">Đánh giá từ người thuê thực tế</h2>
+                    <p class="section-desc mx-auto">Hàng ngàn sinh viên và người đi làm đã tìm được không gian sống ưng ý qua nền tảng của chúng tôi.</p>
+                </div>
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="card h-100 border-0 p-4" style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.04);">
+                            <div class="d-flex align-items-center mb-3">
+                                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80" alt="Avatar" class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                                <div>
+                                    <h6 class="mb-0 fw-bold">Nguyễn Thúy Vy</h6>
+                                    <small class="text-muted">Sinh viên ĐH Vinh</small>
+                                </div>
+                            </div>
+                            <div class="text-warning mb-2">
+                                <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                            </div>
+                            <p class="text-muted mb-0 fst-italic">"Phòng ốc sạch sẽ, anh chủ nhà hỗ trợ nhiệt tình. Nhờ website mà mình không phải tốn tiền môi giới, tìm được phòng trọ ưng ý chỉ trong 1 ngày!"</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card h-100 border-0 p-4" style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.04);">
+                            <div class="d-flex align-items-center mb-3">
+                                <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=100&q=80" alt="Avatar" class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                                <div>
+                                    <h6 class="mb-0 fw-bold">Trần Minh Hoàng</h6>
+                                    <small class="text-muted">Nhân viên IT</small>
+                                </div>
+                            </div>
+                            <div class="text-warning mb-2">
+                                <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
+                            </div>
+                            <p class="text-muted mb-0 fst-italic">"Tính năng hiển thị chi phí vào ở rất minh bạch. Không lo bị phát sinh phí ảo. Căn hộ mini mình thuê full đồ y chang trên ảnh."</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card h-100 border-0 p-4" style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.04);">
+                            <div class="d-flex align-items-center mb-3">
+                                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80" alt="Avatar" class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                                <div>
+                                    <h6 class="mb-0 fw-bold">Lê Phương Anh</h6>
+                                    <small class="text-muted">Nhân viên văn phòng</small>
+                                </div>
+                            </div>
+                            <div class="text-warning mb-2">
+                                <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                            </div>
+                            <p class="text-muted mb-0 fst-italic">"Thích nhất là tính năng lọc theo khoảng giá và khu vực. Giao diện trực quan, dễ dùng. Chắc chắn sẽ giới thiệu cho bạn bè!"</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
 
         <section class="section closing-band">
-            <div class="container-lg">
+            <div class="container-custom">
                 <div class="section-head mb-0">
                     <div>
                         <div class="kicker text-white">Sẵn sàng bắt đầu</div>
@@ -1339,7 +1429,7 @@ try {
             box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
         }
         </style>
-        <div class="container-lg">
+        <div class="container-custom">
             <div class="row gy-4">
                 <!-- Cột 1: Giới thiệu -->
                 <div class="col-lg-4 col-md-6">
@@ -1401,53 +1491,14 @@ try {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-    function toggleDropdown(event) {
-        event.stopPropagation();
-        const dropdownMenu = document.getElementById('user-dropdown-menu');
-        if (dropdownMenu) {
-            dropdownMenu.classList.toggle('active');
-        }
-    }
-
-    // Close dropdown when clicking outside
-    document.addEventListener('click', function(e) {
-        const dropdownMenu = document.getElementById('user-dropdown-menu');
-        if (dropdownMenu && !e.target.closest('.user-dropdown')) {
-            dropdownMenu.classList.remove('active');
-        }
-    });
+    
 
     document.addEventListener('DOMContentLoaded', function() {
         // Xử lý nút Hamburger trên Mobile
-        const menuBtn = document.getElementById('mobile-menu-btn');
-        const menuContent = document.getElementById('mobile-menu');
-        const icon = menuBtn.querySelector('i');
-
-        menuBtn.addEventListener('click', function() {
-            menuContent.classList.toggle('show');
-            if (menuContent.classList.contains('show')) {
-                icon.classList.remove('fa-bars');
-                icon.classList.add('fa-times');
-            } else {
-                icon.classList.remove('fa-times');
-                icon.classList.add('fa-bars');
-            }
-        });
+        
 
         // Xử lý gạch chân cho menu
-        const links = document.querySelectorAll('.nav-links .nav-item');
-        links.forEach(link => {
-            link.addEventListener('click', function() {
-                links.forEach(l => l.classList.remove('active'));
-                this.classList.add('active');
-
-                // Tự động đóng menu trên điện thoại khi chọn xong
-                if (window.innerWidth <= 991) {
-                    menuContent.classList.remove('show');
-                    icon.classList.remove('fa-times');
-                    icon.classList.add('fa-bars');
-                }
-            });
+        
         });
 
     });
