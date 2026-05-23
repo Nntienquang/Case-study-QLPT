@@ -116,10 +116,10 @@ CREATE TABLE `bookings` (
   `contact_email` varchar(150) DEFAULT NULL,
   `deposit_amount` int(11) DEFAULT NULL,
   `total_amount` int(11) NOT NULL DEFAULT 0,
-  `payment_status` enum('pending','processing','paid','failed','cancelled','refunded') NOT NULL DEFAULT 'pending',
-  `booking_status` enum('pending','waiting_payment','paid','confirmed','cancelled','rejected','expired','completed') NOT NULL DEFAULT 'pending',
+  `payment_status` enum('unpaid','pending','processing','paid','failed','cancelled','refunded') NOT NULL DEFAULT 'pending' COMMENT 'Payment lifecycle. unpaid is canonical for no payment; pending/processing kept for current PHP flow.',
+  `booking_status` enum('pending','waiting_payment','paid','accepted','confirmed','cancelled','rejected','expired','completed') NOT NULL DEFAULT 'pending' COMMENT 'Detailed booking workflow. confirmed is legacy-compatible alias for accepted.',
   `checkin_date` date DEFAULT NULL,
-  `status` enum('pending','paid','accepted','completed','rejected','cancelled') DEFAULT 'pending',
+  `status` enum('pending','paid','accepted','completed','rejected','cancelled','expired') DEFAULT 'pending' COMMENT 'Legacy booking status used by current PHP pages.',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `cancelled_at` datetime DEFAULT NULL,
   `cancelled_by` int(11) DEFAULT NULL,
@@ -254,7 +254,7 @@ CREATE TABLE `email_logs` (
   `email` varchar(150) NOT NULL,
   `subject` varchar(255) NOT NULL,
   `body` text NOT NULL,
-  `status` varchar(30) NOT NULL DEFAULT 'pending',
+  `status` enum('pending','sent','failed','cancelled') NOT NULL DEFAULT 'pending',
   `sent_at` datetime DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -346,8 +346,8 @@ CREATE TABLE `maintenance_requests` (
   `title` varchar(180) NOT NULL,
   `description` text NOT NULL,
   `image_url` varchar(255) DEFAULT NULL,
-  `priority` varchar(20) NOT NULL DEFAULT 'normal',
-  `status` varchar(30) NOT NULL DEFAULT 'open',
+  `priority` enum('low','normal','high','urgent') NOT NULL DEFAULT 'normal',
+  `status` enum('open','in_progress','resolved','cancelled') NOT NULL DEFAULT 'open',
   `resolved_at` datetime DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` datetime DEFAULT NULL
@@ -630,12 +630,12 @@ CREATE TABLE `payments` (
   `amount` int(11) DEFAULT NULL,
   `fee` int(11) DEFAULT 0,
   `payment_method` varchar(50) DEFAULT NULL,
-  `payment_status` enum('pending','processing','paid','failed','cancelled','refunded') NOT NULL DEFAULT 'pending',
+  `payment_status` enum('unpaid','pending','processing','paid','failed','cancelled','refunded') NOT NULL DEFAULT 'pending' COMMENT 'Payment lifecycle. unpaid is canonical for no payment; pending/processing kept for current PHP flow.',
   `method` varchar(50) DEFAULT NULL,
   `transaction_code` varchar(255) DEFAULT NULL,
   `paid_at` datetime DEFAULT NULL,
   `gateway_response` longtext DEFAULT NULL,
-  `status` enum('pending','held','released','refunded') DEFAULT 'pending',
+  `status` enum('pending','held','released','refunded') DEFAULT 'pending' COMMENT 'Escrow lifecycle. Kept as status for current PHP compatibility; target name is escrow_status.',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -662,7 +662,7 @@ CREATE TABLE `reports` (
   `motel_id` int(11) DEFAULT NULL,
   `report_type` varchar(100) NOT NULL,
   `reason` text NOT NULL,
-  `status` varchar(30) NOT NULL DEFAULT 'pending',
+  `status` enum('pending','reviewing','investigating','resolved','rejected','closed') NOT NULL DEFAULT 'pending',
   `admin_note` text DEFAULT NULL,
   `handled_by` int(11) DEFAULT NULL,
   `handled_at` datetime DEFAULT NULL,
@@ -689,7 +689,7 @@ CREATE TABLE `reviews` (
   `motel_id` int(11) DEFAULT NULL,
   `rating` int(11) DEFAULT NULL,
   `comment` text DEFAULT NULL,
-  `status` varchar(20) NOT NULL DEFAULT 'visible',
+  `status` enum('pending','visible','hidden','removed') NOT NULL DEFAULT 'visible',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -778,8 +778,8 @@ CREATE TABLE `users` (
   `avatar` varchar(255) DEFAULT NULL,
   `role` enum('user','owner','admin') DEFAULT 'user',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `status` varchar(20) DEFAULT 'pending',
-  `owner_verification_status` enum('not_required','pending_verification','submitted','approved','rejected') NOT NULL DEFAULT 'not_required',
+  `status` enum('active','approved','pending','warning','locked','banned','blocked','rejected') DEFAULT 'active' COMMENT 'Account status. active/warning/locked/banned are canonical; approved/blocked kept for current PHP compatibility.',
+  `owner_verification_status` enum('not_required','pending','pending_verification','submitted','approved','rejected') NOT NULL DEFAULT 'not_required' COMMENT 'Owner KYC workflow. pending is canonical; pending_verification/submitted kept for current PHP compatibility.',
   `approved_by` int(11) DEFAULT NULL,
   `approved_at` datetime DEFAULT NULL,
   `rejection_reason` text DEFAULT NULL,
@@ -856,7 +856,7 @@ CREATE TABLE `viewing_appointments` (
   `owner_id` int(11) NOT NULL,
   `preferred_time` datetime NOT NULL,
   `note` text DEFAULT NULL,
-  `status` varchar(30) NOT NULL DEFAULT 'pending',
+  `status` enum('pending','accepted','rejected','completed','cancelled') NOT NULL DEFAULT 'pending',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -1426,7 +1426,8 @@ CREATE TABLE `wishlists` (
   `motel_id` int(11) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
-  UNIQUE KEY `unique_wishlist` (`user_id`, `motel_id`)
+  UNIQUE KEY `unique_wishlist` (`user_id`, `motel_id`),
+  KEY `idx_wishlists_motel_id` (`motel_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
@@ -1444,8 +1445,59 @@ CREATE TABLE `vouchers` (
   `used_count` int(11) DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
-  UNIQUE KEY `code` (`code`)
+  UNIQUE KEY `code` (`code`),
+  KEY `idx_vouchers_validity` (`valid_from`,`valid_until`),
+  KEY `idx_vouchers_usage` (`used_count`,`usage_limit`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `page_views`
+-- Admin traffic analytics. This tracks website page views, not owner room views.
+--
+
+CREATE TABLE `page_views` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) DEFAULT NULL,
+  `role` varchar(30) DEFAULT NULL,
+  `host` varchar(255) NOT NULL,
+  `page_url` varchar(500) NOT NULL,
+  `page_type` varchar(80) NOT NULL DEFAULT 'page',
+  `ip_address` varchar(45) DEFAULT NULL,
+  `user_agent` varchar(500) DEFAULT NULL,
+  `referrer` varchar(500) DEFAULT NULL,
+  `viewed_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_page_views_viewed_at` (`viewed_at`),
+  KEY `idx_page_views_page_url` (`page_url`(191)),
+  KEY `idx_page_views_page_type` (`page_type`),
+  KEY `idx_page_views_user_id` (`user_id`),
+  CONSTRAINT `fk_page_views_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `owner_warnings`
+-- Manual owner moderation warnings. Admin decides warning/lock/ban; no auto-ban.
+--
+
+CREATE TABLE `owner_warnings` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `owner_id` int(11) NOT NULL,
+  `admin_id` int(11) DEFAULT NULL,
+  `warning_level` enum('reminder','warning','severe_warning','posting_suspended') NOT NULL,
+  `reason` varchar(255) NOT NULL,
+  `note` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_owner_warnings_owner_id_created_at` (`owner_id`,`created_at`),
+  KEY `idx_owner_warnings_admin_id` (`admin_id`),
+  KEY `idx_owner_warnings_warning_level` (`warning_level`),
+  CONSTRAINT `fk_owner_warnings_owner` FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `fk_owner_warnings_admin` FOREIGN KEY (`admin_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- Bổ sung cột cho motels
 ALTER TABLE `motels`
@@ -1460,6 +1512,143 @@ ADD COLUMN `voucher_id` int(11) DEFAULT NULL AFTER `total_amount`,
 ADD COLUMN `discount_applied` int(11) DEFAULT 0 AFTER `voucher_id`,
 ADD COLUMN `final_amount` int(11) NOT NULL DEFAULT 0 AFTER `discount_applied`,
 ADD COLUMN `payment_method` enum('cod','banking','momo','vnpay') DEFAULT 'cod' AFTER `payment_status`;
+
+--
+-- Production integrity constraints
+-- Strategy:
+-- - Historical financial/workflow rows use RESTRICT or SET NULL.
+-- - Dependent display/cache rows use CASCADE.
+-- - `payments.status` remains as legacy escrow status for current PHP compatibility.
+-- - `bookings.status` remains as legacy status; `booking_status` is the detailed workflow.
+-- - Deferred FKs: wallets.user_id and transactions.from_user/to_user are indexed
+--   but not constrained yet because the legacy demo dump still references missing users.id = 4.
+--   Preserve those rows first; reconcile data before adding financial ledger FKs.
+--
+
+ALTER TABLE `motels`
+  ADD KEY `idx_motels_rejected_by` (`rejected_by`),
+  ADD CONSTRAINT `fk_motels_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_motels_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_motels_district` FOREIGN KEY (`district_id`) REFERENCES `districts` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_motels_rejected_by` FOREIGN KEY (`rejected_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE `motel_images`
+  ADD CONSTRAINT `fk_motel_images_motel` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE `motel_utilities`
+  ADD CONSTRAINT `fk_motel_utilities_motel` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_motel_utilities_utility` FOREIGN KEY (`utility_id`) REFERENCES `utilities` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE `bookings`
+  ADD KEY `idx_bookings_cancelled_by` (`cancelled_by`),
+  ADD KEY `idx_bookings_rejected_by` (`rejected_by`),
+  ADD KEY `idx_bookings_voucher_id` (`voucher_id`),
+  ADD CONSTRAINT `fk_bookings_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_bookings_owner` FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_bookings_motel` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_bookings_cancelled_by` FOREIGN KEY (`cancelled_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_bookings_rejected_by` FOREIGN KEY (`rejected_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_bookings_voucher` FOREIGN KEY (`voucher_id`) REFERENCES `vouchers` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE `booking_room_holds`
+  ADD CONSTRAINT `fk_booking_room_holds_booking` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_booking_room_holds_motel` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_booking_room_holds_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE `payments`
+  ADD CONSTRAINT `fk_payments_booking` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE `favorites`
+  ADD CONSTRAINT `fk_favorites_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_favorites_motel` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE `wishlists`
+  ADD CONSTRAINT `fk_wishlists_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_wishlists_motel` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE `reviews`
+  ADD CONSTRAINT `fk_reviews_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_reviews_motel` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE `reports`
+  ADD KEY `idx_reports_handled_by` (`handled_by`),
+  ADD CONSTRAINT `fk_reports_reporter` FOREIGN KEY (`reporter_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_reports_reported_user` FOREIGN KEY (`reported_user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_reports_motel` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_reports_handled_by` FOREIGN KEY (`handled_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE `notifications`
+  ADD CONSTRAINT `fk_notifications_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE `activity_logs`
+  ADD CONSTRAINT `fk_activity_logs_admin` FOREIGN KEY (`admin_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE `admin_notes`
+  ADD CONSTRAINT `fk_admin_notes_admin` FOREIGN KEY (`admin_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+ALTER TABLE `users`
+  ADD KEY `idx_users_approved_by` (`approved_by`),
+  ADD KEY `idx_users_verification_reviewed_by` (`verification_reviewed_by`),
+  ADD CONSTRAINT `fk_users_approved_by` FOREIGN KEY (`approved_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_users_verification_reviewed_by` FOREIGN KEY (`verification_reviewed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE `password_resets`
+  ADD CONSTRAINT `fk_password_resets_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE `saved_searches`
+  ADD CONSTRAINT `fk_saved_searches_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_saved_searches_district` FOREIGN KEY (`district_id`) REFERENCES `districts` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_saved_searches_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE `transactions`
+  ADD CONSTRAINT `fk_transactions_booking` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE `viewing_appointments`
+  ADD CONSTRAINT `fk_viewing_appointments_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_viewing_appointments_motel` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_viewing_appointments_owner` FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+ALTER TABLE `withdraw_requests`
+  ADD CONSTRAINT `fk_withdraw_requests_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE `listing_quality_checks`
+  ADD CONSTRAINT `fk_listing_quality_checks_motel` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE `email_logs`
+  ADD CONSTRAINT `fk_email_logs_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE `articles`
+  ADD CONSTRAINT `fk_articles_category` FOREIGN KEY (`category_id`) REFERENCES `news_categories` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_articles_author` FOREIGN KEY (`author_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE `contracts`
+  ADD CONSTRAINT `fk_contracts_motel` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_contracts_owner` FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_contracts_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+ALTER TABLE `conversations`
+  ADD CONSTRAINT `fk_conversations_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_conversations_owner` FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_conversations_motel` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE `messages`
+  ADD CONSTRAINT `fk_messages_conversation` FOREIGN KEY (`conversation_id`) REFERENCES `conversations` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_messages_sender` FOREIGN KEY (`sender_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+ALTER TABLE `maintenance_requests`
+  ADD CONSTRAINT `fk_maintenance_requests_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_maintenance_requests_owner` FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_maintenance_requests_motel` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_maintenance_requests_booking` FOREIGN KEY (`booking_id`) REFERENCES `bookings` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE `monthly_bills`
+  ADD CONSTRAINT `fk_monthly_bills_motel` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_monthly_bills_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+ALTER TABLE `monthly_invoices`
+  ADD CONSTRAINT `fk_monthly_invoices_owner` FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_monthly_invoices_tenant` FOREIGN KEY (`tenant_user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_monthly_invoices_motel` FOREIGN KEY (`motel_id`) REFERENCES `motels` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 COMMIT;
 

@@ -1,0 +1,650 @@
+FULL AUDIT WEBSITE QUANLYPHONGTRO - PHP THUAN
+Ngay audit: 2026-05-23
+Scope: public/, app/, core/, config/, phongtro_db.sql, public/admin/sql, assets/uploads references.
+Ket luan ngan: He thong da vuot muc demo CRUD co ban va da co skeleton marketplace, nhung chua production-ready do rui ro auth/owner verification, upload, CSRF, database integrity, status workflow va DevOps.
+
+============================================================
+1. TONG QUAN HE THONG HIEN TAI
+============================================================
+
+He thong la PHP thuan theo pseudo-MVC:
+- public/: web entrypoints va page modules. Moi file PHP gan nhu la mot route truc tiep.
+- public/admin/: admin backoffice.
+- public/owner/: owner workspace.
+- public/user/: renter/user workspace.
+- public/ajax/: AJAX endpoints.
+- public/webhooks/: webhook thanh toan SePay.
+- app/controller/: controller cho admin CRUD va workflow quan tri.
+- core/: model/service/helper layer.
+- config/: database.php va constants.php.
+- phongtro_db.sql: schema dump chinh.
+- public/admin/sql/: schema phu cho page_views va owner_warnings.
+
+Kien truc:
+- Khong co front controller/router tap trung. Routing dua vao file path truc tiep.
+- Session-based auth, start session rai rac trong tung file.
+- Admin init tap trung o public/admin_init.php.
+- Owner guard tap trung mot phan o public/owner/_owner_guard.php.
+- User guard lap lai truc tiep trong tung file public/user/*.php.
+- Database layer dung mysqli, co class Database wrapper, nhung van ton tai raw query string va mixed prepared statements.
+- MVC khong that su tach biet: view, request handling, SQL va business logic cung nam trong mot file page.
+
+Diem tot:
+- Da co phan tach module admin/owner/user ro rang.
+- Da co mot so controller va model core dung lai duoc.
+- Login chinh dung prepared statement, password_verify, session_regenerate_id.
+- Admin forms nhieu noi da co Csrf::field/validateRequest.
+- Booking/payment flow co transaction va row lock tai mot so diem.
+- Da co dashboard, chart API, page view tracking, activity log, owner warning schema, notifications.
+
+Diem chua dat production:
+- Khong co middleware/router tap trung nen auth/CSRF/headers/rate limit khong dong nhat.
+- Co nhieu duplicate status va duplicate data source.
+- Upload file chua validate MIME/content day du.
+- Owner KYC dang co logic tu approve trong public/owner/profile.php.
+- DB gan nhu khong co foreign key thuc thi.
+- Mot so demo seed va plain password con trong SQL dump.
+- Reset password chua gui email that, token luu plain text.
+- DevOps thieu .env thuc te, migration versioning, backup, deployment checklist.
+
+============================================================
+2. DANH SACH MODULE HIEN CO
+============================================================
+
+Core/services:
+- core/Database.php: mysqli wrapper.
+- core/Auth.php: auth admin legacy.
+- app/controller/AuthController.php: register/login/password reset public.
+- core/Csrf.php: CSRF helper.
+- core/Captcha.php: captcha helper.
+- core/User.php, Motel.php, Booking.php, Payment.php, Report.php, Review.php.
+- core/ActivityLog.php, AdminRevenue.php, OwnerModeration.php, OwnerStatusMiddleware.php.
+- core/ListingQuality.php: scoring tin dang.
+- core/SepayPayment.php: QR/payment webhook verification helper.
+- core/NotificationHelper.php, EmailNotification.php.
+- core/PathHelper.php, Env.php.
+
+Public pages:
+- index.php, khuvuc.php, blog.php, blog_detail.php, trogiup.php.
+- login.php, register.php, owner-register.php, forgot.php, reset.php, change-password.php, logout.php, captcha.php.
+- notifications.php.
+
+Admin modules:
+- Dashboard: public/admin/index.php + API dashboard_stats, revenue_chart, booking_status_chart, room_status_chart, page_views_chart.
+- Owner approval: user_approvals.php, user_detail.php.
+- Motel moderation: motels.php, motel_detail.php.
+- Booking moderation: bookings.php, booking_detail.php.
+- Payment moderation + escrow release: payments.php, payment_detail.php.
+- Withdrawals: withdraw_requests.php.
+- Reports: reports.php, report_detail.php.
+- Reviews: reviews.php, review_detail.php.
+- Users: users.php, user_create.php, user_edit.php, user_detail.php.
+- Activity logs: activity_logs.php, activity_log_detail.php.
+- Master data: categories, districts, utilities.
+- Admin revenue: admin_revenue.php.
+
+Owner modules:
+- dashboard.php, listings.php, add-listing.php, edit-listing.php.
+- bookings.php, revenue.php, withdrawals via revenue.php.
+- profile.php for KYC/bank info.
+- settings.php, analytics.php, viewing-appointments.php.
+- contracts.php, utilities.php, maintenance.php.
+
+User modules:
+- search.php, motel-detail.php, checkout.php.
+- payment.php, payment-status.php.
+- my-bookings.php, my-invoices.php.
+- saved-motels.php, saved-searches.php.
+- dashboard.php, profile.php, settings.php, notifications.php.
+- messages.php, owner-profile.php.
+
+APIs/AJAX/webhook:
+- public/ajax/toggle-favorite.php.
+- public/ajax/submit-review.php.
+- public/admin/api/*.php.
+- public/webhooks/sepay.php.
+
+Menu/sidebar:
+- Admin menu tap trung trong public/admin/layout.php: admin_nav_items().
+- User sidebar public/user/_nav_sidebar.php.
+- Owner sidebar dang lap lai HTML trong nhieu owner pages, khong tap trung hoan toan.
+
+============================================================
+3. DATABASE AUDIT
+============================================================
+
+Bang co cau truc kha on:
+- users: co PK, unique email, unique phone, role/status index. Nhung status can chuan hoa.
+- motels: co PK, index owner/category/district/status/price-area/location. Nhung data denormalized nhieu.
+- bookings: co booking_code unique, index user/owner/motel/status/payment_status. Nhung duplicate status nghiem trong.
+- payments: co payment_code unique, index booking/status/transaction_code. Nhung duplicate payment status.
+- favorites: co unique user_id/motel_id.
+- wallets: unique user_id.
+- login_security_state/login_attempts: dung cho brute force, co index hop ly.
+- page_views: schema phu co index theo viewed_at/page/user.
+- owner_warnings: schema phu co index owner/admin/level.
+
+Bang can sua/bo sung:
+- bookings:
+  - Co ca status va booking_status, nhieu luc mapping khong dong nhat: accepted vs confirmed, paid vs waiting_payment.
+  - deposit_amount/total_amount/final_amount/voucher_id duoc ADD COLUMN sau dump, can migrate versioned.
+  - cancelled_by/rejected_by khong co FK.
+  - check_in_date, expected_move_in_date, checkin_date trung y nghia.
+- payments:
+  - Co ca payment_status va status. payment_status la payment lifecycle; status la escrow lifecycle. Nen doi ten status thanh escrow_status.
+  - payment_method va method trung y nghia.
+- users:
+  - status varchar cho approved/pending/active/blocked/rejected nhung register user tao 'active', login/admin dung 'approved'. Can chuan hoa.
+  - owner_verification_status tach rieng la dung, nhung public/owner/profile.php co the tu set approved.
+  - reset_token plain text trong users, trong khi co password_resets table chua duoc dung dung muc.
+  - CCCD/bank/KYC file nam cung users, nen tach owner_profiles/owner_kyc_documents neu production.
+- motels:
+  - address + province/district/ward/street denormalized. Chap nhan de search, nhung can constraint va sync rule.
+  - utilities text va motel_utilities song song, de lech du lieu.
+  - amenities_json them sau dump nhung app van dung utilities/motel_utilities.
+  - money int ok voi VND nho, nhung production nen BIGINT UNSIGNED/DECIMAL cho tien.
+- favorites vs wishlists:
+  - Duplicate concept. Public detail check favorites, AJAX/saved-motels/search dung wishlists. Gay UX favorite bi sai.
+- monthly_bills vs monthly_invoices:
+  - Hai bang hoa don thang co overlap. App chu yeu dung monthly_bills, monthly_invoices gan nhu chua dung.
+- reports/reviews/viewing_appointments/maintenance_requests:
+  - status dang varchar/khong enum dong nhat. Nen chuan hoa bang enum/app constants.
+- transactions:
+  - from_user/to_user nullable nhung khong co ledger invariant. Can transaction_type va signed amount ro hon.
+- vouchers/wishlists duoc tao sau AUTO_INCREMENT va truoc COMMIT trong dump, khong co FK/index phu motel_id.
+
+Van de FK/index:
+- Gan nhu khong co FOREIGN KEY thuc thi. Rui ro orphan rows rat cao khi xoa motel/user/payment.
+- Motel::delete() xoa cascade bang code, nhung khong xoa payments, transactions, conversations, messages, booking_room_holds, monthly_bills, reports day du.
+- Can index bo sung:
+  - motels(status, room_status, district_id, category_id, price, area)
+  - bookings(owner_id, status, created_at), bookings(user_id, created_at)
+  - payments(payment_status, status, created_at), payments(booking_id, payment_status)
+  - reports(status, created_at), reviews(motel_id, status, created_at)
+  - viewing_appointments(owner_id, status, preferred_time)
+  - wishlists(motel_id)
+
+SQL/migration de xuat uu tien:
+
+-- Chuan hoa users.status truoc khi them CHECK/ENUM
+UPDATE users SET status = 'approved' WHERE status = 'active';
+
+-- Doi ten escrow status neu duoc phep migrate breaking change
+ALTER TABLE payments CHANGE status escrow_status ENUM('pending','held','released','refunded') DEFAULT 'pending';
+
+-- Bo sung FK mau, can clean orphan data truoc khi chay
+ALTER TABLE motels
+  ADD CONSTRAINT fk_motels_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT,
+  ADD CONSTRAINT fk_motels_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
+  ADD CONSTRAINT fk_motels_district FOREIGN KEY (district_id) REFERENCES districts(id) ON DELETE SET NULL;
+
+ALTER TABLE motel_images
+  ADD CONSTRAINT fk_motel_images_motel FOREIGN KEY (motel_id) REFERENCES motels(id) ON DELETE CASCADE;
+
+ALTER TABLE bookings
+  ADD CONSTRAINT fk_bookings_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+  ADD CONSTRAINT fk_bookings_owner FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL,
+  ADD CONSTRAINT fk_bookings_motel FOREIGN KEY (motel_id) REFERENCES motels(id) ON DELETE SET NULL;
+
+ALTER TABLE payments
+  ADD CONSTRAINT fk_payments_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE RESTRICT;
+
+ALTER TABLE wishlists
+  ADD KEY idx_wishlists_motel_id (motel_id),
+  ADD CONSTRAINT fk_wishlists_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  ADD CONSTRAINT fk_wishlists_motel FOREIGN KEY (motel_id) REFERENCES motels(id) ON DELETE CASCADE;
+
+-- Chuan hoa favorite/wishlist: chon mot bang. De xuat dung favorites, migrate du lieu wishlists sang favorites.
+INSERT IGNORE INTO favorites (user_id, motel_id)
+SELECT user_id, motel_id FROM wishlists;
+
+-- Password reset production: dung password_resets table, khong luu reset_token plain trong users.
+ALTER TABLE users DROP COLUMN reset_token, DROP COLUMN reset_expires;
+
+============================================================
+4. AUTH / LOGIN / SESSION AUDIT
+============================================================
+
+Dang tot:
+- public/login.php dung prepared SELECT users WHERE email = ?.
+- Dung password_verify.
+- Login thanh cong co session_regenerate_id(true).
+- Co brute force state: login_security_state, captcha sau 3 lan sai, lock sau 7 lan sai.
+- Co Turnstile optional khi khong phai localhost.
+- Admin init chan non-admin va blocked.
+- Owner guard check role owner va owner_verification_status.
+
+Loi/chua production:
+- public/register.php khong co CSRF. owner-register.php khong co CSRF.
+- forgot.php/reset.php khong co CSRF va reset token plain text.
+- AuthController::login khong session_regenerate_id, trong khi public/login.php co ham rieng. Code auth bi duplicate va khac hanh vi.
+- core/Auth.php chi login admin va dung getRow SQL string, duoc escape nhung legacy.
+- Remember me chi luu email cookie, khong phai remember-session. Ten UI gay hieu nham.
+- Session cookie settings chua set HttpOnly/Secure/SameSite trong code.
+- Logout khong rotate cookie session id sau destroy.
+- Owner rejected/pending: login van vao owner/profile.php?verify=1, hop ly. Nhung owner/profile.php co logic tu approve khi co idcard + anh, bypass admin.
+- Register user set status = active, trong khi login/admin expected approved/blocked. Can chuan hoa.
+- SQL dump co user id 2 password '123' plain text. password_verify se fail, nhung day la du lieu rac/nguy co leak.
+- Forgot password co TODO gui email; hien tai khong co mail delivery production.
+
+Workflow login can test:
+- user approved: login vao index.php, user dashboard accessible.
+- owner pending_verification: login vao owner/profile.php?verify=1.
+- owner rejected: login vao profile verify, can cho resubmit, khong duoc auto approve.
+- owner approved: login vao owner/dashboard.php.
+- admin approved: login vao admin/index.php.
+- blocked: login bi tu choi.
+
+Muc production-ready: Chua dat.
+
+============================================================
+5. WORKFLOW NGHIEP VU
+============================================================
+
+OWNER
+Dang co:
+- Dang ky owner.
+- Login va profile KYC.
+- Dashboard/listings/add/edit listing.
+- Upload anh phong.
+- Booking handling.
+- Revenue, wallet, withdraw request.
+- Viewing appointments.
+- Utilities/monthly bills.
+- Maintenance/contracts analytics.
+
+Dut logic / rui ro:
+- Owner KYC co bypass tu approve tai public/owner/profile.php. Day la critical logic bug.
+- Add/edit listing khong co CSRF.
+- Upload listing chi check extension theo pathinfo, khong verify MIME/getimagesize/size limit/quarantine.
+- Edit rejected listing khong reset status ve pending ro rang. Hien tai update motels khong set status='pending' khi owner sua tin rejected; admin co the khong thay queue moi.
+- Owner bookings chi accepted/rejected, khong co cancellation/refund dispute/expired hold handling day du.
+- Notification insert trong owner/bookings.php co raw SQL string voi title/body sau khi noi chuoi. Co nguy co SQL error/injection neu title/body co quote.
+- Revenue withdraw co transaction, tot; nhung khong co CSRF.
+- Owner khong co centralized sidebar/component, UI lap lai.
+
+USER
+Dang co:
+- Register/login.
+- Search/filter/sort/save search.
+- Motel detail, view count, viewing appointment, message owner.
+- Checkout booking + voucher + payment.
+- Favorites/saved motels.
+- Review sau booking.
+- Notifications/profile/settings.
+
+Dut logic / rui ro:
+- Favorite bi chia bang: detail dung favorites, AJAX/search/saved-motels dung wishlists. Nut yeu thich co the hien sai.
+- checkout.php khong co CSRF.
+- schedule_viewing/contact_owner trong motel-detail.php khong co CSRF.
+- submit-review AJAX khong co CSRF; eligibility dua vao bookings.status legacy, co the lech voi booking_status.
+- Search utilities filter dung utilities_filter count, nhung input utilities co the la array lon gay query dynamic placeholder dai; can cap limit.
+- Booking hold expires_at co tao 30 phut nhung khong thay cron/job expire de release room_status.
+- User report flow chua day du trong user detail.
+
+ADMIN
+Dang co:
+- Dashboard co stats/charts/traffic.
+- Owner approval.
+- Motel moderation.
+- Booking/payment/release/withdraw/reports/reviews/users/logs.
+- CSRF phu rong cho admin forms.
+- Activity log co o nhieu actions.
+
+Dut logic / rui ro:
+- Admin dashboard co API dependency, can handle missing page_views gracefully da co mot phan.
+- Booking admin updateStatus chi update bookings.status, khong dong bo booking_status/payment/room_status. Nen han che hoac remove manual status update.
+- Payment manual paid tao fee transaction nhung khong tao deposit transaction nhu webhook, gay ledger lech.
+- Owner approval duplicate logic: user_approvals.php va UserApprovalController cung ton tai.
+- Delete motel cascade bang code co the lam mat history booking/payment/review, khong phu hop marketplace production.
+- Report moderation chua gan action follow-up: hide motel, warn owner, suspend posting.
+
+============================================================
+6. UI/UX AUDIT
+============================================================
+
+Diem manh:
+- Public auth pages co 3D/modern visual, co dau an san pham.
+- Admin UI da co workbench layout, sidebar, card, badge, table kha chuyen nghiep hon CRUD demo.
+- Owner UI co dashboard/workbench, charts, cards, module nhieu.
+- User search/detail/checkout co UI kha day du, co price breakdown va filters.
+
+Van de UI/UX:
+- Encoding/text trong nhieu file hien thi bi mojibake trong source/output: 'Ä', 'MÃ£', 'phÃ²ng'. Can fix charset/source encoding.
+- Public/register.php duplicate CSS links va inline style tho; khac style owner-register/login.
+- Forgot/reset pages van style gradient cu, khong dong bo modern auth.
+- Owner pages lap sidebar HTML, de drift style va active state.
+- Status label mau sac chua dong nhat: paid/accepted/confirmed/completed nhieu y nghia.
+- Empty states co nhung khong dong nhat.
+- Loading state co trong admin charts, thieu trong submit booking/payment/upload.
+- Mobile responsiveness can test thuc te; nhieu table/card co nguy co overflow do title/address/code dai.
+- Booking/payment UX chua co timeline trang thai, SLA, dispute/refund instructions.
+- Marketplace trust UX thieu verified badge ro, risk hints, report CTA ro, owner response time.
+
+So sanh:
+- NiceAdmin: admin gan dat visual shell, nhung thieu consistency/pagination/search/sorting o tat ca table.
+- Cho Tot/Batdongsan: search/detail con thieu map/list view polish, SEO, verified media, spam/fraud controls.
+- Shopee Seller Center: owner module chua co queue/action center, performance metrics, violation center, payout reconciliation.
+
+============================================================
+7. SECURITY AUDIT
+============================================================
+
+Critical:
+1. Owner KYC bypass:
+   - public/owner/profile.php tu set owner_verification_status='approved' khi co idcard/anh/bank. Owner co the tu duyet minh, bo qua admin.
+2. File upload risk:
+   - public/owner/add-listing.php, edit-listing.php, owner/profile.php, user/profile.php dung extension/pathinfo va move_uploaded_file; thieu MIME sniffing, size limit, image re-encode, random extension whitelist day du, virus scan, storage ngoai webroot.
+3. CSRF missing:
+   - register.php, owner-register.php, forgot.php, reset.php, checkout.php, motel-detail.php POST, owner revenue/profile/settings/listing forms, AJAX toggle-favorite/submit-review.
+4. DB dump contains credentials/demo accounts and one plain password hash-invalid row.
+5. No global security headers: CSP, X-Frame-Options/frame-ancestors, nosniff, Referrer-Policy, HSTS for HTTPS.
+
+High:
+- IDOR mostly guarded by owner_id/user_id in major pages, but can audit tat ca endpoints.
+- Raw SQL concatenation still exists. Many are cast int, but owner/bookings notification insert concat title/body unsafe.
+- Webhook permits trusted IP using X-Forwarded-For without trusted proxy validation. If app directly exposed, header spoof risk.
+- Password reset token plain text, no token hash, no per-email/IP rate limit.
+- No role middleware central for user pages.
+- No upload path traversal from filename due uniqid, but extension can include odd values if not lower/whitelisted.
+
+Medium:
+- Captcha custom fallback only sau failures; register captcha basic.
+- Remember email cookie lacks Secure/SameSite flags.
+- Session cookie config not hardened.
+- Notifications redirect_link in public/notifications.php redirects raw POST link, potential open redirect/internal path issue.
+- Activity logs store user_agent/ip, fine, but no retention/privacy policy.
+
+============================================================
+8. PERFORMANCE AUDIT
+============================================================
+
+Diem tot:
+- Search co prepared dynamic query va pagination.
+- Admin/user/owner listing nhieu noi co LIMIT/pagination.
+- Booking/payment critical flow co transaction/locks.
+- Chart APIs query aggregate.
+
+Van de:
+- N+1/subquery in search cards: image subquery per motel, acceptable small but can optimize join derived table.
+- Many pages query full lists without pagination: owner bookings, withdraw requests, some reports/admin lists need check.
+- No image optimization/compression/lazy processing. Upload anh goc co the lam cham UI va day disk.
+- No cache for categories/districts/utilities.
+- page_views insert synchronous per public request.
+- No cron to expire booking_room_holds and reset motels.room_status.
+- External CDN dependencies multiple: Bootstrap, FontAwesome, Leaflet, ApexCharts, Chart.js. Need bundling/cache fallback for production.
+
+============================================================
+9. STATUS SYSTEM AUDIT
+============================================================
+
+Hien co:
+- users.status: pending/approved/active/blocked/rejected? Khong dong nhat.
+- users.owner_verification_status: not_required/pending_verification/submitted/approved/rejected.
+- motels.status: pending/approved/hidden/rejected.
+- motels.room_status: available/reserved/rented/unavailable.
+- bookings.status: pending/paid/accepted/completed/rejected/cancelled.
+- bookings.booking_status: pending/waiting_payment/paid/confirmed/cancelled/rejected/expired/completed.
+- bookings.payment_status: pending/processing/paid/failed/cancelled/refunded.
+- payments.payment_status: pending/processing/paid/failed/cancelled/refunded.
+- payments.status: pending/held/released/refunded.
+- reports.status: pending/investigating/resolved/rejected/closed.
+- reviews.status: visible/hidden? varchar.
+- viewing_appointments.status: pending/accepted/rejected/completed.
+- maintenance_requests.status: open/in_progress/resolved.
+- withdraw_requests.status: pending/approved/rejected.
+
+De xuat production:
+- users.account_status: pending_email, active, blocked, deleted.
+- owner_profiles.verification_status: draft, submitted, approved, rejected, suspended.
+- listings.moderation_status: draft, pending_review, approved, rejected, hidden_by_admin, hidden_by_owner.
+- listings.availability_status: available, held, rented, unavailable.
+- bookings.status: draft, waiting_payment, paid, owner_confirmed, tenant_checked_in, completed, cancelled_by_tenant, cancelled_by_owner, rejected_by_owner, expired, disputed, refunded.
+- payments.payment_status: pending, processing, paid, failed, cancelled, refunded.
+- payments.escrow_status: none, held, release_pending, released, refund_pending, refunded, disputed.
+- reports.status: pending, investigating, action_taken, rejected, closed.
+- reviews.status: pending_moderation, visible, hidden, removed.
+- withdrawals.status: pending, approved, rejected, paid, failed.
+
+Nguyen tac:
+- Chi con mot source of truth cho booking business status.
+- Payment lifecycle va escrow lifecycle phai tach bang ten cot ro.
+- Moi transition can service method + transaction + activity log.
+
+============================================================
+10. FEATURE THIEU / CHUA HOAN THIEN
+============================================================
+
+Can co truoc public beta:
+- Email verification.
+- Forgot password email real SMTP/provider.
+- Global CSRF middleware/token for all POST/AJAX.
+- Upload service secure: MIME, size, re-encode, thumbnails, delete/quarantine.
+- Moderation queue cho owner KYC va listing.
+- Cron/jobs: expire holds, release stale pending payment, notify owner, cleanup reset tokens.
+- Unified notification center + unread counts.
+- Report room/user flow tu public detail.
+- Refund/dispute workflow.
+- Audit log for owner/user critical actions, khong chi admin.
+- RBAC constants/middleware central.
+- Migration system/versioning, seed data tach rieng.
+- Backup/restore plan.
+- SEO: slug listing, sitemap, robots, meta OG, canonical.
+- Terms/privacy/payment policy production.
+- Rate limit cho register/forgot/booking/contact/review.
+- Admin risk score: owner/listing/report/payment.
+- Owner warning enforcement: posting_suspended phai chan add-listing/edit.
+
+Co nhung chua hoan thien:
+- Traffic dashboard: co page_views, can install migration va bot filtering.
+- Owner warning: co schema/core, can gan voi moderation action.
+- Analytics: co owner/admin chart, can bo fake/demo va them data quality.
+- Contracts: UI/table co, can workflow e-sign/upload/tenant acceptance.
+- Monthly utilities: co, nhung billing/payment integration chua day du.
+- Messages: co data model va send message tu detail, nhung owner/messages.php khong thay trong file list.
+
+Feature co the bo/tam an:
+- Flash sale/vouchers neu san pham rental local chua can. De sau khi core booking/payment on dinh.
+- 3D auth scene neu anh huong performance/mobile; giu neu da optimize.
+- monthly_invoices neu monthly_bills da la source of truth.
+- favorites hoac wishlists: chi giu mot.
+
+============================================================
+11. ADMIN MODULE AUDIT
+============================================================
+
+Dashboard:
+- Tot: stats, charts, traffic, API protected by admin_init.
+- Can sua: ensure migrations page_views exists; bot filtering; no fake chart; chart empty states.
+
+Owner approval:
+- Tot: tab pending/approved/rejected, search, CSRF, activity log.
+- Critical: owner/profile bypass lam admin approval mat y nghia.
+- Can them: KYC document review, image preview secure, reject reason templates, resubmit flow.
+
+Motel moderation:
+- Tot: filter status, approve/hide/reject/delete, CSRF.
+- Can sua: delete should soft-delete; reject/hide should notify owner; edit rejected should requeue.
+
+Bookings:
+- Tot: list/detail/update/delete.
+- Can sua: manual updateStatus khong dong bo status detailed/payment/room; delete actually cancel, ten button nen 'Huy'.
+
+Payments:
+- Tot: payment status, escrow held/release, CSRF.
+- Can sua: manual paid ledger khac webhook; release only after completed la dung, nhung refund/dispute thieu.
+
+Withdrawals:
+- Tot: lock row, debit on request, refund on reject, notification, activity log.
+- Can sua: add paid/failed payout status, bank transfer reference, admin proof.
+
+Reports/reviews/users/logs:
+- Tot: co CRUD/list/detail.
+- Can sua: report action automation, review moderation queue, user risk/activity page, pagination/search/sort dong nhat.
+
+============================================================
+12. OWNER MODULE AUDIT
+============================================================
+
+Hoat dong tot:
+- Workspace da co nhieu module thuc te: listing, booking, revenue, viewing, utilities, maintenance.
+- Guard owner approved ton tai.
+- Listing quality score la diem cong.
+- Revenue/withdraw dung DB transaction.
+
+Can sua:
+- KYC auto approve critical.
+- Forms thieu CSRF.
+- Upload thieu secure validation.
+- Owner sidebar duplicate.
+- Owner cannot clearly handle rejected listing resubmission.
+- Owner posting suspension warning_level chua enforce.
+- Owner bookings raw notification SQL.
+- No spam/rate limit for add listings/uploads.
+
+============================================================
+13. USER MODULE AUDIT
+============================================================
+
+Hoat dong tot:
+- Search filter kha day du.
+- Detail page co images, services, booking CTA, view schedule, message owner, reviews.
+- Checkout co deposit/payment/voucher/hold.
+- My bookings co confirm received + CSRF.
+
+Can sua:
+- Favorites/wishlists split.
+- Checkout/detail POST/AJAX thieu CSRF.
+- Report listing/user flow thieu ro.
+- Payment confirmation manual needs CSRF.
+- Review eligibility/status should use canonical booking status.
+- User dashboard counts favorites table trong khi saved-motels dung wishlists.
+
+============================================================
+14. FILE CAN REFACTOR UU TIEN
+============================================================
+
+Critical/security:
+- public/owner/profile.php: remove auto-approve, harden KYC upload, add CSRF.
+- public/owner/add-listing.php and edit-listing.php: extract ListingService, UploadService, CSRF, requeue rejected listings.
+- public/user/checkout.php: add CSRF, move booking/payment transaction to BookingService.
+- public/user/motel-detail.php: add CSRF for schedule/contact, centralize message service.
+- public/ajax/toggle-favorite.php and submit-review.php: add CSRF, rate limit, Content-Type.
+- app/controller/AuthController.php, public/login.php, core/Auth.php: unify auth service.
+- public/forgot.php, public/reset.php: use password_resets token_hash and email delivery.
+
+Architecture:
+- core/Database.php: remove unsafe table/where APIs or restrict identifiers/conditions.
+- core/Motel.php, Booking.php, Payment.php: replace legacy raw getRow string with prepared methods.
+- public/admin/layout.php and owner pages: centralize owner layout/sidebar.
+- public/admin/payment*.php + PaymentController.php: unify ledger transaction for webhook/manual.
+- phongtro_db.sql: split into migrations + seeds; remove demo credentials.
+
+============================================================
+15. ROADMAP PRODUCTION-READY
+============================================================
+
+PHASE 1 - Critical security/data bugs
+- Remove owner self-approval in public/owner/profile.php.
+- Add CSRF to all POST forms and AJAX endpoints.
+- Harden session cookie: HttpOnly, Secure, SameSite=Lax/Strict.
+- Secure upload service for avatars/listing/KYC: whitelist extension, MIME/getimagesize, max size, re-encode, random names, store outside executable path or block PHP execution in uploads.
+- Normalize users.status active -> approved/active consistently.
+- Fix favorites vs wishlists to one table.
+- Remove plaintext/demo credentials from SQL seed.
+- Add cron/job to expire booking holds and reset room_status.
+- Fix raw SQL notification insert in owner/bookings.php.
+
+PHASE 2 - Database and workflow integrity
+- Add migration system and split schema/seed.
+- Clean orphan data, add foreign keys.
+- Rename payments.status to escrow_status.
+- Collapse booking status to one canonical workflow or enforce sync service.
+- Add soft delete for motels/users, never hard delete marketplace history.
+- Move password reset to password_resets token_hash.
+- Add indexes for common filters.
+
+PHASE 3 - Admin operations completion
+- KYC moderation queue with document preview, reject templates, resubmit history.
+- Listing moderation action center: approve/reject/hide/warn/suspend owner.
+- Payment reconciliation: manual paid uses same ledger as webhook.
+- Refund/dispute workflow.
+- Withdrawal paid/failed state and bank transaction proof.
+- Admin search/sort/pagination standard across all tables.
+- Activity log every money/status/moderation action.
+
+PHASE 4 - Owner workflow completion
+- Rejected listing edit -> resubmit pending.
+- Enforce owner_warnings posting_suspended.
+- Owner action center: pending bookings, pending viewing, rejected listings, payout tasks.
+- Upload image compression/thumbnails/watermark optional.
+- Revenue reconciliation page: held, releasable, withdrawn, fees.
+- Owner message inbox if messages feature remains.
+
+PHASE 5 - User UX and marketplace trust
+- Unified favorite state.
+- Booking/payment timeline.
+- Clear cancellation/refund policy and support flow.
+- Report listing/owner button on detail.
+- Review moderation/verified stay badge.
+- SEO listing URLs, sitemap, meta tags.
+- Better mobile table/card layouts.
+- Notifications unread badge and email notifications.
+
+PHASE 6 - DevOps hardening
+- .env real config; no secrets in repo.
+- Production web server config: disable PHP execution in uploads, HTTPS, HSTS.
+- Composer autoload or simple app bootstrap.
+- Error logging to file/service, display_errors off.
+- Backup/restore automation.
+- CI: php -l all files, PHPStan/Psalm baseline, unit tests for services, Playwright smoke tests.
+- Staging environment with seeded non-sensitive demo data.
+- Monitoring: uptime, error rate, DB slow query, disk upload usage.
+
+============================================================
+16. RISK KHI DEPLOY PRODUCTION
+============================================================
+
+Neu deploy public ngay:
+- Owner co the tu xac minh tai khoan va dang tin ma khong qua admin.
+- Upload co the bi loi bao mat neu server cho execute trong uploads.
+- CSRF co the thao tac thay user/owner/admin tren nhieu endpoint.
+- DB co the sinh orphan data va sai so tien/trang thai do thieu FK/status canonical.
+- Booking/payment co the bi ket reserved vi hold het han khong release.
+- Reset password chua gui email that va token plain text.
+- UX/status lech lam user/owner/admin khong biet buoc tiep theo.
+
+Muc do san sang deploy: DEMO ONLY.
+- Co the dung de demo do an/internal walkthrough.
+- Chua nen public beta.
+- Sau Phase 1 + mot phan Phase 2 co the len internal beta.
+- Sau Phase 1-4 va DevOps can ban moi public beta.
+- Production-ready can co Phase 1-6 + test/security review lai.
+
+============================================================
+17. KET LUAN THEO VAI TRO
+============================================================
+
+Founder san pham:
+- San pham da co du khung marketplace phong tro: renter search-book-pay, owner post-manage-revenue, admin moderate-escrow.
+- Tuy nhien hien van giong demo nang cao hon la marketplace that do trust/safety, dispute, KYC, payout, SEO va notification chua hoan chinh.
+
+Technical Lead:
+- Can uu tien tach service layer cho Auth, Booking, Payment, Listing, Upload, Notification.
+- Can migration/FK/status state machine truoc khi mo rong feature.
+
+Senior QA:
+- Can test matrix theo role/status: user/owner/admin, pending/rejected/blocked, listing pending/approved/rejected/hidden, booking waiting_payment/paid/accepted/completed/cancelled.
+- Can E2E test full flow: owner register -> admin approve -> owner listing -> admin approve -> user booking -> payment -> admin confirm -> owner accept -> user confirm -> admin release -> owner withdraw -> admin payout.
+
+DevOps reviewer:
+- Thieu deploy checklist, migration runner, backup, error logging, upload isolation, HTTPS/security headers.
+
+Security reviewer:
+- Critical blockers: owner KYC bypass, upload hardening, CSRF coverage, reset token/email, status/IDOR audit.
+
+UI/UX reviewer:
+- Admin/owner/user da co huong thiet ke, nhung can fix encoding, consistency, mobile overflow, status timeline va trust UX.
+
+Marketplace operator:
+- Can moderation queue, warning enforcement, dispute/refund, payout reconciliation, fraud/risk score, audit trail, traffic and conversion analytics.
