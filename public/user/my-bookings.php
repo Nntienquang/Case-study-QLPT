@@ -129,7 +129,7 @@ function tenant_booking_status_label(string $status): string
         'waiting_payment' => 'Chờ thanh toán',
         'paid' => 'Đã đặt cọc',
         'confirmed' => 'Đã xác nhận',
-        'processing' => 'Chờ admin xác nhận',
+        'processing' => 'Đang xử lý',
         'failed' => 'Thanh toán thất bại',
         'refunded' => 'Đã hoàn tiền',
         'accepted' => 'Đã được chấp nhận',

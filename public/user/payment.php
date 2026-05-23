@@ -44,39 +44,90 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'confi
     $message = 'Phiên xác nhận thanh toán đã hết hạn. Vui lòng thử lại.';
     $messageType = 'danger';
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'confirm_transfer') {
-    if (($payment['current_payment_status'] ?? '') === 'pending') {
-        $transactionCode = trim((string)($_POST['transaction_code'] ?? ''));
-        $gateway = json_encode([
-            'type' => 'manual_bank_transfer',
-            'confirmed_by_user_at' => date('c'),
-            'note' => trim((string)($_POST['note'] ?? '')),
-        ], JSON_UNESCAPED_UNICODE);
+    if (in_array(($payment['current_payment_status'] ?? ''), ['pending', 'processing'], true)) {
+        $conn->begin_transaction();
 
-        $stmt = $conn->prepare("
-            UPDATE payments
-            SET payment_status = 'processing', transaction_code = NULLIF(?, ''), gateway_response = ?, updated_at = NOW()
-            WHERE id = ? AND payment_status = 'pending'
-        ");
-        $stmt->bind_param('ssi', $transactionCode, $gateway, $payment['payment_id']);
-        $stmt->execute();
-        $stmt->close();
+        try {
+            $transactionCode = trim((string)($_POST['transaction_code'] ?? ''));
+            $amount = (int)$payment['amount'];
+            $platformFee = (int)ceil($amount * 0.05);
+            $gateway = json_encode([
+                'type' => 'tenant_confirmed_bank_transfer',
+                'confirmed_by_user_at' => date('c'),
+                'note' => trim((string)($_POST['note'] ?? '')),
+            ], JSON_UNESCAPED_UNICODE);
 
-        $stmt = $conn->prepare("UPDATE bookings SET payment_status = 'processing', updated_at = NOW() WHERE id = ?");
-        $stmt->bind_param('i', $bookingId);
-        $stmt->execute();
-        $stmt->close();
+            $stmt = $conn->prepare("
+                UPDATE payments
+                SET payment_status = 'paid',
+                    status = 'held',
+                    transaction_code = NULLIF(?, ''),
+                    gateway_response = ?,
+                    fee = ?,
+                    paid_at = NOW(),
+                    updated_at = NOW()
+                WHERE id = ? AND payment_status IN ('pending', 'processing')
+            ");
+            $stmt->bind_param('ssii', $transactionCode, $gateway, $platformFee, $payment['payment_id']);
+            $stmt->execute();
+            $updatedPayment = $stmt->affected_rows;
+            $stmt->close();
 
-        qlpt_send_notification(
-            $db,
-            (int)$payment['owner_id'],
-            'payment_processing',
-            'Khách đã báo chuyển khoản',
-            'Booking ' . $payment['booking_code'] . ' đang chờ admin xác nhận thanh toán.',
-            'owner/bookings.php'
-        );
+            if ($updatedPayment === 0) {
+                throw new RuntimeException('Thanh toán này đã được xử lý trước đó.');
+            }
 
-        $message = 'Đã ghi nhận thông tin chuyển khoản. Nếu webhook SePay chưa về, admin vẫn có thể đối soát thủ công.';
-        $payment['current_payment_status'] = 'processing';
+            $stmt = $conn->prepare("UPDATE bookings SET payment_status = 'paid', booking_status = 'paid', status = 'paid', updated_at = NOW() WHERE id = ?");
+            $stmt->bind_param('i', $bookingId);
+            $stmt->execute();
+            $stmt->close();
+
+            $stmt = $conn->prepare("UPDATE booking_room_holds SET hold_status = 'converted', updated_at = NOW() WHERE booking_id = ?");
+            $stmt->bind_param('i', $bookingId);
+            $stmt->execute();
+            $stmt->close();
+
+            $admin = $conn->query("SELECT id FROM users WHERE role = 'admin' AND status = 'approved' ORDER BY id ASC LIMIT 1")->fetch_assoc();
+            $adminId = (int)($admin['id'] ?? 0);
+            if ($adminId > 0) {
+                $stmt = $conn->prepare("INSERT INTO transactions (from_user, to_user, amount, fee, type, booking_id, created_at) VALUES (?, ?, ?, ?, 'deposit', ?, NOW())");
+                $stmt->bind_param('iiiii', $userId, $adminId, $amount, $platformFee, $bookingId);
+                $stmt->execute();
+                $stmt->close();
+
+                $stmt = $conn->prepare("INSERT INTO transactions (to_user, amount, type, booking_id, created_at) VALUES (?, ?, 'fee', ?, NOW())");
+                $stmt->bind_param('iii', $adminId, $platformFee, $bookingId);
+                $stmt->execute();
+                $stmt->close();
+            }
+
+            qlpt_send_notification(
+                $db,
+                $userId,
+                'payment',
+                'Thanh toán đã được ghi nhận',
+                'Khoản đặt cọc cho booking ' . $payment['booking_code'] . ' đang được admin giữ an toàn.',
+                'user/my-bookings.php'
+            );
+
+            qlpt_send_notification(
+                $db,
+                (int)$payment['owner_id'],
+                'payment_paid',
+                'Khách đã đặt cọc',
+                'Booking ' . $payment['booking_code'] . ' đã thanh toán cọc. Bạn có thể kiểm tra và chấp nhận booking.',
+                'owner/bookings.php'
+            );
+
+            $conn->commit();
+            $message = 'Thanh toán đã thành công. Tiền cọc đang được admin giữ cho đến khi bạn xác nhận đã nhận phòng.';
+            $payment['current_payment_status'] = 'paid';
+            $payment['payment_status'] = 'paid';
+        } catch (Throwable $e) {
+            $conn->rollback();
+            $message = $e->getMessage();
+            $messageType = 'warning';
+        }
     } else {
         $message = 'Thanh toán này không còn ở trạng thái chờ chuyển khoản.';
         $messageType = 'warning';
@@ -97,7 +148,7 @@ function pay_status_label(string $status): string
 {
     return [
         'pending' => 'Chờ thanh toán',
-        'processing' => 'Chờ xác nhận',
+        'processing' => 'Đang xử lý',
         'paid' => 'Đã thanh toán',
         'failed' => 'Thất bại',
         'cancelled' => 'Đã hủy',

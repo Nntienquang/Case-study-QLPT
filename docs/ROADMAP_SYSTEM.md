@@ -6,7 +6,7 @@
 - Route guard backend cho owner workspace.
 - Booking/payment schema gateway-ready.
 - Room hold chống double booking cơ bản.
-- Payment admin xác nhận thủ công, sẵn sàng thay bằng gateway callback.
+- Payment tự ghi nhận thành công khi khách xác nhận chuyển khoản hoặc khi gateway callback trả về; admin giữ tiền và chỉ giải ngân sau khi khách xác nhận nhận phòng.
 - Public nav đồng bộ cho các trang user.
 
 ## Next Product Hardening

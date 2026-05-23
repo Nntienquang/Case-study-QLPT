@@ -27,8 +27,8 @@ $escrowStatus = (string)($payment['status'] ?? 'pending');
 $bookingStatus = (string)($payment['booking_legacy_status'] ?? $payment['booking_status'] ?? 'pending');
 $options = [$status => admin_status_label($status)];
 foreach ([
-    'pending' => ['processing', 'paid', 'failed', 'cancelled'],
-    'processing' => ['paid', 'failed', 'cancelled'],
+    'pending' => ['processing', 'failed', 'cancelled'],
+    'processing' => ['failed', 'cancelled'],
     'paid' => ['refunded'],
 ] as $from => $next) {
     if ($status === $from) {

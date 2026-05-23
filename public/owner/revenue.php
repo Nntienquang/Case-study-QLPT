@@ -1,6 +1,7 @@
 ﻿<?php
 @require_once '../../config/database.php';
 @require_once '../../core/Database.php';
+@require_once '../../core/Csrf.php';
 
 session_start();
 
@@ -26,6 +27,11 @@ require_once __DIR__ . '/_owner_guard.php';
 // XỬ LÝ POST: YÊU CẦU RÚT TIỀN
 // ==========================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'withdraw') {
+    if (!Csrf::validateRequest('owner_withdraw')) {
+        header('Location: revenue.php?error=invalid_request');
+        exit;
+    }
+
     $amount = (int)$_POST['amount'];
 
     $conn->begin_transaction();
@@ -335,6 +341,12 @@ function get_trans_type_label($type) {
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
                 <?php endif; ?>
+                <?php if (isset($_GET['error']) && $_GET['error'] == 'invalid_request'): ?>
+                <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+                    <i class="fas fa-triangle-exclamation me-2"></i> Phiên gửi yêu cầu không hợp lệ, vui lòng thử lại.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <?php endif; ?>
 
                 <div class="wb-section-head d-flex justify-content-between align-items-end mb-4">
                     <div>
@@ -496,6 +508,7 @@ function get_trans_type_label($type) {
                 </div>
                 <form method="POST" action="">
                     <div class="modal-body p-4">
+                        <?php echo Csrf::field('owner_withdraw'); ?>
                         <input type="hidden" name="action" value="withdraw">
 
                         <div class="d-flex justify-content-between mb-3 border-bottom pb-2">

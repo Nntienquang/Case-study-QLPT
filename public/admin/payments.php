@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
 
 $data = $controller->listPayments();
 
-admin_layout_start('Quản lý thanh toán', 'Theo dõi giao dịch đặt cọc và xác nhận thanh toán trước khi owner xử lý booking.', 'payments');
+admin_layout_start('Quản lý thanh toán', 'Theo dõi tiền cọc đang chờ, đang được giữ hộ và các khoản đủ điều kiện giải ngân.', 'payments');
 admin_flash_messages();
 ?>
 
@@ -30,7 +30,7 @@ admin_flash_messages();
             <label class="form-label fw-semibold">Trạng thái</label>
             <select name="status" class="form-select">
                 <option value="">Tất cả</option>
-                <?php foreach (['pending' => 'Chờ theo dõi', 'held' => 'Đang giữ', 'released' => 'Đã giải ngân', 'refunded' => 'Đã hoàn tiền'] as $value => $label): ?>
+                <?php foreach (['pending' => 'Chờ theo dõi', 'processing' => 'Đang xử lý', 'paid' => 'Đã thanh toán', 'held' => 'Đang giữ', 'released' => 'Đã giải ngân', 'failed' => 'Thất bại', 'cancelled' => 'Đã hủy', 'refunded' => 'Đã hoàn tiền'] as $value => $label): ?>
                     <option value="<?php echo admin_e($value); ?>" <?php echo ($data['status'] ?? '') === $value ? 'selected' : ''; ?>><?php echo admin_e($label); ?></option>
                 <?php endforeach; ?>
             </select>
@@ -82,13 +82,6 @@ admin_flash_messages();
                         <td class="text-end">
                             <a href="<?php echo ADMIN_URL . 'payment_detail.php?id=' . (int)$payment['id']; ?>" class="btn btn-sm btn-primary"><i class="fa fa-eye"></i> Xem</a>
                             <?php if (in_array($status, ['pending', 'processing'], true)): ?>
-                                <form method="POST" class="d-inline" onsubmit="return confirm('Xác nhận thanh toán này đã thành công?');">
-                                    <?php echo Csrf::field('admin_payment_action'); ?>
-                                    <input type="hidden" name="action" value="update_status">
-                                    <input type="hidden" name="status" value="paid">
-                                    <input type="hidden" name="id" value="<?php echo (int)$payment['id']; ?>">
-                                    <button type="submit" class="btn btn-sm btn-success"><i class="fa fa-check"></i></button>
-                                </form>
                                 <form method="POST" class="d-inline" onsubmit="return confirm('Đánh dấu giao dịch thất bại?');">
                                     <?php echo Csrf::field('admin_payment_action'); ?>
                                     <input type="hidden" name="action" value="update_status">

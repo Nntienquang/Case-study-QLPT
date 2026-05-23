@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['booking_id'], $_POST[
             $conn->begin_transaction();
             try {
                 if ($status === 'accepted' && ($booking['payment_status'] ?? '') !== 'paid') {
-                    throw new RuntimeException('Chỉ được chấp nhận booking sau khi thanh toán đã được admin xác nhận.');
+                    throw new RuntimeException('Chỉ được chấp nhận booking sau khi hệ thống ghi nhận khách đã thanh toán cọc.');
                 }
 
                 $newBookingStatus = match ($status) {

@@ -90,6 +90,121 @@ Giu PHP thuan, MySQL, Bootstrap/CSS/JS thuan. Khong chuyen sang framework backen
 - Database moi import xong chay duoc khong can sua tay.
 - UI dong bo, hien dai, doc duoc tieng Viet dung encoding UTF-8.
 
+## Phuong An Chia 6 Nguoi Khong Dong Admin
+
+Phan nay dung khi admin da co nguoi khac lam hoac team muon tach hoan toan khoi `public/admin`.
+Moi thanh vien chi can lam luong public, user, owner va core dung chung cua module minh.
+
+### Nguyen tac tach viec
+
+- Khong sua file trong `public/admin/` va `app/controller/*Admin*`.
+- Uu tien bang va trang da co trong `phongtro_db.sql`: `viewing_appointments`, `conversations`, `messages`, `maintenance_requests`, `contracts`, `monthly_bills`, `monthly_invoices`.
+- Moi module phai co it nhat mot trang tao du lieu va mot trang theo doi/cap nhat du lieu.
+- Neu can notification thi dung `core/NotificationHelper.php`, khong tao alert rieng le roi bo mat trang lich su.
+- Thong nhat navigation user/owner truoc khi merge de tranh moi nguoi them sidebar theo mot kieu.
+
+### Thanh vien 1: Lich xem phong hai chieu
+
+- Actor: User va Owner.
+- Muc tieu: user dat lich xem, theo doi trang thai; owner chap nhan, tu choi, danh dau da xem.
+- Da co diem bat dau:
+  - User tao lich tu `public/user/motel-detail.php`.
+  - Owner xu ly lich tai `public/owner/viewing-appointments.php`.
+- Can bo sung:
+  - Tao trang `public/user/viewing-appointments.php` cho user xem lich da gui va huy lich `pending`.
+  - Them filter lich sap toi/lich cu va thong bao khi owner doi trang thai.
+  - Hien lich sap toi tren user dashboard bang link dung, khong tro ve booking.
+- Definition of Done:
+  - User tao, xem, huy lich chua duoc owner xu ly.
+  - Owner cap nhat trang thai va user nhan notification.
+  - Khong co link `user/viewing-appointments.php` bi 404.
+
+### Thanh vien 2: Lead inbox va nhan tin owner
+
+- Actor: User va Owner.
+- Muc tieu: user hoi chu phong theo tung tin; owner gom lead vao inbox.
+- Da co diem bat dau:
+  - User gui tin tu `public/user/motel-detail.php` va xem hoi thoai tai `public/user/messages.php`.
+  - Schema da co `conversations` va `messages`.
+- Can bo sung:
+  - Tao `public/owner/messages.php` de owner xem hoi thoai, phong lien quan va tra loi.
+  - Danh dau `messages.read_at`, dem tin chua doc va dua inbox vao owner navigation.
+  - Kiem tra owner chi doc hoi thoai cua minh, user chi doc hoi thoai cua minh.
+- Definition of Done:
+  - Mot hoi thoai user-owner-motel gui nhan hai chieu duoc.
+  - Notification tin moi tro den trang ton tai.
+  - Query khong lo tin nhan cua owner khac.
+
+### Thanh vien 3: Bao tri tu phia nguoi thue
+
+- Actor: User va Owner.
+- Muc tieu: phong da co booking hop le co kenh bao su co sau khi vao o.
+- Da co diem bat dau:
+  - Owner da co bang xu ly tai `public/owner/maintenance.php`.
+  - Schema da co `maintenance_requests`.
+- Can bo sung:
+  - Tao `public/user/maintenance.php` de user tao ticket tu booking du dieu kien.
+  - Cho user xem trang thai `open`, `in_progress`, `resolved` va anh dinh kem neu co.
+  - Gui notification cho owner khi co ticket moi va cho user khi ticket duoc cap nhat.
+- Definition of Done:
+  - User khong the tao ticket cho phong khong phai booking cua minh.
+  - Owner cap nhat trang thai va user thay lich su trang thai hien tai.
+  - Ticket moi hien trong owner dashboard/maintenance queue.
+
+### Thanh vien 4: Hop dong va ban giao
+
+- Actor: Owner va User.
+- Muc tieu: doi booking da nhan thanh ho so thue co ngay bat dau, ngay ket thuc va tai lieu.
+- Da co diem bat dau:
+  - Bang `contracts` va trang khung `public/owner/contracts.php`.
+- Can bo sung:
+  - Owner tao hop dong tu booking `accepted` hoac `completed`.
+  - User co trang xem hop dong cua minh, trang thai ky va ngay sap het han.
+  - Them checklist ban giao co ban: tien coc, ngay vao o, ghi chu hien trang phong.
+- Definition of Done:
+  - Hop dong chi gan dung owner, user, motel, booking lien quan.
+  - Hop dong sap het han duoc loc rieng.
+  - Nut dang demo/alert trong trang owner duoc thay bang thao tac that.
+
+### Thanh vien 5: Hoa don dien nuoc cho nguoi thue
+
+- Actor: Owner va User.
+- Muc tieu: owner chot so hang thang, user xem duoc chi tiet hoa don va trang thai.
+- Da co diem bat dau:
+  - Owner da co `public/owner/utilities.php`.
+  - User da co `public/user/my-invoices.php`.
+  - Schema dang co ca `monthly_bills` va `monthly_invoices`, can chon mot nguon chinh.
+- Can bo sung:
+  - Chuan hoa owner tao hoa don va user doc cung mot bang du lieu.
+  - Them chi tiet cach tinh tien phong, dien, nuoc, dich vu.
+  - Them reminder hoa don chua thanh toan trong user dashboard/notification.
+- Definition of Done:
+  - Hoa don owner tao xuat hien o user cung ky thang.
+  - Tong tien tren owner va user khop nhau.
+  - Khong de hai schema hoa don song song ma UI hien du lieu lech nhau.
+
+### Thanh vien 6: Cong cu quyet dinh phong
+
+- Actor: Guest va User.
+- Muc tieu: giup nguoi thue chon phong truoc khi booking, khong can them nghiep vu admin.
+- Can bo sung:
+  - Compare room: chon 2-3 phong tu search va so sanh gia, dien tich, coc, phi, tien nghi, khu vuc.
+  - Shortlist/share: luu danh sach phong dang can nhac va tao link search/filter de quay lai.
+  - Lam ro match score tren `public/user/search.php`: tieu chi nao dang lam phong phu hop.
+- File nen so huu:
+  - `public/user/search.php`, trang compare moi, JS/CSS compare rieng neu can.
+- Definition of Done:
+  - Guest co the so sanh phong dang hien cong khai.
+  - User co the di tu compare ve detail/booking.
+  - Cong cu chi doc phong `approved`, khong lo phong an/cho duyet.
+
+### Thu tu merge de giam dung file
+
+1. Thanh vien 1 va 2 merge navigation user/owner truoc vi cac module khac can link.
+2. Thanh vien 3 va 4 merge sau khi chot dieu kien booking hop le.
+3. Thanh vien 5 chot mot schema hoa don truoc khi sua UI owner va user.
+4. Thanh vien 6 tach CSS/JS compare rieng de tranh xung dot `search.php`.
+
 ## Phase 4 - Chuc Nang Thi Truong De Ban Duoc
 
 ### Epic User
