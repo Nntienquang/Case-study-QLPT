@@ -545,3 +545,51 @@ Lưu ý:
 - Ưu tiên tương thích XAMPP/PHP hiện tại.
 - Không hardcode dữ liệu.
 - Code phải dễ đọc, dễ bảo vệ đồ án và dễ mở rộng thành hệ thống thật.
+BANG CHECK CASE STUDY - CAP NHAT WORKFLOW 2026-05-23
+
+| Nhom chuc nang | Chuc nang yeu cau | Chuc nang chi tiet / file lien quan | Nguoi thuc hien | Check |
+|---|---|---|---|---|
+| Dang ky, dang nhap | Dang ky user | public/register.php: validate name/email/phone/password/captcha/CSRF | Codex | Da fix |
+| Dang ky, dang nhap | Dang ky owner | public/owner-register.php + AuthController: validate dong bo user, owner khong tu approve | Codex | Da fix |
+| Dang ky, dang nhap | Validate trung email | register.php, AuthController | Codex | Da fix |
+| Dang ky, dang nhap | Validate trung so dien thoai | register.php, AuthController | Codex | Da fix |
+| Dang ky, dang nhap | Mat khau manh | Toi thieu 8 ky tu, co chu va so | Codex | Da fix |
+| Dang ky, dang nhap | Dang nhap chung | public/login.php, AuthController | Nhom/Codex | Da co |
+| Dang ky, dang nhap | Phan quyen role | AuthMiddleware, OwnerStatusMiddleware, _owner_guard.php | Nhom/Codex | Da fix |
+| Dang ky, dang nhap | Captcha | register.php, owner-register.php, login.php | Nhom/Codex | Da co |
+| Dang ky, dang nhap | Quen mat khau/reset | AuthController co logic reset | Nhom | Can hoan thien UI/test |
+| Tai khoan | Chinh sua ho so | owner/profile.php, user/profile neu co | Nhom/Codex | Da co |
+| Tai khoan | KYC owner | owner/profile.php: upload KYC ve submitted/pending, admin duyet | Codex | Da fix |
+| Tai khoan | Trang thai owner | pending/submitted/approved/rejected/locked | Codex | Da fix |
+| Trang chu | Hero/search | public/index.php: hero khong lay anh hidden/upload cu the | Codex | Da fix |
+| Trang chu | Tin phong moi nhat | public/index.php, status approved only | Codex | Da fix |
+| Trang chu | Phong xem nhieu | public/index.php sort count_view | Codex | Da fix |
+| Trang chu | Phong yeu thich nhieu | public/index.php favorites + wishlists | Codex | Da fix |
+| Trang chu | Khu vuc/phuong noi bat | districts + search API address fallback | Codex | Can hoan thien data |
+| Trang chu | Chi hien approved | index/search/khuvuc/motel-detail | Codex | Da fix |
+| Tim kiem/phong tro | Loc keyword | public/user/search.php | Nhom | Da co |
+| Tim kiem/phong tro | Loc tinh/thanh | public/user/search.php + vn-address-picker.js | Codex | Da fix |
+| Tim kiem/phong tro | Loc quan/huyen | public/user/search.php + district_code/district_name fallback | Codex | Da fix |
+| Tim kiem/phong tro | Loc phuong/xa | public/user/search.php + ward_code/ward_name | Codex | Da fix |
+| Tim kiem/phong tro | Loc gia/dien tich/tien nghi | public/user/search.php | Nhom/Codex | Da co |
+| Tim kiem/phong tro | Xem chi tiet phong | public/user/motel-detail.php | Nhom/Codex | Da co |
+| Tim kiem/phong tro | Phi dien/nuoc/dich vu | owner add/edit, motel-detail, admin motel_detail | Codex | Da fix |
+| User | Luu yeu thich | ajax/toggle-favorite.php dong bo favorites/wishlists | Codex | Da fix |
+| User | Dat lich xem phong | motel-detail.php + viewing_appointments + owner/viewing-appointments.php | Codex | Da fix |
+| User | Booking | checkout.php, giu workflow hien tai | Nhom/Codex | Da co |
+| User | Thanh toan | payment.php, chi sua UI/CSRF nhe | Nhom/Codex | Can phoi hop payment |
+| User | Danh gia/bao cao | submit-review.php, reports module | Nhom/Codex | Da co |
+| Owner | Login khi chua duyet | dashboard gioi han + profile/KYC | Codex | Da fix |
+| Owner | Dang/sua phong | add-listing.php, edit-listing.php day du field | Codex | Da fix |
+| Owner | Upload anh | validate extension/MIME/size | Codex | Da fix |
+| Owner | Xem lich xem | owner/viewing-appointments.php | Nhom | Da co |
+| Owner | Doanh thu/rut tien | Owner approved moi dung | Nhom/Codex | Can test them |
+| Admin | Duyet owner | user_approvals.php, user_detail.php | Nhom/Codex | Da fix |
+| Admin | Kiem duyet phong | motels.php, motel_detail.php | Nhom/Codex | Da co |
+| Admin | Canh bao owner | user_detail.php + OwnerModeration + owner_warnings | Nhom/Codex | Da co |
+| Admin | Activity log | ActivityLog, user_detail warning log | Nhom/Codex | Da co |
+| Admin | Page view/traffic | page_views + dashboard neu co | Nhom/Codex | Can hoan thien UI |
+| Bao mat/he thong | CSRF | login/register/owner listing/booking/payment/admin actions | Codex | Da fix |
+| Bao mat/he thong | Prepared statement | Cac luong chinh da dung prepare, con can audit toan bo | Codex | Can hoan thien |
+| Bao mat/he thong | Upload validation | Owner listing/profile KYC | Codex | Da fix |
+| Bao mat/he thong | Status workflow | owner/motel/booking/payment mapping an toan | Codex | Da fix |

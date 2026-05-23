@@ -4,6 +4,7 @@
 @require_once '../../core/Database.php';
 @require_once '../../core/OwnerStatusMiddleware.php';
 @require_once '../../core/ListingQuality.php';
+@require_once '../../core/Csrf.php';
 
 session_start();
 
@@ -117,7 +118,10 @@ $districts = $conn->query("SELECT id, name FROM districts ORDER BY name")->fetch
 $utilities_list = $conn->query("SELECT id, name FROM utilities ORDER BY name")->fetch_all(MYSQLI_ASSOC);
 
 // Xử lý Form Submit
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_verified) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_verified && !Csrf::validateRequest('owner_add_listing')) {
+    $message = 'Phiên đăng tin đã hết hạn. Vui lòng thử lại.';
+    $message_type = 'danger';
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_verified) {
     $title = trim($_POST['title'] ?? '');
     $description = trim($_POST['description'] ?? '');
     $price = (int)($_POST['price'] ?? 0);
@@ -149,6 +153,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_verified) {
     $available_from = !empty($_POST['available_from']) ? $_POST['available_from'] : null;
     $service_fee = (int)($_POST['service_fee'] ?? 0);
     $deposit_months = (float)($_POST['deposit_months'] ?? 1);
+    $max_people = max(0, (int)($_POST['max_people'] ?? 0));
+    $electricity_unit_price = max(0, (int)($_POST['electricity_unit_price'] ?? $_POST['electricity_price'] ?? 0));
+    $water_fee_per_person = max(0, (int)($_POST['water_fee_per_person'] ?? $_POST['water_price'] ?? 0));
+    $internet_fee = max(0, (int)($_POST['internet_fee'] ?? $_POST['internet_price'] ?? 0));
+    $parking_fee = max(0, (int)($_POST['parking_fee'] ?? 0));
 
     // Đánh giá chất lượng tin đăng
     $quality = ListingQuality::evaluate([
@@ -159,18 +168,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_verified) {
     ]);
     $health_score = $quality['score'];
 
-    if (empty($title) || empty($price) || empty($address)) {
+    if (empty($title) || $price <= 0 || $area <= 0 || empty($address)) {
         $message = 'Vui lòng điền đầy đủ các thông tin bắt buộc!';
         $message_type = 'danger';
     } else {
-        // Câu lệnh INSERT (17 dấu ? ứng với 17 biến trong bind_param)
+        // Câu lệnh INSERT đầy đủ thông số chi phí để đồng bộ schema production.
         $stmt = $conn->prepare("
-            INSERT INTO motels (user_id, title, description, price, area, bedrooms, bathrooms, address, category_id, district_id, utilities, available_from, service_fee, deposit_months, health_score, status, lat, lng)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
+            INSERT INTO motels
+                (user_id, title, description, price, area, bedrooms, bathrooms, address, category_id, district_id,
+                 utilities, available_from, service_fee, deposit_months, health_score, max_people,
+                 electricity_unit_price, water_fee_per_person, internet_fee, parking_fee, status, lat, lng)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
         ");
 
-        // Sửa lỗi ArgumentCountError: Chuỗi định dạng 17 ký tự cho 17 biến
-        $stmt->bind_param("issiiiisiissididd", $owner_id, $title, $description, $price, $area, $bedrooms, $bathrooms, $address, $category_id, $district_id, $utilities_string, $available_from, $service_fee, $deposit_months, $health_score, $lat, $lng);
+        // Chuỗi định dạng phải khớp đủ biến bind_param.
+        $stmt->bind_param("issiiiisiissidiiiiiidd", $owner_id, $title, $description, $price, $area, $bedrooms, $bathrooms, $address, $category_id, $district_id, $utilities_string, $available_from, $service_fee, $deposit_months, $health_score, $max_people, $electricity_unit_price, $water_fee_per_person, $internet_fee, $parking_fee, $lat, $lng);
 
         if ($stmt->execute()) {
             $motel_id = $stmt->insert_id;
@@ -190,11 +202,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_verified) {
                 if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
                 
                 $stmt_img = $conn->prepare("INSERT INTO motel_images (motel_id, image_url) VALUES (?, ?)");
+                $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+                $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+                $maxUploadSize = 5 * 1024 * 1024;
                 foreach ($_FILES['images']['name'] as $key => $name) {
                     if ($_FILES['images']['error'][$key] === 0) {
-                        $ext = pathinfo($name, PATHINFO_EXTENSION);
+                        $tmpName = $_FILES['images']['tmp_name'][$key];
+                        $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+                        $mime = is_file($tmpName) ? (mime_content_type($tmpName) ?: '') : '';
+                        $size = (int)($_FILES['images']['size'][$key] ?? 0);
+                        if (!in_array($ext, $allowedExtensions, true) || !in_array($mime, $allowedMimeTypes, true) || $size > $maxUploadSize) {
+                            continue;
+                        }
                         $new_name = uniqid('motel_') . '.' . $ext;
-                        if (move_uploaded_file($_FILES['images']['tmp_name'][$key], $upload_dir . $new_name)) {
+                        if (move_uploaded_file($tmpName, $upload_dir . $new_name)) {
                             $image_url = 'uploads/motels/' . $new_name;
                             $stmt_img->bind_param("is", $motel_id, $image_url);
                             $stmt_img->execute();
@@ -356,6 +377,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_verified) {
 
                 <form method="POST" enctype="multipart/form-data" class="wb-card p-4"
                     onsubmit="const btn = this.querySelector('button[type=submit]'); btn.disabled = true; btn.innerHTML = 'Đang gửi...';">
+                    <?php echo Csrf::field('owner_add_listing'); ?>
                     <h5 class="mb-3 border-bottom pb-2"><i class="fas fa-camera text-primary"></i> Hình Ảnh</h5>
                     <div class="mb-4">
                         <label class="form-label">Chọn hình ảnh *</label>
@@ -444,6 +466,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $is_verified) {
                     <div class="mb-3">
                         <label class="form-label">Mô tả</label>
                         <textarea name="description" class="form-control" rows="4"></textarea>
+                    </div>
+
+                    <h5 class="mb-3 border-bottom pb-2"><i class="fas fa-ruler-combined text-primary"></i> Thông Số & Chi Phí</h5>
+                    <div class="row mb-4">
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Diện tích (m²) *</label>
+                            <input type="number" name="area" class="form-control" min="1" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Số người tối đa</label>
+                            <input type="number" name="max_people" class="form-control" min="0">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Phòng ngủ</label>
+                            <input type="number" name="bedrooms" class="form-control" min="0" value="0">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Phòng tắm</label>
+                            <input type="number" name="bathrooms" class="form-control" min="0" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Tiền điện (VNĐ/kWh)</label>
+                            <input type="number" name="electricity_unit_price" class="form-control" min="0" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Tiền nước (VNĐ/người)</label>
+                            <input type="number" name="water_fee_per_person" class="form-control" min="0" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Internet (VNĐ/tháng)</label>
+                            <input type="number" name="internet_fee" class="form-control" min="0" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Gửi xe (VNĐ/tháng)</label>
+                            <input type="number" name="parking_fee" class="form-control" min="0" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Phí dịch vụ (VNĐ/tháng)</label>
+                            <input type="number" name="service_fee" class="form-control" min="0" value="0">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Số tháng cọc</label>
+                            <input type="number" step="0.5" min="0" name="deposit_months" class="form-control" value="1">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Trống từ ngày</label>
+                            <input type="date" name="available_from" class="form-control">
+                        </div>
                     </div>
 
                     <h5 class="mb-3 border-bottom pb-2">Tiện Nghi & Khác</h5>

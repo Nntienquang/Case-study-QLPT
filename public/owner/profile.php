@@ -71,59 +71,89 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($message_type !== 'danger') {
-        $upload_dir = '../../public/uploads/kyc/';
+        $upload_dir = __DIR__ . '/../uploads/kyc/';
         if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
 
         $id_card_front = $user['id_card_front'];
         $id_card_back = $user['id_card_back'];
         $selfie_image = $user['selfie_image'] ?? null;
+        $allowedKycExt = ['jpg', 'jpeg', 'png', 'webp'];
+        $allowedKycMime = ['image/jpeg', 'image/png', 'image/webp'];
+        $maxKycBytes = 5 * 1024 * 1024;
 
         // Upload mặt trước
         if (!empty($_FILES['id_card_front']['name'])) {
-            $ext = pathinfo($_FILES['id_card_front']['name'], PATHINFO_EXTENSION);
-            $new_name = 'front_' . $owner_id . '_' . time() . '.' . $ext;
-            if (move_uploaded_file($_FILES['id_card_front']['tmp_name'], $upload_dir . $new_name)) {
-                $id_card_front = 'uploads/kyc/' . $new_name;
+            $ext = strtolower(pathinfo($_FILES['id_card_front']['name'], PATHINFO_EXTENSION));
+            $imageInfo = @getimagesize($_FILES['id_card_front']['tmp_name']);
+            $mime = is_array($imageInfo) ? (string)($imageInfo['mime'] ?? '') : '';
+            if ((int)($_FILES['id_card_front']['size'] ?? 0) > $maxKycBytes || !in_array($ext, $allowedKycExt, true) || !in_array($mime, $allowedKycMime, true)) {
+                $message = 'Chỉ chấp nhận ảnh JPG, PNG hoặc WEBP, tối đa 5MB.';
+                $message_type = 'danger';
+            } else {
+                $new_name = 'front_' . $owner_id . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+                if (move_uploaded_file($_FILES['id_card_front']['tmp_name'], $upload_dir . $new_name)) {
+                    $id_card_front = 'uploads/kyc/' . $new_name;
+                }
             }
         }
 
         // Upload mặt sau
         if (!empty($_FILES['id_card_back']['name'])) {
-            $ext = pathinfo($_FILES['id_card_back']['name'], PATHINFO_EXTENSION);
-            $new_name = 'back_' . $owner_id . '_' . time() . '.' . $ext;
-            if (move_uploaded_file($_FILES['id_card_back']['tmp_name'], $upload_dir . $new_name)) {
-                $id_card_back = 'uploads/kyc/' . $new_name;
+            $ext = strtolower(pathinfo($_FILES['id_card_back']['name'], PATHINFO_EXTENSION));
+            $imageInfo = @getimagesize($_FILES['id_card_back']['tmp_name']);
+            $mime = is_array($imageInfo) ? (string)($imageInfo['mime'] ?? '') : '';
+            if ((int)($_FILES['id_card_back']['size'] ?? 0) > $maxKycBytes || !in_array($ext, $allowedKycExt, true) || !in_array($mime, $allowedKycMime, true)) {
+                $message = 'Chỉ chấp nhận ảnh JPG, PNG hoặc WEBP, tối đa 5MB.';
+                $message_type = 'danger';
+            } else {
+                $new_name = 'back_' . $owner_id . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+                if (move_uploaded_file($_FILES['id_card_back']['tmp_name'], $upload_dir . $new_name)) {
+                    $id_card_back = 'uploads/kyc/' . $new_name;
+                }
             }
         }
 
         if (!empty($_FILES['selfie_image']['name'])) {
             $ext = strtolower(pathinfo($_FILES['selfie_image']['name'], PATHINFO_EXTENSION));
-            if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) {
-                $new_name = 'selfie_' . $owner_id . '_' . time() . '.' . $ext;
+            $imageInfo = @getimagesize($_FILES['selfie_image']['tmp_name']);
+            $mime = is_array($imageInfo) ? (string)($imageInfo['mime'] ?? '') : '';
+            if ((int)($_FILES['selfie_image']['size'] ?? 0) > $maxKycBytes || !in_array($ext, $allowedKycExt, true) || !in_array($mime, $allowedKycMime, true)) {
+                $message = 'Chỉ chấp nhận ảnh JPG, PNG hoặc WEBP, tối đa 5MB.';
+                $message_type = 'danger';
+            } else {
+                $new_name = 'selfie_' . $owner_id . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
                 if (move_uploaded_file($_FILES['selfie_image']['tmp_name'], $upload_dir . $new_name)) {
                     $selfie_image = 'uploads/kyc/' . $new_name;
                 }
             }
         }
 
-        $hasFullVerification = $phone !== null && $address !== '' && $idcard_number !== '' && $id_card_front !== '' && $id_card_back !== '' && $bank_name !== '' && $bank_account_no !== '' && $bank_account_name !== '';
-        $hasDemoKycDocuments = $idcard_number !== '' && ($id_card_front !== '' || $id_card_back !== '');
-        $shouldApproveForDemo = $hasFullVerification || $hasDemoKycDocuments;
-        $nextVerificationStatus = $shouldApproveForDemo ? 'approved' : 'pending_verification';
+        if ($message_type !== 'danger') {
+        $currentVerificationStatus = (string)($user['owner_verification_status'] ?? 'pending_verification');
+        $hasReviewableKyc = $phone !== null && $address !== '' && $idcard_number !== '' && $id_card_front !== '' && $id_card_back !== '';
+        if ($currentVerificationStatus === 'approved') {
+            $nextVerificationStatus = 'approved';
+        } elseif ($hasReviewableKyc) {
+            $nextVerificationStatus = 'submitted';
+        } elseif ($currentVerificationStatus === 'rejected') {
+            $nextVerificationStatus = 'rejected';
+        } else {
+            $nextVerificationStatus = 'pending_verification';
+        }
 
         // Cập nhật Database
-        $stmt = $db->prepare("UPDATE users SET name = ?, phone = ?, address = ?, idcard_number = ?, id_card_front = ?, id_card_back = ?, selfie_image = ?, bank_name = ?, bank_account_no = ?, bank_account_name = ?, owner_verification_status = ?, status = CASE WHEN ? = 'approved' THEN 'approved' ELSE status END, verification_submitted_at = CASE WHEN ? = 'approved' THEN COALESCE(verification_submitted_at, NOW()) ELSE verification_submitted_at END, verification_reviewed_at = CASE WHEN ? = 'approved' THEN NOW() ELSE verification_reviewed_at END, verified_at = CASE WHEN ? = 'approved' THEN NOW() ELSE verified_at END, bank_verified_at = CASE WHEN ? = 'approved' AND bank_account_no <> '' THEN NOW() ELSE bank_verified_at END, verification_rejection_reason = CASE WHEN ? = 'approved' THEN NULL ELSE verification_rejection_reason END WHERE id = ?");
-        $stmt->bind_param("sssssssssssssssssi", $name, $phone, $address, $idcard_number, $id_card_front, $id_card_back, $selfie_image, $bank_name, $bank_account_no, $bank_account_name, $nextVerificationStatus, $nextVerificationStatus, $nextVerificationStatus, $nextVerificationStatus, $nextVerificationStatus, $nextVerificationStatus, $nextVerificationStatus, $owner_id);
+        $stmt = $db->prepare("UPDATE users SET name = ?, phone = ?, address = ?, idcard_number = ?, id_card_front = ?, id_card_back = ?, selfie_image = ?, bank_name = ?, bank_account_no = ?, bank_account_name = ?, owner_verification_status = ?, verification_submitted_at = CASE WHEN ? = 'submitted' THEN NOW() ELSE verification_submitted_at END, verification_reviewed_by = CASE WHEN ? = 'submitted' THEN NULL ELSE verification_reviewed_by END, verification_reviewed_at = CASE WHEN ? = 'submitted' THEN NULL ELSE verification_reviewed_at END, verification_rejection_reason = CASE WHEN ? = 'submitted' THEN NULL ELSE verification_rejection_reason END WHERE id = ?");
+        $stmt->bind_param("sssssssssssssssi", $name, $phone, $address, $idcard_number, $id_card_front, $id_card_back, $selfie_image, $bank_name, $bank_account_no, $bank_account_name, $nextVerificationStatus, $nextVerificationStatus, $nextVerificationStatus, $nextVerificationStatus, $nextVerificationStatus, $owner_id);
 
         if ($stmt->execute()) {
             $_SESSION['name'] = $name;
             $_SESSION['owner_verification_status'] = $nextVerificationStatus;
-            if ($nextVerificationStatus === 'approved') {
-                $_SESSION['status'] = 'approved';
-            }
-            $message = $shouldApproveForDemo
+            $message = $nextVerificationStatus === 'submitted'
                 ? 'Hồ sơ xác minh đã được duyệt thành công. Bạn có thể sử dụng khu vực owner ngay.'
                 : 'Hồ sơ đã lưu. Bạn cần bổ sung đủ CCCD, số điện thoại, địa chỉ và ngân hàng để gửi xác minh.';
+            $message = $nextVerificationStatus === 'submitted'
+                ? 'Ho so xac minh da duoc gui. Vui long cho admin duyet.'
+                : 'Ho so da luu. Ban can bo sung du CCCD, so dien thoai va dia chi de gui xac minh.';
             $message_type = 'success';
 
             // Refresh lại dữ liệu hiển thị
@@ -135,6 +165,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $message = 'Lỗi cập nhật cơ sở dữ liệu!';
             $message_type = 'danger';
+        }
         }
         }
     }

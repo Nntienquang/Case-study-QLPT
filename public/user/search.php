@@ -18,6 +18,12 @@ $user_role = $_SESSION['role'] ?? $_SESSION['user_role'] ?? 'user';
 // --- Lấy dữ liệu từ GET ---
 $keyword = trim($_GET['keyword'] ?? '');
 $district_id = $_GET['district_id'] ?? ($_GET['district'] ?? '');
+$province_code = trim((string)($_GET['province_code'] ?? ''));
+$province_name = trim((string)($_GET['province_name'] ?? ''));
+$district_code = trim((string)($_GET['district_code'] ?? ''));
+$district_name = trim((string)($_GET['district_name'] ?? ''));
+$ward_code = trim((string)($_GET['ward_code'] ?? ''));
+$ward_name = trim((string)($_GET['ward_name'] ?? ''));
 $category_id = $_GET['category_id'] ?? ($_GET['category'] ?? '');
 $min_price = $_GET['min_price'] ?? '';
 $max_price = $_GET['max_price'] ?? '';
@@ -43,7 +49,7 @@ if (isset($_GET['save_search']) && !$isLoggedUser) {
 }
 
 if (isset($_GET['save_search']) && $isLoggedUser) {
-    $hasFilter = $keyword !== '' || $district_id !== '' || $category_id !== '' || $min_price !== '' || $max_price !== '' || $area_min !== '';
+    $hasFilter = $keyword !== '' || $district_id !== '' || $province_code !== '' || $district_code !== '' || $ward_code !== '' || $category_id !== '' || $min_price !== '' || $max_price !== '' || $area_min !== '';
     if ($hasFilter) {
         $searchName = $keyword !== '' ? $keyword : 'Bộ lọc phòng trọ';
         $stmt = $db->prepare('
@@ -85,6 +91,25 @@ if ($district_id !== '') {
     $where .= ' AND m.district_id = ?';
     $params[] = (int)$district_id;
     $types .= 'i';
+}
+if ($province_code !== '') {
+    $where .= ' AND (m.province_code = ? OR m.province_name = ?)';
+    $params[] = $province_code;
+    $params[] = $province_name;
+    $types .= 'ss';
+}
+if ($district_code !== '') {
+    $where .= ' AND (m.district_code = ? OR m.district_name = ? OR d.name = ?)';
+    $params[] = $district_code;
+    $params[] = $district_name;
+    $params[] = $district_name;
+    $types .= 'sss';
+}
+if ($ward_code !== '') {
+    $where .= ' AND (m.ward_code = ? OR m.ward_name = ?)';
+    $params[] = $ward_code;
+    $params[] = $ward_name;
+    $types .= 'ss';
 }
 if ($category_id !== '') {
     $where .= ' AND m.category_id = ?';
@@ -139,6 +164,8 @@ $orderBy = 'm.is_featured DESC, m.health_score DESC, m.created_at DESC';
 if ($sort === 'price_asc') { $orderBy = 'm.price ASC, m.health_score DESC'; } 
 elseif ($sort === 'price_desc') { $orderBy = 'm.price DESC, m.health_score DESC'; } 
 elseif ($sort === 'newest') { $orderBy = 'm.created_at DESC'; }
+elseif ($sort === 'views') { $orderBy = 'm.count_view DESC, m.created_at DESC'; }
+elseif ($sort === 'popular') { $orderBy = '((SELECT COUNT(*) FROM favorites f WHERE f.motel_id = m.id) + (SELECT COUNT(*) FROM wishlists w WHERE w.motel_id = m.id)) DESC, m.created_at DESC'; }
 
 $query = '
     SELECT m.*, d.name as district_name, c.name as category_name, u.name as owner_name, u.verified_at, u.trust_score,
@@ -470,6 +497,26 @@ unset($baseQuery['page'], $baseQuery['save_search']);
                                 </select>
                             </div>
                             <div class="mb-3">
+                                <div class="mb-3" data-address-picker>
+                                    <label class="form-label fw-bold text-dark small text-uppercase">Địa chỉ theo API</label>
+                                    <input type="hidden" name="province_name" data-address-province-name value="<?php echo htmlspecialchars($province_name); ?>">
+                                    <input type="hidden" name="district_name" data-address-district-name value="<?php echo htmlspecialchars($district_name); ?>">
+                                    <input type="hidden" name="ward_name" data-address-ward-name value="<?php echo htmlspecialchars($ward_name); ?>">
+                                    <input type="hidden" data-address-full>
+                                    <div class="vstack gap-2">
+                                        <select name="province_code" class="form-select bg-light" data-address-province data-selected="<?php echo htmlspecialchars($province_code); ?>">
+                                            <option value="">-- Chọn tỉnh/thành --</option>
+                                        </select>
+                                        <select name="district_code" class="form-select bg-light" data-address-district data-selected="<?php echo htmlspecialchars($district_code); ?>" disabled>
+                                            <option value="">-- Chọn quận/huyện --</option>
+                                        </select>
+                                        <select name="ward_code" class="form-select bg-light" data-address-ward data-selected="<?php echo htmlspecialchars($ward_code); ?>" disabled>
+                                            <option value="">-- Chọn phường/xã --</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-text" data-address-status></div>
+                                    <div class="form-text">Dùng dữ liệu provinces.open-api.vn; khu vực cũ phía trên là fallback cho tin cũ.</div>
+                                </div>
                                 <label class="form-label fw-bold text-dark small text-uppercase">Loại hình</label>
                                 <select name="category_id" class="form-select bg-light">
                                     <option value="">Tất cả loại phòng</option>
@@ -562,7 +609,7 @@ unset($baseQuery['page'], $baseQuery['save_search']);
                         <?php foreach ($motels as $motel): ?>
                         <?php
                                 $moveInCost = (int)$motel['price'] + (int)($motel['service_fee'] ?? 0) + (int)round((int)$motel['price'] * (float)($motel['deposit_months'] ?? 1));
-                                $motelImage = !empty($motel['image_url']) ? $motel['image_url'] : '../uploads/motels/motel_6a096b186de22.jpeg';
+                                $motelImage = !empty($motel['image_url']) ? $motel['image_url'] : 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=900&q=80';
                                 if (!filter_var($motelImage, FILTER_VALIDATE_URL) && strpos($motelImage, '../') !== 0) {
                                     $motelImage = '../' . ltrim($motelImage, '/');
                                 }
@@ -683,6 +730,7 @@ unset($baseQuery['page'], $baseQuery['save_search']);
     }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../assets/js/vn-address-picker.js"></script>
 </body>
 
 </html>

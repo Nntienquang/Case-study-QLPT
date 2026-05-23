@@ -33,6 +33,21 @@ function auth_redirect_for_role(string $role): string
     return './index.php';
 }   
 
+function auth_safe_redirect(?string $redirect): string
+{
+    $redirect = trim((string)$redirect);
+    if ($redirect === '') {
+        return '';
+    }
+
+    $redirect = str_replace('\\', '/', $redirect);
+    if (preg_match('/^[a-z][a-z0-9+.-]*:/i', $redirect) || strpos($redirect, '//') === 0) {
+        return '';
+    }
+
+    return ltrim($redirect, '/');
+}
+
 function login_client_ip(): string
 {
     return $_SERVER['REMOTE_ADDR'] ?? 'local';
@@ -230,13 +245,14 @@ function login_record_failure(mysqli $conn, string $email, string $reason): arra
 
 function login_write_log(mysqli $conn, int $adminId, string $action, string $entityType, int $entityId, string $description): void
 {
+    $adminIdForInsert = $adminId > 0 ? $adminId : null;
     $ip = $_SERVER['REMOTE_ADDR'] ?? '';
     $ua = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 255);
     $stmt = $conn->prepare('INSERT INTO activity_logs (admin_id, action, entity_type, entity_id, description, ip_address, user_agent, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())');
     if (!$stmt) {
         return;
     }
-    $stmt->bind_param('ississs', $adminId, $action, $entityType, $entityId, $description, $ip, $ua);
+    $stmt->bind_param('ississs', $adminIdForInsert, $action, $entityType, $entityId, $description, $ip, $ua);
     $stmt->execute();
     $stmt->close();
 }
@@ -277,7 +293,7 @@ function verify_public_credentials(mysqli $conn, string $email, string $password
         return ['success' => false, 'message' => 'Email hoặc mật khẩu không đúng.', 'reason' => 'bad_credentials'];
     }
 
-    if (($user['status'] ?? '') === 'blocked') {
+    if (in_array((string)($user['status'] ?? ''), ['blocked', 'locked', 'banned'], true)) {
         return ['success' => false, 'message' => 'Tài khoản của bạn bị khóa.', 'reason' => 'blocked'];
     }
 
@@ -357,7 +373,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     header('Location: ./change-password.php');
                     exit;
                 }
-                header('Location: ' . auth_redirect_for_role($result['user']['role']));
+                $requestedRedirect = auth_safe_redirect($_POST['redirect'] ?? $_GET['redirect'] ?? '');
+                $role = (string)($result['user']['role'] ?? 'user');
+                if ($requestedRedirect !== '' && $role === 'user') {
+                    header('Location: ./'. $requestedRedirect);
+                    exit;
+                }
+                header('Location: ' . auth_redirect_for_role($role));
                 exit;
             }
 
@@ -422,6 +444,10 @@ $useTurnstile = $showCaptcha && login_turnstile_enabled();
 
                 <form method="POST" autocomplete="off">
                     <?php echo Csrf::field('login'); ?>
+                    <?php $requestedRedirect = auth_safe_redirect($_GET['redirect'] ?? $_POST['redirect'] ?? ''); ?>
+                    <?php if ($requestedRedirect !== ''): ?>
+                    <input type="hidden" name="redirect" value="<?php echo htmlspecialchars($requestedRedirect, ENT_QUOTES, 'UTF-8'); ?>">
+                    <?php endif; ?>
 
 
 

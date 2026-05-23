@@ -69,7 +69,7 @@ $hasPageViews = admin_dashboard_table_exists($conn, 'page_views');
 $ownerModeration = new OwnerModeration($db);
 
 $dashboardStats = [
-    'owner_pending' => admin_dashboard_scalar($conn, "SELECT COUNT(*) AS value FROM users WHERE role = 'owner' AND owner_verification_status = 'submitted'"),
+    'owner_pending' => admin_dashboard_scalar($conn, "SELECT COUNT(*) AS value FROM users WHERE role = 'owner' AND owner_verification_status IN ('submitted', 'pending')"),
     'room_pending' => admin_dashboard_scalar($conn, "SELECT COUNT(*) AS value FROM motels WHERE status = 'pending'"),
     'report_pending' => admin_dashboard_scalar($conn, "SELECT COUNT(*) AS value FROM reports WHERE status = 'pending'"),
     'booking_pending' => admin_dashboard_scalar($conn, "SELECT COUNT(*) AS value FROM bookings WHERE status = 'pending'"),

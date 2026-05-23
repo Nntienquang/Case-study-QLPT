@@ -103,9 +103,13 @@ $whereParts = ["role = 'owner'"];
 $whereParams = [];
 $whereTypes = '';
 if (in_array($tab, ['pending', 'approved', 'rejected'], true)) {
-    $whereParts[] = 'owner_verification_status = ?';
-    $whereParams[] = $tab === 'pending' ? 'submitted' : $tab;
-    $whereTypes .= 's';
+    if ($tab === 'pending') {
+        $whereParts[] = "owner_verification_status IN ('submitted', 'pending')";
+    } else {
+        $whereParts[] = 'owner_verification_status = ?';
+        $whereParams[] = $tab;
+        $whereTypes .= 's';
+    }
 } else {
     $tab = 'all';
 }
@@ -137,7 +141,7 @@ if ($usersStmt) {
 
 $stats = [
     'total' => $db->count('users', "role = 'owner'"),
-    'pending' => $db->count('users', "role = 'owner' AND owner_verification_status = 'submitted'"),
+    'pending' => $db->count('users', "role = 'owner' AND owner_verification_status IN ('submitted', 'pending')"),
     'approved' => $db->count('users', "role = 'owner' AND owner_verification_status = 'approved'"),
     'rejected' => $db->count('users', "role = 'owner' AND owner_verification_status = 'rejected'"),
 ];
@@ -204,7 +208,7 @@ admin_flash_messages();
                         <td><span class="wb-pill <?php echo admin_pill_class($status); ?>"><?php echo admin_status_label($status); ?></span></td>
                         <td class="text-end">
                             <a href="user_detail.php?id=<?php echo (int)$user['id']; ?>" class="btn btn-sm btn-primary"><i class="fa fa-eye"></i> Xem</a>
-                            <?php if ($status === 'submitted'): ?>
+                            <?php if (in_array($status, ['submitted', 'pending'], true)): ?>
                                 <button type="button" class="btn btn-sm btn-success" onclick="approveUser(<?php echo (int)$user['id']; ?>)"><i class="fa fa-check"></i> Duyệt</button>
                                 <button type="button" class="btn btn-sm btn-outline-danger" onclick='openRejectModal(<?php echo (int)$user['id']; ?>, <?php echo json_encode((string)($user['name'] ?? 'Owner')); ?>)'><i class="fa fa-times"></i> Từ chối</button>
                             <?php endif; ?>

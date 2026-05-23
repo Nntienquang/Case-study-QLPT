@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $status = $_POST['status'] ?? '';
         $adminNote = trim((string)($_POST['admin_note'] ?? ''));
         $adminId = (int)$_SESSION['user_id'];
-        $validStatuses = ['investigating', 'resolved', 'rejected', 'closed'];
+        $validStatuses = ['reviewing', 'investigating', 'resolved', 'rejected', 'closed'];
 
         if (in_array($status, ['resolved', 'rejected', 'closed'], true) && $adminNote === '') {
             $_SESSION['error'] = 'Vui lòng nhập ghi chú xử lý cho trạng thái này.';

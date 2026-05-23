@@ -72,7 +72,7 @@ class AuthMiddleware {
     public function requireNotBlocked() {
         $this->requireLogin();
         
-        if ($_SESSION['status'] === 'blocked') {
+        if (in_array((string)($_SESSION['status'] ?? ''), ['blocked', 'locked', 'banned'], true)) {
             // Logout if blocked
             $this->authController->logout();
             header("Location: " . BASE_URL . "login.php?blocked=1");

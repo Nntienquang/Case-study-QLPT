@@ -17,6 +17,7 @@ if (($_SESSION['role'] ?? '') !== 'owner') {
     exit;
 }
 
+$allowUnverifiedOwner = true;
 require_once __DIR__ . '/_owner_guard.php';
 
 $owner_id = (int)$_SESSION['user_id'];
@@ -29,6 +30,7 @@ $is_dark = $userTheme['dark_mode'] ?? 0;
 
 $db = new Database($conn);
 $ownerId = (int)$_SESSION['user_id'];
+$ownerWorkspaceCheck = $ownerGuard->canUseOwnerWorkspace($ownerId);
 $ownerName = $_SESSION['name'] ?? $_SESSION['user_name'] ?? 'Chủ phòng';
 
 // --- CÁC HÀM TRỢ GIÚP ---
@@ -96,6 +98,66 @@ function owner_dash_booking_status(string $status): string
 // --- TRUY VẤN DỮ LIỆU BỔ SUNG ---
 
 // 1. Lấy trạng thái tài khoản và số dư ví
+if (empty($ownerWorkspaceCheck['allowed'])) {
+    $verificationStatus = (string)($ownerGuardInfo['owner_verification_status'] ?? 'pending_verification');
+    $verificationMessage = OwnerStatusMiddleware::verificationMessage($verificationStatus, $ownerGuardInfo);
+    ?>
+<!DOCTYPE html>
+<html lang="vi" <?php echo $is_dark ? 'data-bs-theme="dark"' : ''; ?>>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard owner - QuanLyPhongTro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="../assets/css/modern.css" rel="stylesheet">
+    <link href="../assets/css/workbench.css" rel="stylesheet">
+</head>
+<body class="workbench">
+    <header class="wb-topbar">
+        <div class="container-lg wb-topbar-inner">
+            <a class="wb-brand" href="../index.php"><span class="wb-brand-mark"><i class="fas fa-house-chimney"></i></span><span>QuanLyPhongTro</span></a>
+            <div class="wb-user">
+                <span><?php echo owner_dash_e($ownerName); ?></span>
+                <a class="btn btn-outline-secondary btn-sm" href="../logout.php">Dang xuat</a>
+            </div>
+        </div>
+    </header>
+    <main class="wb-shell">
+        <div class="container-lg wb-layout">
+            <aside class="wb-sidebar">
+                <div class="wb-side-title">Owner</div>
+                <a class="wb-side-link active" href="dashboard.php"><i class="fas fa-chart-line"></i> Tong quan</a>
+                <a class="wb-side-link" href="profile.php?verify=1"><i class="fas fa-user-check"></i> Ho so KYC</a>
+                <a class="wb-side-link" href="../notifications.php"><i class="fas fa-bell"></i> Thong bao</a>
+                <a class="wb-side-link" href="../logout.php"><i class="fas fa-right-from-bracket"></i> Dang xuat</a>
+            </aside>
+            <section>
+                <div class="wb-card p-4 mb-4">
+                    <div class="d-flex gap-3 align-items-start">
+                        <i class="fas fa-circle-info text-warning fs-3"></i>
+                        <div>
+                            <h2 class="h4 mb-2">Tai khoan owner chua duoc kich hoat day du</h2>
+                            <p class="mb-3"><?php echo owner_dash_e($verificationMessage); ?></p>
+                            <a class="btn btn-primary" href="profile.php?verify=1"><i class="fas fa-upload"></i> Cap nhat ho so xac minh</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="wb-grid wb-stats-4">
+                    <div class="wb-card"><i class="fa fa-user-check wb-card-icon"></i><div class="wb-card-value"><?php echo owner_dash_e(OwnerStatusMiddleware::verificationLabel($verificationStatus)); ?></div><div class="wb-card-label">Trang thai KYC</div></div>
+                    <div class="wb-card"><i class="fa fa-lock wb-card-icon"></i><div class="wb-card-value">Khoa</div><div class="wb-card-label">Dang phong</div></div>
+                    <div class="wb-card"><i class="fa fa-lock wb-card-icon"></i><div class="wb-card-value">Khoa</div><div class="wb-card-label">Booking</div></div>
+                    <div class="wb-card"><i class="fa fa-lock wb-card-icon"></i><div class="wb-card-value">Khoa</div><div class="wb-card-label">Doanh thu</div></div>
+                </div>
+            </section>
+        </div>
+    </main>
+</body>
+</html>
+<?php
+    exit;
+}
+
 $userData = owner_dash_rows($conn, "SELECT u.status, COALESCE(w.balance, 0) as balance 
                                     FROM users u 
                                     LEFT JOIN wallets w ON u.id = w.user_id 

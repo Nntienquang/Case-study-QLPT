@@ -39,8 +39,8 @@ class OwnerStatusMiddleware
             return ['allowed' => false, 'status' => 'invalid_role', 'message' => 'Chỉ chủ phòng mới được truy cập khu vực này.'];
         }
 
-        if (($owner['status'] ?? '') === 'blocked') {
-            return ['allowed' => false, 'status' => 'blocked', 'message' => 'Tài khoản của bạn đang bị khóa.'];
+        if (in_array((string)($owner['status'] ?? ''), ['blocked', 'locked', 'banned'], true)) {
+            return ['allowed' => false, 'status' => (string)$owner['status'], 'message' => 'Tài khoản của bạn đang bị khóa.'];
         }
 
         $verification = (string)($owner['owner_verification_status'] ?? 'pending_verification');
@@ -75,7 +75,7 @@ class OwnerStatusMiddleware
     public static function verificationMessage(string $status, ?array $owner = []): string
     {
         return match ($status) {
-            'pending_verification' => 'Bạn cần hoàn tất hồ sơ xác minh chủ phòng trước khi sử dụng khu vực owner.',
+            'pending', 'pending_verification' => 'Bạn cần hoàn tất hồ sơ xác minh chủ phòng trước khi sử dụng khu vực owner.',
             'submitted' => 'Hồ sơ xác minh của bạn đang chờ admin duyệt.',
             'rejected' => 'Hồ sơ xác minh bị từ chối: ' . (($owner['verification_rejection_reason'] ?? $owner['rejection_reason'] ?? '') ?: 'Vui lòng cập nhật lại hồ sơ.'),
             default => 'Tài khoản owner chưa đủ điều kiện sử dụng chức năng này.',
@@ -86,6 +86,7 @@ class OwnerStatusMiddleware
     {
         return [
             'not_required' => 'Không yêu cầu',
+            'pending' => 'Chưa gửi hồ sơ',
             'pending_verification' => 'Chưa gửi hồ sơ',
             'submitted' => 'Chờ admin duyệt',
             'approved' => 'Đã xác minh',

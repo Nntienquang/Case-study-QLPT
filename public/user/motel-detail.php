@@ -4,6 +4,7 @@
 @require_once '../../core/Database.php';
 @require_once '../../core/NotificationHelper.php';
 @require_once '../../core/PathHelper.php';
+@require_once '../../core/Csrf.php';
 @require_once '../components/PublicNav.php';
 
 session_start();
@@ -45,15 +46,25 @@ $message = '';
 $message_type = 'success';
 
 if (!$is_logged_in && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    header('Location: ../login.php');
+    header('Location: ../login.php?redirect=' . urlencode('user/motel-detail.php?id=' . $motel_id));
     exit;
 }
 
 if ($is_renter && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['schedule_viewing'])) {
     $preferred_time = $_POST['preferred_time'] ?? '';
     $note = trim($_POST['note'] ?? '');
-    if ($preferred_time === '') {
+    $preferredTs = $preferred_time !== '' ? strtotime($preferred_time) : false;
+    if (!Csrf::validateRequest('schedule_viewing')) {
+        $message = 'Phiên gửi lịch xem đã hết hạn. Vui lòng thử lại.';
+        $message_type = 'danger';
+    } elseif ($preferred_time === '' || $preferredTs === false) {
         $message = 'Vui lòng chọn thời gian xem phòng.';
+        $message_type = 'danger';
+    } elseif ($preferredTs < time() + 1800) {
+        $message = 'Vui lòng chọn thời gian xem phòng sau thời điểm hiện tại ít nhất 30 phút.';
+        $message_type = 'danger';
+    } elseif ((int)$motel['user_id'] === $user_id) {
+        $message = 'Bạn không thể đặt lịch xem phòng của chính mình.';
         $message_type = 'danger';
     } else {
         $stmt = $db->prepare("
@@ -66,7 +77,7 @@ if ($is_renter && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['schedul
             $message = 'Đã gửi lịch xem phòng. Chủ phòng sẽ xác nhận lại với bạn.';
             $notifyTitle = 'Có lịch xem phòng mới';
             $notifyBody = 'Người thuê ' . ($_SESSION['name'] ?? 'User') . ' muốn xem phòng: ' . $motel['title'];
-            $notifyLink = 'owner/dashboard.php';
+            $notifyLink = 'owner/viewing-appointments.php';
             qlpt_send_notification($db, $ownerId, 'viewing_request', $notifyTitle, $notifyBody, $notifyLink);
         } else {
             $message = 'Không thể gửi lịch xem phòng lúc này.';
@@ -731,9 +742,28 @@ $move_in_total = (int)$motel['price'] + $service_fee + $deposit_amount;
                                 onclick="toggleFavorite(<?php echo $motel['id']; ?>, this)"><i
                                     class="fas fa-heart"></i></button>
                         </div>
+                        <div class="collapse mt-3" id="viewingForm">
+                            <form method="POST" class="p-3 rounded-4 border bg-light">
+                                <?php echo Csrf::field('schedule_viewing'); ?>
+                                <input type="hidden" name="schedule_viewing" value="1">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Thời gian muốn xem phòng</label>
+                                    <input type="datetime-local" name="preferred_time" class="form-control"
+                                        min="<?php echo date('Y-m-d\TH:i', time() + 1800); ?>" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Ghi chú cho chủ phòng</label>
+                                    <textarea name="note" class="form-control" rows="3"
+                                        placeholder="Ví dụ: Em muốn xem phòng sau giờ hành chính."></textarea>
+                                </div>
+                                <button type="submit" class="btn-modern btn-primary-modern w-100">
+                                    <i class="fas fa-paper-plane"></i> Gửi lịch xem
+                                </button>
+                            </form>
+                        </div>
                         <?php else: ?>
                         <?php if (!$is_logged_in): ?>
-                        <a href="../login.php" class="btn-modern btn-primary-modern w-100 text-decoration-none">Đăng
+                        <a href="../login.php?redirect=<?php echo urlencode('user/motel-detail.php?id=' . (int)$motel['id']); ?>" class="btn-modern btn-primary-modern w-100 text-decoration-none">Đăng
                             nhập để thuê</a>
                         <?php else: ?>
                         <div class="alert alert-secondary text-center small rounded-4">Tính năng đặt phòng chỉ dành cho

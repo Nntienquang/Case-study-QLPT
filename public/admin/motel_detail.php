@@ -49,6 +49,19 @@ admin_flash_messages();
     </div>
     <div class="wb-list-row">
         <div>
+            <div class="wb-title">Chi phí vận hành</div>
+            <div class="wb-muted">
+                Số người tối đa: <?php echo admin_e((string)($motel['max_people'] ?? 'N/A')); ?> ·
+                Điện: <?php echo admin_money($motel['electricity_unit_price'] ?? 0); ?>/kWh ·
+                Nước: <?php echo admin_money($motel['water_fee_per_person'] ?? 0); ?>/người ·
+                Internet: <?php echo admin_money($motel['internet_fee'] ?? 0); ?>/tháng ·
+                Gửi xe: <?php echo admin_money($motel['parking_fee'] ?? 0); ?>/tháng ·
+                Dịch vụ: <?php echo admin_money($motel['service_fee'] ?? 0); ?>/tháng
+            </div>
+        </div>
+    </div>
+    <div class="wb-list-row">
+        <div>
             <div class="wb-title">Liên hệ</div>
             <div><?php echo admin_e($motel['phone'] ?? 'N/A'); ?></div>
         </div>

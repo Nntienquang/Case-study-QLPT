@@ -9,7 +9,7 @@ class Report
 {
     private $db;
     private $table = 'reports';
-    private const FILTER_STATUSES = ['pending', 'investigating', 'resolved', 'rejected', 'closed'];
+    private const FILTER_STATUSES = ['pending', 'reviewing', 'investigating', 'resolved', 'rejected', 'closed'];
     
     public function __construct($database)
     {

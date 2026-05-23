@@ -23,6 +23,12 @@ $db = new Database($conn);
 $districts = [];
 $categories = [];
 $rooms = [];
+$flash_sale_rooms = [];
+$near_uni_rooms = [];
+$suggested_rooms = [];
+$latest_rooms = [];
+$most_viewed_rooms = [];
+$favorite_rooms = [];
 $stats = ['rooms' => 0, 'owners' => 0, 'bookings' => 0, 'districts' => 0];
 
 try {
@@ -43,6 +49,9 @@ try {
     $flash_sale_rooms = $db->getRows($baseQuery . " AND m.is_flash_sale = 1 ORDER BY m.created_at DESC LIMIT 6");
     $near_uni_rooms = $db->getRows($baseQuery . " AND (m.ward_name IN ('Bến Thủy', 'Trường Thi', 'Trung Đô') OR m.address LIKE '%Đại học Vinh%') ORDER BY m.created_at DESC LIMIT 6");
     $suggested_rooms = $db->getRows($baseQuery . " ORDER BY RAND() LIMIT 6");
+    $latest_rooms = $db->getRows($baseQuery . " ORDER BY m.created_at DESC LIMIT 6");
+    $most_viewed_rooms = $db->getRows($baseQuery . " ORDER BY m.count_view DESC, m.created_at DESC LIMIT 6");
+    $favorite_rooms = $db->getRows($baseQuery . " ORDER BY ((SELECT COUNT(*) FROM favorites f WHERE f.motel_id = m.id) + (SELECT COUNT(*) FROM wishlists w WHERE w.motel_id = m.id)) DESC, m.created_at DESC LIMIT 6");
 
     $dummy_rooms = [
         [
@@ -104,12 +113,10 @@ try {
         ]
     ];
     
-    $flash_sale_rooms = array_slice(array_merge($flash_sale_rooms, [$dummy_rooms[0], $dummy_rooms[2]]), 0, 6);
-    $near_uni_rooms = array_slice(array_merge($near_uni_rooms, [$dummy_rooms[0], $dummy_rooms[1], $dummy_rooms[2]]), 0, 6);
-    $suggested_rooms = array_slice(array_merge($suggested_rooms, $dummy_rooms), 0, 6);
+    // Chỉ hiển thị dữ liệu phòng thật đã được duyệt trên public homepage.
 
     $stats['rooms'] = (int)($db->getRow("SELECT COUNT(*) AS total FROM motels WHERE status = 'approved'")['total'] ?? 0);
-    $stats['owners'] = (int)($db->getRow("SELECT COUNT(*) AS total FROM users WHERE role = 'owner' AND status = 'approved'")['total'] ?? 0);
+    $stats['owners'] = (int)($db->getRow("SELECT COUNT(*) AS total FROM users WHERE role = 'owner' AND owner_verification_status = 'approved' AND status IN ('active', 'approved', 'warning')")['total'] ?? 0);
     $stats['bookings'] = (int)($db->getRow("SELECT COUNT(*) AS total FROM bookings")['total'] ?? 0);
     $stats['districts'] = (int)($db->getRow("SELECT COUNT(*) AS total FROM districts")['total'] ?? 0);
 } catch (Throwable $e) {
@@ -214,12 +221,12 @@ try {
     }
 
     .hero-media span:nth-child(1) {
-        background-image: url('uploads/motels/motel_6a096b186de22.jpeg');
+        background-image: url('https://images.unsplash.com/photo-1560448075-bb485b067938?auto=format&fit=crop&w=2200&q=88');
         animation-delay: 0s;
     }
 
     .hero-media span:nth-child(2) {
-        background-image: url('uploads/motels/motel_6a09869feab09.jpg');
+        background-image: url('https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=2200&q=88');
         animation-delay: 8s;
     }
 
@@ -707,7 +714,7 @@ try {
         color: #fff;
         background:
             linear-gradient(90deg, rgba(16, 24, 40, .96), rgba(14, 116, 144, .92)),
-            url('uploads/motels/motel_6a096b186de22.jpeg') center/cover;
+            url('https://images.unsplash.com/photo-1560448075-bb485b067938?auto=format&fit=crop&w=1800&q=88') center/cover;
         border-radius: 0;
     }
 
@@ -1195,6 +1202,14 @@ qlpt_render_public_nav(['base' => './', 'active' => '']);
         <?php
         $sections = [
             [
+                'id' => 'latest',
+                'kicker' => 'Tin mới',
+                'title' => 'Tin phòng mới nhất',
+                'rooms' => $latest_rooms,
+                'bg_class' => '',
+                'link' => 'user/search.php?sort=newest'
+            ],
+            [
                 'id' => 'flash-sale',
                 'kicker' => 'Flash Sale',
                 'title' => 'Phòng đang Hot - Giảm giá sâu',
@@ -1209,6 +1224,22 @@ qlpt_render_public_nav(['base' => './', 'active' => '']);
                 'rooms' => $near_uni_rooms,
                 'bg_class' => 'bg-light',
                 'link' => 'user/search.php?near_uni=1'
+            ],
+            [
+                'id' => 'most-viewed',
+                'kicker' => 'Lượt xem',
+                'title' => 'Phòng được xem nhiều nhất',
+                'rooms' => $most_viewed_rooms,
+                'bg_class' => '',
+                'link' => 'user/search.php?sort=views'
+            ],
+            [
+                'id' => 'favorite-rooms',
+                'kicker' => 'Yêu thích',
+                'title' => 'Phòng được yêu thích nhiều nhất',
+                'rooms' => $favorite_rooms,
+                'bg_class' => 'bg-light',
+                'link' => 'user/search.php?sort=popular'
             ],
             [
                 'id' => 'suggested',
@@ -1237,12 +1268,12 @@ qlpt_render_public_nav(['base' => './', 'active' => '']);
                     <?php foreach ($sec['rooms'] as $room): ?>
                     <?php
                             $roomImage = function_exists('qlpt_relative_public_asset_url')
-                                ? qlpt_relative_public_asset_url($room['image_url'] ?? null, 'uploads/motels/motel_6a096b186de22.jpeg')
-                                : ($room['image_url'] ?: 'uploads/motels/motel_6a096b186de22.jpeg');
+                                ? qlpt_relative_public_asset_url($room['image_url'] ?? null, 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=900&q=80')
+                                : ($room['image_url'] ?: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=900&q=80');
                     ?>
                     <article class="room-card border-0 shadow-sm rounded-3 overflow-hidden d-flex flex-column h-100 bg-white">
                         <div class="room-photo position-relative" style="aspect-ratio: 4/3; background: #f3f4f6;">
-                            <img src="<?php echo htmlspecialchars($roomImage); ?>" alt="Ảnh phòng" class="w-100 h-100" style="object-fit: cover; color: transparent;">
+                            <img src="<?php echo htmlspecialchars($roomImage); ?>" alt="Ảnh phòng" class="w-100 h-100" style="object-fit: cover; color: transparent;" onerror="this.onerror=null;this.src='https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=900&q=80';">
                             
                             <?php if (!empty($room['badge_label'])): ?>
                                 <span class="badge bg-danger position-absolute top-0 start-0 m-2 z-3 px-2 py-1 shadow-sm"><?php echo htmlspecialchars($room['badge_label']); ?></span>
@@ -1266,6 +1297,10 @@ qlpt_render_public_nav(['base' => './', 'active' => '']);
                             
                             <div class="room-meta text-muted small mb-3">
                                 <i class="fas fa-location-dot"></i> <?php echo htmlspecialchars($room['address'] ?: 'Chưa cập nhật địa chỉ'); ?>
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                <span class="badge text-bg-light border"><i class="fas fa-ruler-combined"></i> <?php echo (int)($room['area'] ?? 0); ?> m²</span>
+                                <span class="badge text-bg-success"><i class="fas fa-circle-check"></i> Đã duyệt</span>
                             </div>
                             
                             <!-- Footer ép text trái, nút phải bằng Flexbox -->

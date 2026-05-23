@@ -38,8 +38,8 @@ class AuthController
 
         if (empty($name)) {
             $errors[] = "Họ tên không được để trống";
-        } elseif (strlen($name) < 3) {
-            $errors[] = "Họ tên phải có ít nhất 3 ký tự";
+        } elseif (mb_strlen($name) < 2) {
+            $errors[] = "Họ tên phải có ít nhất 2 ký tự";
         }
 
         if (empty($email)) {
@@ -48,14 +48,18 @@ class AuthController
             $errors[] = "Email không hợp lệ";
         }
 
-        if ($phone !== null && !$this->isValidPhone($phone)) {
+        if ($phone === null) {
+            $errors[] = "Số điện thoại không được để trống";
+        } elseif (!$this->isValidPhone($phone)) {
             $errors[] = "Số điện thoại không hợp lệ";
         }
 
         if (empty($password)) {
             $errors[] = "Mật khẩu không được để trống";
-        } elseif (strlen($password) < 6) {
-            $errors[] = "Mật khẩu phải có ít nhất 6 ký tự";
+        } elseif (strlen($password) < 8) {
+            $errors[] = "Mật khẩu phải có ít nhất 8 ký tự";
+        } elseif (!preg_match('/[A-Za-z]/', $password) || !preg_match('/[0-9]/', $password)) {
+            $errors[] = "Mật khẩu phải có cả chữ và số";
         } elseif ($password !== $confirm) {
             $errors[] = "Mật khẩu không khớp";
         }
@@ -92,7 +96,7 @@ class AuthController
         // Register if no errors
         if (empty($errors)) {
             $hashed_password = password_hash($password, PASSWORD_BCRYPT);
-            $status = 'approved';
+            $status = 'active';
             $ownerVerificationStatus = $role === 'owner' ? 'pending_verification' : 'not_required';
 
             $stmt = $this->db->prepare("INSERT INTO users (name, email, password, phone, role, status, owner_verification_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
@@ -192,7 +196,7 @@ class AuthController
         $stmt->close();
 
         // Check account status
-        if ($user['status'] === 'blocked') {
+        if (in_array((string)($user['status'] ?? ''), ['blocked', 'locked', 'banned'], true)) {
             return [
                 'success' => false,
                 'message' => 'Tài khoản của bạn bị khóa'

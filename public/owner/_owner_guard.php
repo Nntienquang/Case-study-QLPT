@@ -16,6 +16,13 @@ $ownerGuard = new OwnerStatusMiddleware($ownerGuardDb);
 $ownerGuardInfo = $ownerGuard->getOwnerApprovalInfo((int)$_SESSION['user_id']);
 $ownerVerificationStatus = (string)($ownerGuardInfo['owner_verification_status'] ?? 'pending_verification');
 
+if (in_array((string)($ownerGuardInfo['status'] ?? ''), ['blocked', 'locked', 'banned'], true)) {
+    session_unset();
+    session_destroy();
+    header('Location: ../login.php?blocked=1');
+    exit;
+}
+
 if (!($allowUnverifiedOwner ?? false)) {
     $ownerGuard->checkOwnerAccess((int)$_SESSION['user_id'], 'profile.php?verify=1');
 }

@@ -30,6 +30,7 @@ class ActivityLog
     {
         $conn = $this->db->getConnection();
         $admin_id = (int)$admin_id;
+        $adminIdForInsert = $admin_id > 0 ? $admin_id : null;
         $action = (string)$action;
         $entity_type = (string)$entity_type;
         $entity_id = (int)$entity_id;
@@ -46,7 +47,7 @@ class ActivityLog
         if (!$stmt) {
             return false;
         }
-        $stmt->bind_param('ississsss', $admin_id, $action, $entity_type, $entity_id, $old_value, $new_value, $description, $ip_address, $user_agent);
+        $stmt->bind_param('ississsss', $adminIdForInsert, $action, $entity_type, $entity_id, $old_value, $new_value, $description, $ip_address, $user_agent);
         $logged = $stmt->execute();
         $stmt->close();
         return $logged;

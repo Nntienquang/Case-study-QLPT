@@ -4,6 +4,7 @@
 @require_once '../core/Database.php';
 @require_once '../core/User.php';
 @require_once '../core/Captcha.php';
+@require_once '../core/Csrf.php';
 @require_once '../app/controller/AuthController.php';
 
 session_start();
@@ -69,9 +70,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     
-    elseif (strlen($name) < 3) {
+    elseif (mb_strlen($name) < 2) {
 
-        $message = 'Họ tên phải từ 3 ký tự';
+        $message = 'Họ tên phải có ít nhất 2 ký tự';
         $type = 'error';
     }
 
@@ -83,19 +84,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     
-    elseif (strlen($password) < 6) {
+    elseif (!preg_match('/^(0|\+84)[0-9]{9,10}$/', $phone)) {
 
-        $message = 'Mật khẩu phải từ 6 ký tự';
+        $message = 'Số điện thoại Việt Nam không hợp lệ';
+        $type = 'error';
+    }
+
+    
+    elseif (strlen($password) < 8) {
+
+        $message = 'Mật khẩu phải có ít nhất 8 ký tự';
         $type = 'error';
     }
 
  
     elseif (
-        !preg_match('/[A-Z]/', $password) ||
+        !preg_match('/[A-Za-z]/', $password) ||
         !preg_match('/[0-9]/', $password)
     ) {
 
-        $message = 'Mật khẩu phải có ít nhất 1 chữ hoa và 1 số';
+        $message = 'Mật khẩu phải có cả chữ và số';
         $type = 'error';
     }
 
@@ -103,6 +111,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     elseif ($password !== $confirm) {
 
         $message = 'Xác nhận mật khẩu không đúng';
+        $type = 'error';
+    }
+
+ 
+    elseif (!Csrf::validateRequest('user_register')) {
+
+        $message = 'Phiên đăng ký đã hết hạn. Vui lòng thử lại';
         $type = 'error';
     }
 
@@ -136,6 +151,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         else {
+            $stmt->close();
+            $stmt = $conn->prepare("SELECT id FROM users WHERE phone = ? LIMIT 1");
+            $stmt->bind_param("s", $phone);
+            $stmt->execute();
+            $checkPhone = $stmt->get_result();
+
+            if ($checkPhone->num_rows > 0) {
+
+                $message = 'Số điện thoại đã tồn tại';
+                $type = 'error';
+            }
+
+            else {
 
 
             $hashedPassword = password_hash(
@@ -191,6 +219,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $message = 'Có lỗi xảy ra khi đăng ký';
                 $type = 'error';
+            }
             }
         }
     }
@@ -302,6 +331,7 @@ $captchaChallenge = Captcha::ensure('register_captcha');
                 <?php endif; ?>
 
                 <form method="POST">
+                    <?php echo Csrf::field('user_register'); ?>
                     <label>Họ tên</label>
                     <div class="input-group">
                         <i class="fa fa-user"></i>
@@ -344,7 +374,7 @@ $captchaChallenge = Captcha::ensure('register_captcha');
             type="password"
             name="password"
             id="password"
-            placeholder="Ít nhất 6 ký tự"
+            placeholder="Ít nhất 8 ký tự, có chữ và số"
             required
         >
 

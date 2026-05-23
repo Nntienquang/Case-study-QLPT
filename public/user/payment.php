@@ -3,6 +3,7 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../core/Database.php';
 require_once __DIR__ . '/../../core/SepayPayment.php';
 require_once __DIR__ . '/../../core/NotificationHelper.php';
+require_once __DIR__ . '/../../core/Csrf.php';
 require_once __DIR__ . '/../components/PublicNav.php';
 
 session_start();
@@ -39,7 +40,10 @@ if (!$payment) {
 $message = '';
 $messageType = 'success';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'confirm_transfer') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'confirm_transfer' && !Csrf::validateRequest('payment_confirm_transfer')) {
+    $message = 'Phiên xác nhận thanh toán đã hết hạn. Vui lòng thử lại.';
+    $messageType = 'danger';
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'confirm_transfer') {
     if (($payment['current_payment_status'] ?? '') === 'pending') {
         $transactionCode = trim((string)($_POST['transaction_code'] ?? ''));
         $gateway = json_encode([
@@ -117,7 +121,7 @@ $isPaid = ($payment['current_payment_status'] ?? '') === 'paid';
     <link href="../assets/css/modern.css" rel="stylesheet">
     <style>
         body { background: #f6f8fb; }
-        .payment-shell { padding: 34px 0 56px; }
+        .payment-shell { padding: 124px 0 56px; }
         .pay-card { background: #fff; border: 1px solid #e5eaf2; border-radius: 16px; box-shadow: 0 18px 50px rgba(15,23,42,.08); padding: 24px; }
         .pay-code { font-size: 30px; font-weight: 900; letter-spacing: 0; color: #101828; overflow-wrap: anywhere; }
         .qr-box { border: 1px solid #dbe4f0; border-radius: 16px; min-height: 280px; display: grid; place-items: center; text-align: center; color: #64748b; background: #f8fafc; padding: 18px; }
@@ -127,6 +131,10 @@ $isPaid = ($payment['current_payment_status'] ?? '') === 'paid';
         .copy-btn { min-width: 92px; }
         .status-dot { width: 10px; height: 10px; border-radius: 999px; display: inline-block; background: #f59e0b; }
         .status-dot.paid { background: #16a34a; }
+        @media (max-width: 768px) {
+            .payment-shell { padding-top: 112px; }
+            .pay-card { padding: 20px; }
+        }
     </style>
 </head>
 <body>
@@ -209,6 +217,7 @@ $isPaid = ($payment['current_payment_status'] ?? '') === 'paid';
 
                     <?php if (($payment['current_payment_status'] ?? '') === 'pending'): ?>
                         <form method="POST" class="mt-3">
+                            <?php echo Csrf::field('payment_confirm_transfer'); ?>
                             <input type="hidden" name="action" value="confirm_transfer">
                             <input type="hidden" name="booking_id" value="<?php echo (int)$bookingId; ?>">
                             <div class="mb-3">

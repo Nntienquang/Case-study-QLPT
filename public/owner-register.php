@@ -4,6 +4,7 @@
 @require_once '../core/Database.php';
 @require_once '../core/User.php';
 @require_once '../core/Captcha.php';
+@require_once '../core/Csrf.php';
 @require_once '../app/controller/AuthController.php';
 require_once __DIR__ . '/components/PasswordInput.php';
 
@@ -39,7 +40,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $phone = trim($_POST['phone'] ?? '');
     $captcha = trim($_POST['captcha'] ?? '');
 
-    if (!Captcha::validate('owner_register_captcha', $captcha)) {
+    if (!Csrf::validateRequest('owner_register')) {
+        $message = 'Phiên đăng ký đã hết hạn. Vui lòng thử lại.';
+        $type = 'error';
+    } elseif (!Captcha::validate('owner_register_captcha', $captcha)) {
         $message = 'Mã xác thực không đúng. Vui lòng nhập lại mã trong ảnh.';
         $type = 'error';
     } else {
@@ -100,6 +104,7 @@ $captchaChallenge = Captcha::ensure('owner_register_captcha');
                 <?php endif; ?>
 
                 <form method="POST">
+                    <?php echo Csrf::field('owner_register'); ?>
                     <label>Họ tên chủ phòng</label>
                     <div class="input-group">
                         <i class="fa fa-user"></i>
@@ -109,7 +114,7 @@ $captchaChallenge = Captcha::ensure('owner_register_captcha');
                     <label>Số điện thoại</label>
                     <div class="input-group">
                         <i class="fa fa-phone"></i>
-                        <input type="tel" name="phone" placeholder="09xxxxxxxx" value="<?php echo htmlspecialchars($phone); ?>">
+                        <input type="tel" name="phone" placeholder="09xxxxxxxx" value="<?php echo htmlspecialchars($phone); ?>" required>
                     </div>
 
                     <label>Email</label>
@@ -121,7 +126,7 @@ $captchaChallenge = Captcha::ensure('owner_register_captcha');
                     <label>Mật khẩu</label>
                     <div class="input-group has-password-toggle">
                         <i class="fa fa-lock"></i>
-                        <input type="password" name="password" placeholder="Ít nhất 6 ký tự" required>
+                        <input type="password" name="password" placeholder="Ít nhất 8 ký tự, có chữ và số" required>
                         <button type="button" class="password-toggle" data-password-toggle aria-label="Hiện mật khẩu" title="Hiện mật khẩu">
                             <i class="fa fa-eye"></i>
                         </button>

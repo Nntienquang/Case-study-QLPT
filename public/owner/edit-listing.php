@@ -4,6 +4,7 @@
 @require_once '../../core/Database.php';
 @require_once '../../core/OwnerStatusMiddleware.php';
 @require_once '../../core/ListingQuality.php';
+@require_once '../../core/Csrf.php';
 
 session_start();
 
@@ -132,7 +133,10 @@ $utilities_list = $conn->query("SELECT id, name FROM utilities ORDER BY name")->
 $utilities_array = array_filter(explode(',', $motel['utilities']));
 
 // Xử lý Form Submit
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !Csrf::validateRequest('owner_edit_listing')) {
+    $message = 'Phiên cập nhật tin đã hết hạn. Vui lòng thử lại.';
+    $message_type = 'danger';
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = trim($_POST['title'] ?? '');
     $description = trim($_POST['description'] ?? '');
     $price = (int)($_POST['price'] ?? 0);
@@ -163,6 +167,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $available_from = !empty($_POST['available_from']) ? $_POST['available_from'] : null;
     $service_fee = (int)($_POST['service_fee'] ?? 0);
     $deposit_months = (float)($_POST['deposit_months'] ?? 1);
+    $max_people = max(0, (int)($_POST['max_people'] ?? 0));
+    $electricity_unit_price = max(0, (int)($_POST['electricity_unit_price'] ?? $_POST['electricity_price'] ?? 0));
+    $water_fee_per_person = max(0, (int)($_POST['water_fee_per_person'] ?? $_POST['water_price'] ?? 0));
+    $internet_fee = max(0, (int)($_POST['internet_fee'] ?? $_POST['internet_price'] ?? 0));
+    $parking_fee = max(0, (int)($_POST['parking_fee'] ?? 0));
 
     // Tính điểm chất lượng
     $quality = ListingQuality::evaluate([
@@ -180,7 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ]);
     $health_score = $quality['score'];
 
-    if (empty($title) || empty($price) || empty($address)) {
+    if (empty($title) || $price <= 0 || $area <= 0 || empty($address)) {
         $message = 'Vui lòng điền đầy đủ thông tin bắt buộc (*)!';
         $message_type = 'danger';
     } else {
@@ -189,10 +198,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             UPDATE motels
             SET title=?, description=?, price=?, area=?, bedrooms=?, bathrooms=?, address=?, 
                 category_id=?, district_id=?, utilities=?, available_from=?, service_fee=?, 
-                deposit_months=?, health_score=?, lat=?, lng=?
+                deposit_months=?, health_score=?, max_people=?, electricity_unit_price=?,
+                water_fee_per_person=?, internet_fee=?, parking_fee=?, lat=?, lng=?,
+                rejection_reason = CASE WHEN status = 'rejected' THEN NULL ELSE rejection_reason END,
+                rejected_by = CASE WHEN status = 'rejected' THEN NULL ELSE rejected_by END,
+                rejected_at = CASE WHEN status = 'rejected' THEN NULL ELSE rejected_at END,
+                status = CASE WHEN status = 'rejected' THEN 'pending' ELSE status END
             WHERE id=? AND user_id=?
         ");
-        $stmt->bind_param("ssiiiisiissididdii", $title, $description, $price, $area, $bedrooms, $bathrooms, $address, $category_id, $district_id, $utilities_string, $available_from, $service_fee, $deposit_months, $health_score, $lat, $lng, $motel_id, $owner_id);
+        $stmt->bind_param("ssiiiisiissidiiiiiiddii", $title, $description, $price, $area, $bedrooms, $bathrooms, $address, $category_id, $district_id, $utilities_string, $available_from, $service_fee, $deposit_months, $health_score, $max_people, $electricity_unit_price, $water_fee_per_person, $internet_fee, $parking_fee, $lat, $lng, $motel_id, $owner_id);
 
         if ($stmt->execute()) {
             owner_edit_update_standard_address($conn, $motel_id, [
@@ -224,10 +238,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!is_dir($upload_dir)) mkdir($upload_dir, 0777, true);
 
                 $stmt_img = $conn->prepare("INSERT INTO motel_images (motel_id, image_url) VALUES (?, ?)");
+                $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
+                $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+                $maxUploadSize = 5 * 1024 * 1024;
                 foreach ($_FILES['images']['name'] as $key => $name) {
                     if ($_FILES['images']['error'][$key] === 0) {
                         $tmp_name = $_FILES['images']['tmp_name'][$key];
-                        $ext = pathinfo($name, PATHINFO_EXTENSION);
+                        $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+                        $mime = is_file($tmp_name) ? (mime_content_type($tmp_name) ?: '') : '';
+                        $size = (int)($_FILES['images']['size'][$key] ?? 0);
+                        if (!in_array($ext, $allowedExtensions, true) || !in_array($mime, $allowedMimeTypes, true) || $size > $maxUploadSize) {
+                            continue;
+                        }
                         $new_name = uniqid('motel_') . '.' . $ext;
                         if (move_uploaded_file($tmp_name, $upload_dir . $new_name)) {
                             $image_url = 'uploads/motels/' . $new_name;
@@ -465,6 +487,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <form method="POST" enctype="multipart/form-data" class="wb-card p-4"
                     onsubmit="const btn = this.querySelector('button[type=submit]'); btn.disabled = true; btn.innerHTML = '<i class=\'fas fa-spinner fa-spin me-1\'></i> Đang lưu...';">
+                    <?php echo Csrf::field('owner_edit_listing'); ?>
 
                     <h5 class="mb-3 border-bottom pb-2"><i class="fas fa-camera text-primary"></i> Hình Ảnh Phòng</h5>
 
@@ -613,7 +636,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="row mb-4">
                         <div class="col-md-3 mb-3">
                             <label class="form-label">Diện Tích (m²)</label>
-                            <input type="number" name="area" class="form-control" value="<?php echo $motel['area']; ?>">
+                            <input type="number" name="area" class="form-control" min="1" required value="<?php echo $motel['area']; ?>">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Số người tối đa</label>
+                            <input type="number" name="max_people" class="form-control" min="0"
+                                value="<?php echo (int)($motel['max_people'] ?? 0); ?>">
                         </div>
                         <div class="col-md-3 mb-3">
                             <label class="form-label">Phòng Ngủ</label>
@@ -629,6 +657,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <label class="form-label">Trống Từ Ngày</label>
                             <input type="date" name="available_from" class="form-control"
                                 value="<?php echo htmlspecialchars($motel['available_from'] ?? ''); ?>">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Tiền điện (VNĐ/kWh)</label>
+                            <input type="number" name="electricity_unit_price" class="form-control" min="0"
+                                value="<?php echo (int)($motel['electricity_unit_price'] ?? 0); ?>">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Tiền nước (VNĐ/người)</label>
+                            <input type="number" name="water_fee_per_person" class="form-control" min="0"
+                                value="<?php echo (int)($motel['water_fee_per_person'] ?? 0); ?>">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Internet (VNĐ/tháng)</label>
+                            <input type="number" name="internet_fee" class="form-control" min="0"
+                                value="<?php echo (int)($motel['internet_fee'] ?? 0); ?>">
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Gửi xe (VNĐ/tháng)</label>
+                            <input type="number" name="parking_fee" class="form-control" min="0"
+                                value="<?php echo (int)($motel['parking_fee'] ?? 0); ?>">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Phí Dịch Vụ / Tháng (VNĐ)</label>

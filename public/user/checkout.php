@@ -2,6 +2,7 @@
 @require_once '../../config/database.php';
 @require_once '../../core/Database.php';
 @require_once '../../core/NotificationHelper.php';
+@require_once '../../core/Csrf.php';
 @require_once '../components/PublicNav.php';
 
 session_start();
@@ -45,7 +46,10 @@ $vouchers = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
 // Handle booking
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !Csrf::validateRequest('booking_checkout')) {
+    $message = 'Phiên đặt phòng đã hết hạn. Vui lòng thử lại.';
+    $message_type = 'danger';
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $check_in = $_POST['check_in_date'] ?? '';
     $durationMonths = max(1, (int)($_POST['rental_duration_months'] ?? 1));
     $durationMonths = min(36, $durationMonths);
@@ -250,7 +254,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         body { background: #f8f9fa; font-family: 'Segoe UI', sans-serif; }
         .navbar { background: linear-gradient(135deg, #667eea, #764ba2); }
         .navbar-brand { font-size: 22px; font-weight: 700; color: white !important; }
-        .main-content { padding: 100px 0 30px; }
+        .main-content { padding: 124px 0 30px; }
         .form-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .form-section { margin-bottom: 40px; }
         .form-section h5 { font-weight: 700; color: #333; margin-bottom: 25px; border-bottom: 2px solid #667eea; padding-bottom: 15px; }
@@ -270,6 +274,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .price-item.total { border-top: 1px solid #dee2e6; padding-top: 12px; margin-top: 12px; font-weight: 800; color: #111827; font-size: 18px; }
         .readonly-date { background: #f8fafc; }
         .alert { border-radius: 12px; }
+        @media (max-width: 768px) {
+            .main-content { padding-top: 112px; }
+            .form-card { padding: 24px; }
+        }
     </style>
     <link href="../assets/css/modern.css" rel="stylesheet">
 </head>
@@ -305,6 +313,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="col-lg-8">
                 <div class="form-card">
                     <form method="POST">
+                        <?php echo Csrf::field('booking_checkout'); ?>
                         <!-- Thông tin phòng -->
                         <div class="motel-summary">
                             <h3><i class="fas fa-home"></i> <?php echo htmlspecialchars($motel['title']); ?></h3>

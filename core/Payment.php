@@ -5,7 +5,8 @@
 
 class Payment {
     private $db;
-    private const FILTER_STATUSES = ['pending', 'held', 'released', 'refunded'];
+    private const FILTER_STATUSES = ['pending', 'processing', 'paid', 'failed', 'cancelled', 'refunded', 'held', 'released'];
+    private const PAYMENT_STATUS_FILTERS = ['processing', 'paid', 'failed', 'cancelled'];
     
     public function __construct($database) {
         $this->db = $database;
@@ -27,7 +28,9 @@ class Payment {
                 LEFT JOIN motels m ON b.motel_id = m.id";
         
         if ($status !== '') {
-            $sql .= ' WHERE p.status = ?';
+            $sql .= in_array($status, self::PAYMENT_STATUS_FILTERS, true)
+                ? ' WHERE p.payment_status = ?'
+                : ' WHERE p.status = ?';
         }
         
         $sql .= " ORDER BY p.created_at DESC LIMIT $offset, $limit";
@@ -52,7 +55,11 @@ class Payment {
         $status = self::filterStatus((string)$status);
         return $status === ''
             ? $this->db->count('payments')
-            : $this->db->count('payments', 'status = ?', [$status]);
+            : $this->db->count(
+                'payments',
+                in_array($status, self::PAYMENT_STATUS_FILTERS, true) ? 'payment_status = ?' : 'status = ?',
+                [$status]
+            );
     }
 
     public static function filterStatus(string $status): string {
