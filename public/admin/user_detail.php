@@ -49,6 +49,76 @@ function admin_user_detail_many(mysqli $conn, string $sql, string $types, array 
     return $rows;
 }
 
+function admin_user_detail_kyc_image(?string $path): array
+{
+    $rawPath = trim((string)$path);
+    if ($rawPath === '') {
+        return ['exists' => false, 'url' => '', 'path' => ''];
+    }
+
+    if (filter_var($rawPath, FILTER_VALIDATE_URL)) {
+        return ['exists' => true, 'url' => $rawPath, 'path' => $rawPath];
+    }
+
+    $normalizedPath = str_replace('\\', '/', $rawPath);
+    $publicRoot = realpath(__DIR__ . '/..');
+    $absolutePath = realpath($normalizedPath);
+    if ($absolutePath !== false && $publicRoot !== false) {
+        $absolutePath = str_replace('\\', '/', $absolutePath);
+        $normalizedPublicRoot = str_replace('\\', '/', $publicRoot);
+        if (str_starts_with($absolutePath, $normalizedPublicRoot)) {
+            $relativePath = ltrim(substr($absolutePath, strlen($normalizedPublicRoot)), '/');
+
+            return [
+                'exists' => is_file($absolutePath),
+                'url' => BASE_URL . $relativePath,
+                'path' => $relativePath,
+            ];
+        }
+    }
+
+    $relativePath = $normalizedPath;
+    $relativePath = preg_replace('#^(\.\./)+#', '', $relativePath);
+    $relativePath = ltrim($relativePath, '/');
+    $relativePath = preg_replace('#^public/#', '', $relativePath);
+
+    $fullPath = realpath(__DIR__ . '/../' . $relativePath);
+    $exists = $fullPath !== false
+        && $publicRoot !== false
+        && str_starts_with(str_replace('\\', '/', $fullPath), str_replace('\\', '/', $publicRoot))
+        && is_file($fullPath);
+
+    return [
+        'exists' => $exists,
+        'url' => BASE_URL . $relativePath,
+        'path' => $relativePath,
+    ];
+}
+
+function admin_user_detail_render_kyc_card(string $label, ?string $path): void
+{
+    $image = admin_user_detail_kyc_image($path);
+    ?>
+    <div class="admin-kyc-card">
+        <div class="admin-kyc-label"><?php echo admin_e($label); ?></div>
+        <?php if ($image['exists']): ?>
+            <a class="admin-kyc-preview" href="<?php echo admin_e($image['url']); ?>" target="_blank" rel="noopener">
+                <img src="<?php echo admin_e($image['url']); ?>" alt="<?php echo admin_e($label); ?>" loading="lazy">
+            </a>
+            <div class="admin-kyc-path"><?php echo admin_e($image['path']); ?></div>
+        <?php else: ?>
+            <div class="admin-kyc-empty">
+                <i class="bi bi-image"></i>
+                <span>Không có ảnh KYC</span>
+            </div>
+            <?php if ($image['path'] !== ''): ?>
+                <div class="admin-kyc-path text-danger"><?php echo admin_e($image['path']); ?></div>
+            <?php endif; ?>
+        <?php endif; ?>
+    </div>
+    <?php
+}
+
 $user = admin_user_detail_one($conn, 'SELECT * FROM users WHERE id = ? LIMIT 1', $id);
 if (!$user) {
     $_SESSION['error'] = 'Tài khoản không tồn tại.';
@@ -272,6 +342,11 @@ admin_flash_messages();
             <tr><td class="fw-bold">Địa chỉ</td><td><?php echo admin_e($user['address'] ?? 'Chưa cập nhật'); ?></td></tr>
         </tbody></table>
     </div>
+    <div class="admin-kyc-grid mb-3">
+        <?php admin_user_detail_render_kyc_card('Ảnh mặt trước CCCD', $user['id_card_front'] ?? null); ?>
+        <?php admin_user_detail_render_kyc_card('Ảnh mặt sau CCCD', $user['id_card_back'] ?? null); ?>
+        <?php admin_user_detail_render_kyc_card('Ảnh selfie/KYC', $user['selfie_image'] ?? null); ?>
+    </div>
 <?php endif; ?>
 
 <div class="wb-section-head"><h2>Phòng liên quan</h2><span class="wb-pill"><?php echo count($motels); ?> phòng gần nhất</span></div>
@@ -335,4 +410,74 @@ admin_flash_messages();
     </form></div></div>
 </div>
 
-<?php admin_layout_end(); ?>
+<?php
+$style = <<<'HTML'
+<style>
+.admin-kyc-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+.admin-kyc-card {
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid var(--admin-border);
+    border-radius: 12px;
+    background: var(--admin-surface);
+    box-shadow: var(--admin-shadow);
+}
+.admin-kyc-label {
+    margin-bottom: 10px;
+    color: var(--admin-text);
+    font-weight: 720;
+}
+.admin-kyc-preview {
+    display: block;
+    overflow: hidden;
+    aspect-ratio: 4 / 3;
+    border: 1px solid #dfe7f5;
+    border-radius: 8px;
+    background: #f7f9fe;
+}
+.admin-kyc-preview img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
+}
+.admin-kyc-empty {
+    aspect-ratio: 4 / 3;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 8px;
+    border: 1px dashed #c9d6ea;
+    border-radius: 8px;
+    background: #f7f9fe;
+    color: var(--admin-muted);
+    font-weight: 650;
+    text-align: center;
+}
+.admin-kyc-empty i {
+    font-size: 28px;
+}
+.admin-kyc-path {
+    margin-top: 8px;
+    color: var(--admin-muted);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+@media (max-width: 1100px) {
+    .admin-kyc-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 640px) {
+    .admin-kyc-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+HTML;
+admin_layout_end($style);
+?>

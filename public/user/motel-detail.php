@@ -164,8 +164,13 @@ if (!in_array($motel_id, $_SESSION['viewed_motels'])) {
 // Check if favorite
 $is_favorite = false;
 if ($is_renter) {
-    $stmt = $db->prepare("SELECT id FROM favorites WHERE user_id = ? AND motel_id = ?");
-    $stmt->bind_param("ii", $user_id, $motel_id);
+    $stmt = $db->prepare("
+        SELECT motel_id FROM favorites WHERE user_id = ? AND motel_id = ?
+        UNION
+        SELECT motel_id FROM wishlists WHERE user_id = ? AND motel_id = ?
+        LIMIT 1
+    ");
+    $stmt->bind_param("iiii", $user_id, $motel_id, $user_id, $motel_id);
     $stmt->execute();
     $is_favorite = $stmt->get_result()->fetch_assoc() ? true : false;
     $stmt->close();
@@ -849,9 +854,9 @@ $move_in_total = (int)$motel['price'] + $service_fee + $deposit_amount;
         })
         .then(res => res.json())
         .then(data => {
-            if (data.success !== undefined) {
-                btn.classList.toggle('active');
-            } else if (data.message === 'Not authenticated') {
+            if (data.success) {
+                btn.classList.toggle('active', !!data.saved);
+            } else if (data.login_required) {
                 window.location.href = '../login.php';
             } else {
                 alert('Có lỗi xảy ra, vui lòng thử lại.');

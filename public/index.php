@@ -51,7 +51,7 @@ try {
     $suggested_rooms = $db->getRows($baseQuery . " ORDER BY RAND() LIMIT 6");
     $latest_rooms = $db->getRows($baseQuery . " ORDER BY m.created_at DESC LIMIT 6");
     $most_viewed_rooms = $db->getRows($baseQuery . " ORDER BY m.count_view DESC, m.created_at DESC LIMIT 6");
-    $favorite_rooms = $db->getRows($baseQuery . " ORDER BY ((SELECT COUNT(*) FROM favorites f WHERE f.motel_id = m.id) + (SELECT COUNT(*) FROM wishlists w WHERE w.motel_id = m.id)) DESC, m.created_at DESC LIMIT 6");
+    $favorite_rooms = $db->getRows($baseQuery . " ORDER BY ((SELECT COUNT(DISTINCT f.user_id) FROM favorites f WHERE f.motel_id = m.id) + (SELECT COUNT(DISTINCT w.user_id) FROM wishlists w WHERE w.motel_id = m.id AND NOT EXISTS (SELECT 1 FROM favorites f2 WHERE f2.user_id = w.user_id AND f2.motel_id = w.motel_id))) DESC, m.created_at DESC LIMIT 6");
 
     $dummy_rooms = [
         [
@@ -123,6 +123,22 @@ try {
     $districts = [];
     $categories = [];
     $rooms = [];
+}
+
+$favorite_ids = [];
+if (isset($_SESSION['user_id']) && ($_SESSION['role'] ?? $_SESSION['user_role'] ?? '') === 'user') {
+    $stmt = $db->prepare('
+        SELECT motel_id FROM favorites WHERE user_id = ?
+        UNION
+        SELECT motel_id FROM wishlists WHERE user_id = ?
+    ');
+    if ($stmt) {
+        $uid = (int)$_SESSION['user_id'];
+        $stmt->bind_param('ii', $uid, $uid);
+        $stmt->execute();
+        $favorite_ids = array_map(static fn(array $row): int => (int)$row['motel_id'], $stmt->get_result()->fetch_all(MYSQLI_ASSOC));
+        $stmt->close();
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -1281,7 +1297,7 @@ qlpt_render_public_nav(['base' => './', 'active' => '']);
                                 <span class="badge-flash-sale position-absolute top-0 start-0 m-2 z-3 shadow-sm">Flash Sale</span>
                             <?php endif; ?>
                             
-                            <button class="btn-wishlist position-absolute z-3 d-flex align-items-center justify-content-center text-danger border-0" style="top:12px; right:12px; width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.8); box-shadow:0 4px 8px rgba(0,0,0,0.15); cursor:pointer;" onclick="toggleFavorite(<?php echo (int)$room['id']; ?>, this)" aria-label="Yêu thích"><i class="fas fa-heart"></i></button>
+                            <button class="btn-wishlist position-absolute z-3 d-flex align-items-center justify-content-center text-danger border-0 <?php echo in_array((int)$room['id'], $favorite_ids, true) ? 'active' : ''; ?>" style="top:12px; right:12px; width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.8); box-shadow:0 4px 8px rgba(0,0,0,0.15); cursor:pointer;" onclick="toggleFavorite(<?php echo (int)$room['id']; ?>, this)" aria-label="Yêu thích"><i class="fas fa-heart"></i></button>
                         </div>
                         <div class="room-body p-3 d-flex flex-column flex-grow-1">
                             <h3 class="room-title fw-bold mb-2" style="font-size: 1.1rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
@@ -1526,17 +1542,38 @@ qlpt_render_public_nav(['base' => './', 'active' => '']);
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-    
+    function toggleFavorite(motelId, button) {
+        <?php if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? $_SESSION['user_role'] ?? '') !== 'user'): ?>
+        window.location.href = 'login.php';
+        return;
+        <?php endif; ?>
 
-    document.addEventListener('DOMContentLoaded', function() {
+        fetch('ajax/toggle-favorite.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ motel_id: motelId })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                button.classList.toggle('active', !!data.saved);
+            } else if (data.login_required) {
+                window.location.href = 'login.php';
+            } else {
+                alert(data.message || 'Có lỗi xảy ra, vui lòng thử lại.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Có lỗi xảy ra, vui lòng thử lại.');
+        });
+    }
+
         // Xử lý nút Hamburger trên Mobile
         
 
         // Xử lý gạch chân cho menu
         
-        });
-
-    });
     </script>
 </body>
 

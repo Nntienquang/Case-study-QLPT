@@ -16,25 +16,42 @@ $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $limit = 12;
 $offset = ($page - 1) * $limit;
 
-// Get total
-$stmt = $db->prepare("SELECT COUNT(*) as count FROM wishlists WHERE user_id = ?");
-$stmt->bind_param("i", $user_id);
+// favorites is the canonical table; wishlists is included as legacy fallback.
+$savedSourceSql = "
+    SELECT motel_id, MAX(saved_id) AS saved_id
+    FROM (
+        SELECT motel_id, id AS saved_id FROM favorites WHERE user_id = ?
+        UNION
+        SELECT motel_id, id AS saved_id FROM wishlists WHERE user_id = ?
+    ) saved_source
+    GROUP BY motel_id
+";
+
+// Get total approved saved rooms.
+$stmt = $db->prepare("
+    SELECT COUNT(*) as count
+    FROM ({$savedSourceSql}) saved
+    JOIN motels m ON m.id = saved.motel_id
+    WHERE m.status = 'approved'
+");
+$stmt->bind_param("ii", $user_id, $user_id);
 $stmt->execute();
-$total = $stmt->get_result()->fetch_assoc()['count'];
+$total = (int)($stmt->get_result()->fetch_assoc()['count'] ?? 0);
 $total_pages = ceil($total / $limit);
 $stmt->close();
 
-// Get wishlists
+// Get saved motels.
 $stmt = $db->prepare("
-    SELECT m.id, m.title, m.price, m.area, m.address, m.count_view,
+    SELECT m.id, m.title, m.price, m.area, m.address, m.count_view, m.status, u.verified_at,
            (SELECT image_url FROM motel_images WHERE motel_id = m.id LIMIT 1) as cover_image
-    FROM wishlists w
-    JOIN motels m ON w.motel_id = m.id
-    WHERE w.user_id = ?
-    ORDER BY w.id DESC
+    FROM ({$savedSourceSql}) saved
+    JOIN motels m ON m.id = saved.motel_id
+    LEFT JOIN users u ON u.id = m.user_id
+    WHERE m.status = 'approved'
+    ORDER BY saved.saved_id DESC
     LIMIT ? OFFSET ?
 ");
-$stmt->bind_param("iii", $user_id, $limit, $offset);
+$stmt->bind_param("iiii", $user_id, $user_id, $limit, $offset);
 $stmt->execute();
 $motels = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
@@ -206,20 +223,26 @@ $stmt->close();
                         <h1 class="fw-bold m-0 fs-3">
                             <i class="fas fa-heart text-danger me-2"></i> Phòng đã lưu
                         </h1>
-                        <span class="badge bg-danger rounded-pill px-3 py-2 fs-6"><?php echo $total; ?> phòng</span>
+                        <span id="saved-count-badge" class="badge bg-danger rounded-pill px-3 py-2 fs-6"><?php echo $total; ?> phòng</span>
                     </div>
 
                     <?php if (count($motels) > 0): ?>
                         <div class="row g-4">
                             <?php foreach ($motels as $motel): ?>
+                                <?php
+                                    $coverImage = !empty($motel['cover_image']) ? (string)$motel['cover_image'] : '';
+                                    if ($coverImage !== '' && !filter_var($coverImage, FILTER_VALIDATE_URL)) {
+                                        $coverImage = '../' . ltrim(str_replace('\\', '/', $coverImage), '/');
+                                    }
+                                ?>
                                 <div class="col-md-6 col-lg-4" id="motel-card-<?php echo $motel['id']; ?>">
                                     <div class="motel-card">
                                         <div class="motel-image-wrapper">
                                             <button class="btn-favorite" onclick="toggleFavorite(<?php echo $motel['id']; ?>)" title="Bỏ lưu">
                                                 <i class="fas fa-heart"></i>
                                             </button>
-                                            <?php if (!empty($motel['cover_image'])): ?>
-                                                <img src="../<?php echo htmlspecialchars($motel['cover_image']); ?>" class="motel-image" alt="Hình ảnh phòng">
+                                            <?php if ($coverImage !== ''): ?>
+                                                <img src="<?php echo htmlspecialchars($coverImage); ?>" class="motel-image" alt="Hình ảnh phòng">
                                             <?php else: ?>
                                                 <div class="motel-placeholder"><i class="fas fa-image"></i></div>
                                             <?php endif; ?>
@@ -232,12 +255,18 @@ $stmt->close();
                                                 <span><i class="fas fa-vector-square me-1"></i> <?php echo htmlspecialchars($motel['area'] ?? '--'); ?> m²</span>
                                                 <span><i class="fas fa-eye me-1"></i> <?php echo $motel['count_view']; ?> xem</span>
                                             </div>
+                                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                                <span class="badge bg-success"><i class="fas fa-circle-check me-1"></i> Approved</span>
+                                                <?php if (!empty($motel['verified_at'])): ?>
+                                                    <span class="badge bg-primary"><i class="fas fa-shield-check me-1"></i> Verified</span>
+                                                <?php endif; ?>
+                                            </div>
                                             
                                             <div class="motel-address" title="<?php echo htmlspecialchars($motel['address']); ?>">
                                                 <i class="fas fa-map-marker-alt text-muted me-1"></i> <?php echo htmlspecialchars($motel['address']); ?>
                                             </div>
                                             
-                                            <a href="../motel-detail.php?id=<?php echo $motel['id']; ?>" class="btn-view">
+                                            <a href="motel-detail.php?id=<?php echo $motel['id']; ?>" class="btn-view">
                                                 Xem chi tiết
                                             </a>
                                         </div>
@@ -286,6 +315,10 @@ $stmt->close();
         .then(response => response.json())
         .then(data => {
             if (data.success) {
+                const badge = document.getElementById('saved-count-badge');
+                if (badge && typeof data.count !== 'undefined') {
+                    badge.textContent = data.count + ' phòng';
+                }
                 // Remove card from UI
                 const card = document.getElementById('motel-card-' + motelId);
                 if (card) {
@@ -301,6 +334,8 @@ $stmt->close();
                         }
                     }, 300);
                 }
+            } else if (data.login_required) {
+                window.location.href = '../login.php';
             } else {
                 alert(data.message || 'Có lỗi xảy ra!');
             }

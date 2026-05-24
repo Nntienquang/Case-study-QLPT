@@ -89,7 +89,19 @@ $hasFeatured = user_dash_column_exists($conn, 'motels', 'is_featured');
 $stats = [
     'total_bookings' => user_dash_count($conn, 'SELECT COUNT(*) AS count FROM bookings WHERE user_id = ?', 'i', [$userId]),
     'pending_bookings' => user_dash_count($conn, "SELECT COUNT(*) AS count FROM bookings WHERE user_id = ? AND status = 'pending'", 'i', [$userId]),
-    'total_favorites' => user_dash_count($conn, 'SELECT COUNT(*) AS count FROM wishlists WHERE user_id = ?', 'i', [$userId]),
+    'total_favorites' => user_dash_count(
+        $conn,
+        "SELECT COUNT(*) AS count
+         FROM (
+             SELECT motel_id FROM favorites WHERE user_id = ?
+             UNION
+             SELECT motel_id FROM wishlists WHERE user_id = ?
+         ) saved
+         JOIN motels m ON m.id = saved.motel_id
+         WHERE m.status = 'approved'",
+        'ii',
+        [$userId, $userId]
+    ),
     'pending_viewings' => $hasViewingAppointments ? user_dash_count($conn, "SELECT COUNT(*) AS count FROM viewing_appointments WHERE user_id = ? AND status = 'pending'", 'i', [$userId]) : 0,
     'saved_searches' => $hasSavedSearches ? user_dash_count($conn, 'SELECT COUNT(*) AS count FROM saved_searches WHERE user_id = ?', 'i', [$userId]) : 0,
 ];

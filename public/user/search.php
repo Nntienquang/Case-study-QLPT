@@ -174,7 +174,7 @@ if ($sort === 'price_asc') { $orderBy = 'm.price ASC, m.health_score DESC'; }
 elseif ($sort === 'price_desc') { $orderBy = 'm.price DESC, m.health_score DESC'; } 
 elseif ($sort === 'newest') { $orderBy = 'm.created_at DESC'; }
 elseif ($sort === 'views') { $orderBy = 'm.count_view DESC, m.created_at DESC'; }
-elseif ($sort === 'popular') { $orderBy = '((SELECT COUNT(*) FROM favorites f WHERE f.motel_id = m.id) + (SELECT COUNT(*) FROM wishlists w WHERE w.motel_id = m.id)) DESC, m.created_at DESC'; }
+elseif ($sort === 'popular') { $orderBy = "((SELECT COUNT(DISTINCT f.user_id) FROM favorites f WHERE f.motel_id = m.id) + (SELECT COUNT(DISTINCT w.user_id) FROM wishlists w WHERE w.motel_id = m.id AND NOT EXISTS (SELECT 1 FROM favorites f2 WHERE f2.user_id = w.user_id AND f2.motel_id = w.motel_id))) DESC, m.created_at DESC"; }
 
 $query = '
     SELECT m.*, d.name as district_name, c.name as category_name, u.name as owner_name, u.verified_at, u.trust_score,
@@ -197,9 +197,13 @@ $stmt->close();
 $favorite_ids = [];
 if ($motels && isset($_SESSION['user_id'])) {
     $motel_ids = implode(',', array_map(fn($m) => (int)$m['id'], $motels));
-    $fav_stmt = $db->prepare("SELECT motel_id FROM wishlists WHERE user_id = ? AND motel_id IN ($motel_ids)");
+    $fav_stmt = $db->prepare("
+        SELECT motel_id FROM favorites WHERE user_id = ? AND motel_id IN ($motel_ids)
+        UNION
+        SELECT motel_id FROM wishlists WHERE user_id = ? AND motel_id IN ($motel_ids)
+    ");
     $uid = (int)$_SESSION['user_id'];
-    $fav_stmt->bind_param('i', $uid);
+    $fav_stmt->bind_param('ii', $uid, $uid);
     $fav_stmt->execute();
     $favs = $fav_stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $favorite_ids = array_map(fn($f) => (int)$f['motel_id'], $favs);
@@ -728,7 +732,9 @@ unset($baseQuery['page'], $baseQuery['save_search']);
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    button.classList.toggle('active');
+                    button.classList.toggle('active', !!data.saved);
+                } else if (data.login_required) {
+                    window.location.href = '../login.php';
                 } else {
                     alert('Có lỗi xảy ra, vui lòng thử lại sau!');
                 }
